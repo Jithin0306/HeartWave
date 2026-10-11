@@ -15,6 +15,8 @@ import { cameraManager } from '../../services/cameraManager';
 import { handTracker } from '../../tracking/handTracker';
 import { DiagnosticsRenderer } from '../../tracking/diagnosticsRenderer';
 import { effectManager } from '../../effects/effectManager';
+import { videoCompositor } from '../../services/videoCompositor';
+import { VirtualOutputBar } from '../output/VirtualOutputBar';
 
 export const CameraPreviewViewport: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -52,6 +54,9 @@ export const CameraPreviewViewport: React.FC = () => {
     gestureHoldDuration,
     selectedEffectId,
     activeIntensity,
+    isPrivacyShutterActive,
+    isBypassActive,
+    setCompositorMetrics,
   } = useAppStore();
 
   // Initialize hardware enumeration and device change listeners
@@ -176,6 +181,17 @@ export const CameraPreviewViewport: React.FC = () => {
           effectManager.update(activeIntensity, gestureResult?.gestureEvent?.anchor, now);
           effectManager.render(eCtx, effectsCanvas.width, effectsCanvas.height, isMirrored);
         }
+
+        // Phase 5: Composite physical video + effect overlay onto offscreen compositor
+        videoCompositor.setResolution(video.videoWidth || 1280, video.videoHeight || 720);
+        const compMetrics = videoCompositor.compositeFrame(
+          video,
+          effectsCanvas,
+          isMirrored,
+          isBypassActive,
+          isPrivacyShutterActive
+        );
+        setCompositorMetrics(compMetrics);
       }
     } else {
       setActiveGestureEvent(null);
@@ -190,6 +206,9 @@ export const CameraPreviewViewport: React.FC = () => {
     isMirrored,
     showSkeletonDiagnostics,
     activeIntensity,
+    isPrivacyShutterActive,
+    isBypassActive,
+    setCompositorMetrics,
     setActiveGestureEvent,
   ]);
 
@@ -448,6 +467,44 @@ export const CameraPreviewViewport: React.FC = () => {
             display: cameraStatus === 'active' && showSkeletonDiagnostics ? 'block' : 'none',
           }}
         />
+
+        {/* Privacy Shutter Active Viewport Overlay */}
+        {cameraStatus === 'active' && isPrivacyShutterActive && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundColor: '#141211',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 25,
+            }}
+          >
+            <div
+              style={{
+                width: '72px',
+                height: '72px',
+                border: '1px solid rgba(214, 189, 145, 0.4)',
+                borderRadius: 'var(--hw-radius-sm)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '16px',
+                backgroundColor: 'rgba(38, 32, 31, 0.6)',
+              }}
+            >
+              <span style={{ color: '#D6BD91', fontSize: '22px', fontWeight: 600, fontFamily: 'serif' }}>HW</span>
+            </div>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--hw-text-primary)', letterSpacing: '0.1em' }}>
+              CAMERA MUTED
+            </span>
+            <span style={{ fontSize: '11px', color: 'var(--hw-text-muted)', marginTop: '4px' }}>
+              Privacy Shutter Active • Video stream obscured
+            </span>
+          </div>
+        )}
 
         {/* Framing Reticle Corners */}
         <div
@@ -1035,6 +1092,9 @@ export const CameraPreviewViewport: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Phase 5: Processed Video Output Pipeline Control Bar */}
+      <VirtualOutputBar />
     </section>
   );
 };

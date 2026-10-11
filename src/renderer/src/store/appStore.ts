@@ -11,6 +11,7 @@ import {
 import { GestureEvent } from '../types/gesture';
 import { INITIAL_EFFECTS } from '../data/initialEffects';
 import { cameraManager } from '../services/cameraManager';
+import { CompositorMetrics, VirtualOutputStatus } from '../types/compositor';
 
 export const RESOLUTION_PRESETS: ResolutionProfile[] = [
   { id: '1080p30', label: '1080p 30fps', width: 1920, height: 1080, fps: 30 },
@@ -69,6 +70,16 @@ interface AppState {
   // Virtual Camera State
   virtualCameraStatus: VirtualCameraStatus;
   toggleVirtualCamera: () => void;
+
+  // Phase 5 Video Output Pipeline
+  virtualOutputStatus: VirtualOutputStatus;
+  isPrivacyShutterActive: boolean;
+  isBypassActive: boolean;
+  compositorMetrics: CompositorMetrics | null;
+  toggleVirtualOutput: () => void;
+  togglePrivacyShutter: () => void;
+  toggleBypass: () => void;
+  setCompositorMetrics: (metrics: CompositorMetrics) => void;
 
   // Modals & Panels
   isSettingsOpen: boolean;
@@ -200,6 +211,25 @@ export const useAppStore = create<AppState>((set, get) => ({
       virtualCameraStatus:
         state.virtualCameraStatus === 'offline' ? 'driver_unregistered' : 'offline',
     })),
+
+  // Phase 5 Video Output Pipeline Actions
+  virtualOutputStatus: 'standby',
+  isPrivacyShutterActive: false,
+  isBypassActive: false,
+  compositorMetrics: null,
+  toggleVirtualOutput: () =>
+    set((state) => ({
+      virtualOutputStatus: state.virtualOutputStatus === 'broadcasting' ? 'standby' : 'broadcasting',
+    })),
+  togglePrivacyShutter: () =>
+    set((state) => ({
+      isPrivacyShutterActive: !state.isPrivacyShutterActive,
+    })),
+  toggleBypass: () =>
+    set((state) => ({
+      isBypassActive: !state.isBypassActive,
+    })),
+  setCompositorMetrics: (metrics) => set({ compositorMetrics: metrics }),
 
   isSettingsOpen: false,
   setIsSettingsOpen: (open) => set({ isSettingsOpen: open }),

@@ -97,7 +97,7 @@ export const TitleBar: React.FC = () => {
             color: 'var(--hw-accent-rose)',
           }}
         >
-          PHASE 4: ROMANTIC EFFECT ENGINE
+          PHASE 5: VIDEO OUTPUT PIPELINE
         </div>
 
         {/* Tagline */}
