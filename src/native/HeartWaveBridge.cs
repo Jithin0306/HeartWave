@@ -57,7 +57,8 @@ namespace HeartWave
                     accessor.Write(24, (uint)0); // type = VIDEO
                     accessor.Write(28, width);
                     accessor.Write(32, height);
-                    accessor.Write(36, interval);
+                    accessor.Write(36, (uint)0);   // 4-byte padding for 64-bit struct alignment
+                    accessor.Write(40, interval);  // 64-bit uint64 interval in MSVC struct queue_header
 
                     uint[] offsets = new uint[] { offset0, offset1, offset2 };
                     uint writeIdx = 0;
