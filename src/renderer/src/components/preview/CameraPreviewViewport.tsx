@@ -1,37 +1,80 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   Camera,
   FlipHorizontal,
   Layers,
   ChevronDown,
+  AlertTriangle,
+  RefreshCw,
+  VideoOff,
 } from 'lucide-react';
-import { useAppStore, RESOLUTION_PRESETS, MOCK_DEVICES } from '../../store/appStore';
+import { useAppStore, RESOLUTION_PRESETS } from '../../store/appStore';
+import { cameraManager } from '../../services/cameraManager';
 
 export const CameraPreviewViewport: React.FC = () => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
   const {
     cameraStatus,
-    setCameraStatus,
+    availableDevices,
     selectedDeviceId,
-    setSelectedDeviceId,
     selectedResolution,
-    setSelectedResolution,
+    activeStream,
+    cameraMetrics,
+    cameraError,
     isMirrored,
+    fetchDevices,
+    startCamera,
+    stopCamera,
+    selectDevice,
+    selectResolution,
     toggleMirror,
+    clearCameraError,
     virtualCameraStatus,
     toggleVirtualCamera,
   } = useAppStore();
 
+  // Initialize hardware enumeration and device change listeners
+  useEffect(() => {
+    fetchDevices();
+
+    const cleanupDeviceListener = cameraManager.onDeviceChange(() => {
+      fetchDevices();
+    });
+
+    cameraManager.setOnDisconnect(() => {
+      stopCamera();
+    });
+
+    return () => {
+      cleanupDeviceListener();
+      cameraManager.setOnDisconnect(null);
+    };
+  }, [fetchDevices, stopCamera]);
+
+  // Bind active media stream to the HTMLVideoElement
+  useEffect(() => {
+    if (videoRef.current) {
+      if (activeStream) {
+        videoRef.current.srcObject = activeStream;
+        videoRef.current.play().catch((err) => {
+          console.warn('Auto-play was interrupted:', err);
+        });
+      } else {
+        videoRef.current.srcObject = null;
+      }
+    }
+  }, [activeStream]);
+
   const handleToggleCamera = () => {
-    // In Phase 1, toggling illustrates the interface state transition
-    if (cameraStatus === 'standby') {
-      setCameraStatus('connecting');
-      setTimeout(() => {
-        setCameraStatus('active');
-      }, 400);
+    if (cameraStatus === 'active') {
+      stopCamera();
     } else {
-      setCameraStatus('standby');
+      startCamera();
     }
   };
+
+  const selectedDevice = availableDevices.find((d) => d.id === selectedDeviceId);
 
   return (
     <section
@@ -66,6 +109,7 @@ export const CameraPreviewViewport: React.FC = () => {
             Camera Preview
           </h2>
 
+          {/* Status Badge */}
           <div
             style={{
               display: 'flex',
@@ -76,16 +120,22 @@ export const CameraPreviewViewport: React.FC = () => {
               backgroundColor:
                 cameraStatus === 'active'
                   ? 'rgba(78, 170, 121, 0.15)'
+                  : cameraStatus === 'error'
+                  ? 'rgba(208, 93, 93, 0.15)'
                   : 'var(--hw-surface-elevated)',
               border: `1px solid ${
                 cameraStatus === 'active'
                   ? 'rgba(78, 170, 121, 0.4)'
+                  : cameraStatus === 'error'
+                  ? 'rgba(208, 93, 93, 0.4)'
                   : 'var(--hw-border-subtle)'
               }`,
               fontSize: '11px',
               color:
                 cameraStatus === 'active'
                   ? 'var(--hw-status-active)'
+                  : cameraStatus === 'error'
+                  ? 'var(--hw-status-error)'
                   : 'var(--hw-text-muted)',
             }}
           >
@@ -97,14 +147,22 @@ export const CameraPreviewViewport: React.FC = () => {
                 backgroundColor:
                   cameraStatus === 'active'
                     ? 'var(--hw-status-active)'
+                    : cameraStatus === 'error'
+                    ? 'var(--hw-status-error)'
                     : 'var(--hw-status-idle)',
               }}
             />
-            {cameraStatus === 'active' ? 'Preview Active' : 'Standby Mode'}
+            {cameraStatus === 'active'
+              ? 'Live Webcam Active'
+              : cameraStatus === 'connecting'
+              ? 'Connecting...'
+              : cameraStatus === 'error'
+              ? 'Hardware Notice'
+              : 'Standby Mode'}
           </div>
         </div>
 
-        {/* Device Picker Selector */}
+        {/* Real Device Dropdown */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div
             style={{
@@ -117,25 +175,37 @@ export const CameraPreviewViewport: React.FC = () => {
               border: '1px solid var(--hw-border-subtle)',
               fontSize: '11px',
               color: 'var(--hw-text-secondary)',
+              maxWidth: '280px',
             }}
           >
-            <Camera size={13} strokeWidth={1.8} />
+            <Camera size={13} strokeWidth={1.8} style={{ flexShrink: 0 }} />
             <select
               value={selectedDeviceId}
-              onChange={(e) => setSelectedDeviceId(e.target.value)}
+              onChange={(e) => selectDevice(e.target.value)}
+              disabled={availableDevices.length === 0}
               style={{
                 cursor: 'pointer',
                 color: 'var(--hw-text-primary)',
                 background: 'transparent',
+                width: '100%',
+                textOverflow: 'ellipsis',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
               }}
             >
-              {MOCK_DEVICES.map((d) => (
-                <option key={d.id} value={d.id} style={{ background: '#1D1918' }}>
-                  {d.label}
+              {availableDevices.length > 0 ? (
+                availableDevices.map((d) => (
+                  <option key={d.id} value={d.id} style={{ background: '#1D1918' }}>
+                    {d.label}
+                  </option>
+                ))
+              ) : (
+                <option value="" style={{ background: '#1D1918' }}>
+                  No Cameras Detected
                 </option>
-              ))}
+              )}
             </select>
-            <ChevronDown size={11} strokeWidth={2} style={{ color: 'var(--hw-text-muted)' }} />
+            <ChevronDown size={11} strokeWidth={2} style={{ color: 'var(--hw-text-muted)', flexShrink: 0 }} />
           </div>
         </div>
       </div>
@@ -146,7 +216,7 @@ export const CameraPreviewViewport: React.FC = () => {
           position: 'relative',
           width: '100%',
           flex: 1,
-          backgroundColor: '#0E0D0C',
+          backgroundColor: '#0A0909',
           borderRadius: 'var(--hw-radius-lg)',
           border: '1px solid var(--hw-border-subtle)',
           overflow: 'hidden',
@@ -157,7 +227,23 @@ export const CameraPreviewViewport: React.FC = () => {
           boxShadow: 'var(--hw-shadow-md)',
         }}
       >
-        {/* Subtle Framing Reticle Corners */}
+        {/* Real HTML5 Video Element for Live Camera Stream */}
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            display: cameraStatus === 'active' ? 'block' : 'none',
+            transform: isMirrored ? 'scaleX(-1)' : 'none',
+            transition: 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+          }}
+        />
+
+        {/* Framing Reticle Corners */}
         <div
           style={{
             position: 'absolute',
@@ -168,6 +254,7 @@ export const CameraPreviewViewport: React.FC = () => {
             borderTop: '2px solid rgba(214, 189, 145, 0.4)',
             borderLeft: '2px solid rgba(214, 189, 145, 0.4)',
             pointerEvents: 'none',
+            zIndex: 10,
           }}
         />
         <div
@@ -180,6 +267,7 @@ export const CameraPreviewViewport: React.FC = () => {
             borderTop: '2px solid rgba(214, 189, 145, 0.4)',
             borderRight: '2px solid rgba(214, 189, 145, 0.4)',
             pointerEvents: 'none',
+            zIndex: 10,
           }}
         />
         <div
@@ -192,6 +280,7 @@ export const CameraPreviewViewport: React.FC = () => {
             borderBottom: '2px solid rgba(214, 189, 145, 0.4)',
             borderLeft: '2px solid rgba(214, 189, 145, 0.4)',
             pointerEvents: 'none',
+            zIndex: 10,
           }}
         />
         <div
@@ -204,6 +293,7 @@ export const CameraPreviewViewport: React.FC = () => {
             borderBottom: '2px solid rgba(214, 189, 145, 0.4)',
             borderRight: '2px solid rgba(214, 189, 145, 0.4)',
             pointerEvents: 'none',
+            zIndex: 10,
           }}
         />
 
@@ -216,7 +306,7 @@ export const CameraPreviewViewport: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            zIndex: 10,
+            zIndex: 20,
           }}
         >
           <span
@@ -233,6 +323,22 @@ export const CameraPreviewViewport: React.FC = () => {
           >
             16:9
           </span>
+
+          {cameraMetrics && (
+            <span
+              style={{
+                padding: '3px 8px',
+                borderRadius: 'var(--hw-radius-xs)',
+                backgroundColor: 'rgba(29, 25, 24, 0.85)',
+                border: '1px solid var(--hw-border-subtle)',
+                fontSize: '10px',
+                fontWeight: 600,
+                color: 'var(--hw-status-active)',
+              }}
+            >
+              {cameraMetrics.actualWidth}×{cameraMetrics.actualHeight} @ {cameraMetrics.actualFps}fps
+            </span>
+          )}
 
           {isMirrored && (
             <span
@@ -257,7 +363,7 @@ export const CameraPreviewViewport: React.FC = () => {
             position: 'absolute',
             top: '16px',
             right: '36px',
-            zIndex: 10,
+            zIndex: 20,
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
@@ -273,7 +379,7 @@ export const CameraPreviewViewport: React.FC = () => {
             value={selectedResolution.id}
             onChange={(e) => {
               const found = RESOLUTION_PRESETS.find((r) => r.id === e.target.value);
-              if (found) setSelectedResolution(found);
+              if (found) selectResolution(found);
             }}
             style={{
               cursor: 'pointer',
@@ -289,8 +395,8 @@ export const CameraPreviewViewport: React.FC = () => {
           </select>
         </div>
 
-        {/* Center Viewport Content: Honest Standby State vs Active Mock */}
-        {cameraStatus === 'standby' ? (
+        {/* Center Overlay: Standby State */}
+        {cameraStatus === 'standby' && (
           <div
             style={{
               display: 'flex',
@@ -298,10 +404,10 @@ export const CameraPreviewViewport: React.FC = () => {
               alignItems: 'center',
               textAlign: 'center',
               padding: '24px',
-              maxWidth: '420px',
+              maxWidth: '440px',
+              zIndex: 10,
             }}
           >
-            {/* Watermark Heart Glyph */}
             <div
               style={{
                 width: '64px',
@@ -327,7 +433,7 @@ export const CameraPreviewViewport: React.FC = () => {
                 marginBottom: '6px',
               }}
             >
-              Camera Feed Inactive
+              Ready to Stream Video
             </h3>
 
             <p
@@ -338,13 +444,15 @@ export const CameraPreviewViewport: React.FC = () => {
                 marginBottom: '20px',
               }}
             >
-              Hardware capture and live frame streaming will be integrated in <strong>Phase Two</strong>. Select a device or toggle preview to inspect workspace framing.
+              {availableDevices.length > 0
+                ? `Selected: ${selectedDevice?.label || 'Default Camera'}. Click below to start live hardware capture.`
+                : 'No webcams detected yet. Connect a camera or check Windows device permissions.'}
             </p>
 
             <button
               onClick={handleToggleCamera}
               style={{
-                padding: '9px 22px',
+                padding: '9px 24px',
                 borderRadius: 'var(--hw-radius-md)',
                 backgroundColor: 'var(--hw-accent-primary)',
                 color: '#FFFFFF',
@@ -360,72 +468,125 @@ export const CameraPreviewViewport: React.FC = () => {
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--hw-accent-primary)')}
             >
               <Camera size={14} strokeWidth={2} />
-              Connect Camera (Phase 2 Ready)
+              Start Live Camera
             </button>
           </div>
-        ) : cameraStatus === 'connecting' ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-            <div
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                border: '2px solid var(--hw-border-subtle)',
-                borderTopColor: 'var(--hw-accent-rose)',
-                animation: 'spin 1s linear infinite',
-              }}
-            />
-            <span style={{ fontSize: '12px', color: 'var(--hw-text-secondary)' }}>
-              Initializing capture pipeline...
-            </span>
-          </div>
-        ) : (
-          /* Active Camera Mock Viewport with Ambient Video Simulation */
+        )}
+
+        {/* Center Overlay: Connecting State */}
+        {cameraStatus === 'connecting' && (
           <div
             style={{
-              width: '100%',
-              height: '100%',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative',
-              background: 'radial-gradient(ellipse at center, #261D1F 0%, #120F10 100%)',
-              transform: isMirrored ? 'scaleX(-1)' : 'none',
-              transition: 'transform 0.3s ease',
+              gap: '14px',
+              zIndex: 10,
             }}
           >
-            {/* Ambient Silhouette Mock Graphic */}
             <div
               style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                border: '2px solid var(--hw-border-subtle)',
+                borderTopColor: 'var(--hw-accent-rose)',
+                animation: 'spin 0.8s linear infinite',
+              }}
+            />
+            <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--hw-text-primary)' }}>
+              Acquiring camera hardware stream...
+            </span>
+          </div>
+        )}
+
+        {/* Center Overlay: Hardware Error State */}
+        {cameraStatus === 'error' && cameraError && (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              padding: '28px',
+              maxWidth: '460px',
+              backgroundColor: 'rgba(29, 25, 24, 0.95)',
+              borderRadius: 'var(--hw-radius-lg)',
+              border: '1px solid rgba(208, 93, 93, 0.4)',
+              zIndex: 30,
+              boxShadow: 'var(--hw-shadow-lg)',
+            }}
+          >
+            <div
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(208, 93, 93, 0.15)',
                 display: 'flex',
-                flexDirection: 'column',
                 alignItems: 'center',
-                opacity: 0.85,
-                transform: isMirrored ? 'scaleX(-1)' : 'none',
+                justifyContent: 'center',
+                marginBottom: '12px',
+                color: 'var(--hw-status-error)',
               }}
             >
-              <div
+              <AlertTriangle size={24} strokeWidth={1.8} />
+            </div>
+
+            <h4
+              style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                color: 'var(--hw-text-primary)',
+                marginBottom: '6px',
+              }}
+            >
+              {cameraError.message}
+            </h4>
+
+            <p
+              style={{
+                fontSize: '11px',
+                color: 'var(--hw-text-muted)',
+                lineHeight: 1.5,
+                marginBottom: '18px',
+              }}
+            >
+              {cameraError.recoveryHint}
+            </p>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={handleToggleCamera}
                 style={{
-                  width: '80px',
-                  height: '80px',
-                  borderRadius: '50%',
-                  border: '2px solid var(--hw-accent-burgundy)',
-                  backgroundColor: 'rgba(103, 47, 64, 0.2)',
+                  padding: '7px 16px',
+                  borderRadius: 'var(--hw-radius-sm)',
+                  backgroundColor: 'var(--hw-accent-primary)',
+                  color: '#FFFFFF',
+                  fontSize: '11px',
+                  fontWeight: 600,
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '14px',
+                  gap: '6px',
                 }}
               >
-                <Camera size={32} strokeWidth={1.5} color="var(--hw-accent-rose)" />
-              </div>
-              <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--hw-text-primary)' }}>
-                Live Feed Emulation Active
-              </span>
-              <span style={{ fontSize: '11px', color: 'var(--hw-text-muted)', marginTop: '4px' }}>
-                Phase Two will bind real MediaStream frames directly to this surface.
-              </span>
+                <RefreshCw size={12} strokeWidth={2} />
+                Retry Connection
+              </button>
+
+              <button
+                onClick={clearCameraError}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: 'var(--hw-radius-sm)',
+                  backgroundColor: 'var(--hw-surface-elevated)',
+                  border: '1px solid var(--hw-border-subtle)',
+                  color: 'var(--hw-text-secondary)',
+                  fontSize: '11px',
+                }}
+              >
+                Dismiss
+              </button>
             </div>
           </div>
         )}
@@ -444,11 +605,11 @@ export const CameraPreviewViewport: React.FC = () => {
           border: '1px solid var(--hw-border-subtle)',
         }}
       >
-        {/* Left Toggles: Mirror & Fullscreen */}
+        {/* Left: Mirror Video Toggle */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
             onClick={toggleMirror}
-            title="Mirror Camera Feed"
+            title="Mirror Camera Feed horizontally"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -491,11 +652,20 @@ export const CameraPreviewViewport: React.FC = () => {
             transition: 'all var(--hw-transition-fast)',
           }}
         >
-          <Camera size={14} strokeWidth={2} />
-          {cameraStatus === 'active' ? 'Stop Camera' : 'Start Camera'}
+          {cameraStatus === 'active' ? (
+            <>
+              <VideoOff size={14} strokeWidth={2} />
+              Stop Camera
+            </>
+          ) : (
+            <>
+              <Camera size={14} strokeWidth={2} />
+              Start Camera
+            </>
+          )}
         </button>
 
-        {/* Right Toggle: Virtual Camera (with honest warning tooltip) */}
+        {/* Right Toggle: Virtual Camera */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
             onClick={toggleVirtualCamera}

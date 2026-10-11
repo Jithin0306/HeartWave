@@ -1,17 +1,20 @@
 import { create } from 'zustand';
 import { EffectItem, EffectCategory } from '../types/effect';
-import { CameraDevice, ResolutionProfile, CameraStatus, VirtualCameraStatus } from '../types/camera';
+import {
+  CameraDevice,
+  ResolutionProfile,
+  CameraStatus,
+  VirtualCameraStatus,
+  CameraErrorInfo,
+  LiveStreamMetrics,
+} from '../types/camera';
 import { INITIAL_EFFECTS } from '../data/initialEffects';
+import { cameraManager } from '../services/cameraManager';
 
 export const RESOLUTION_PRESETS: ResolutionProfile[] = [
   { id: '1080p30', label: '1080p 30fps', width: 1920, height: 1080, fps: 30 },
   { id: '720p30', label: '720p 30fps', width: 1280, height: 720, fps: 30 },
   { id: '720p60', label: '720p 60fps', width: 1280, height: 720, fps: 60 },
-];
-
-export const MOCK_DEVICES: CameraDevice[] = [
-  { id: 'cam-1', label: 'Integrated HD Webcam', isDefault: true },
-  { id: 'cam-2', label: 'Logitech Brio 4K / StreamCam' },
 ];
 
 interface AppState {
@@ -31,15 +34,24 @@ interface AppState {
   categoryFilter: EffectCategory;
   setCategoryFilter: (cat: EffectCategory) => void;
 
-  // Camera State (Honest Standby / Phase 1 UI state)
+  // Physical Camera State
   cameraStatus: CameraStatus;
-  setCameraStatus: (status: CameraStatus) => void;
+  availableDevices: CameraDevice[];
   selectedDeviceId: string;
-  setSelectedDeviceId: (id: string) => void;
   selectedResolution: ResolutionProfile;
-  setSelectedResolution: (profile: ResolutionProfile) => void;
+  activeStream: MediaStream | null;
+  cameraMetrics: LiveStreamMetrics | null;
+  cameraError: CameraErrorInfo | null;
   isMirrored: boolean;
   toggleMirror: () => void;
+
+  // Camera Actions
+  fetchDevices: () => Promise<void>;
+  startCamera: () => Promise<void>;
+  stopCamera: () => void;
+  selectDevice: (deviceId: string) => Promise<void>;
+  selectResolution: (profile: ResolutionProfile) => Promise<void>;
+  clearCameraError: () => void;
 
   // Virtual Camera State
   virtualCameraStatus: VirtualCameraStatus;
@@ -52,7 +64,7 @@ interface AppState {
   setIsInspectorOpen: (open: boolean) => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>((set, get) => ({
   activeNav: 'romantic',
   setActiveNav: (nav) => set({ activeNav: nav }),
 
@@ -72,14 +84,90 @@ export const useAppStore = create<AppState>((set) => ({
   categoryFilter: 'all',
   setCategoryFilter: (cat) => set({ categoryFilter: cat }),
 
+  // Camera State
   cameraStatus: 'standby',
-  setCameraStatus: (status) => set({ cameraStatus: status }),
-  selectedDeviceId: MOCK_DEVICES[0].id,
-  setSelectedDeviceId: (id) => set({ selectedDeviceId: id }),
+  availableDevices: [],
+  selectedDeviceId: '',
   selectedResolution: RESOLUTION_PRESETS[0],
-  setSelectedResolution: (profile) => set({ selectedResolution: profile }),
+  activeStream: null,
+  cameraMetrics: null,
+  cameraError: null,
   isMirrored: false,
   toggleMirror: () => set((state) => ({ isMirrored: !state.isMirrored })),
+
+  fetchDevices: async () => {
+    try {
+      const devices = await cameraManager.enumerateDevices();
+      const currentSelected = get().selectedDeviceId;
+      const deviceExists = devices.some((d) => d.id === currentSelected);
+
+      set({
+        availableDevices: devices,
+        selectedDeviceId: deviceExists
+          ? currentSelected
+          : devices.length > 0
+          ? devices[0].id
+          : '',
+      });
+    } catch (err) {
+      console.error('Failed to fetch camera devices:', err);
+    }
+  },
+
+  startCamera: async () => {
+    const { selectedDeviceId, selectedResolution } = get();
+    set({ cameraStatus: 'connecting', cameraError: null });
+
+    try {
+      const { stream, metrics } = await cameraManager.startStream(
+        selectedDeviceId || undefined,
+        selectedResolution
+      );
+
+      // Re-fetch devices in case labels were unlocked by user media permission
+      const updatedDevices = await cameraManager.enumerateDevices();
+
+      set({
+        activeStream: stream,
+        cameraMetrics: metrics,
+        cameraStatus: 'active',
+        cameraError: null,
+        availableDevices: updatedDevices.length > 0 ? updatedDevices : get().availableDevices,
+      });
+    } catch (err) {
+      const parsed = cameraManager.parseError(err);
+      set({
+        activeStream: null,
+        cameraStatus: 'error',
+        cameraError: parsed,
+      });
+    }
+  },
+
+  stopCamera: () => {
+    cameraManager.stopStream();
+    set({
+      activeStream: null,
+      cameraStatus: 'standby',
+      cameraMetrics: null,
+    });
+  },
+
+  selectDevice: async (deviceId: string) => {
+    set({ selectedDeviceId: deviceId });
+    if (get().cameraStatus === 'active') {
+      await get().startCamera();
+    }
+  },
+
+  selectResolution: async (profile: ResolutionProfile) => {
+    set({ selectedResolution: profile });
+    if (get().cameraStatus === 'active') {
+      await get().startCamera();
+    }
+  },
+
+  clearCameraError: () => set({ cameraError: null, cameraStatus: 'standby' }),
 
   virtualCameraStatus: 'offline',
   toggleVirtualCamera: () =>

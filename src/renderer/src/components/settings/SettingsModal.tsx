@@ -8,8 +8,11 @@ export const SettingsModal: React.FC = () => {
   const {
     isSettingsOpen,
     setIsSettingsOpen,
+    availableDevices,
+    selectedDeviceId,
+    selectDevice,
     selectedResolution,
-    setSelectedResolution,
+    selectResolution,
     isMirrored,
     toggleMirror,
     virtualCameraStatus,
@@ -154,6 +157,40 @@ export const SettingsModal: React.FC = () => {
               <>
                 <div>
                   <h4 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--hw-text-primary)', marginBottom: '4px' }}>
+                    Active Webcam Device
+                  </h4>
+                  <p style={{ fontSize: '11px', color: 'var(--hw-text-muted)', marginBottom: '10px' }}>
+                    Select the physical camera sensor to stream from.
+                  </p>
+                  <select
+                    value={selectedDeviceId}
+                    onChange={(e) => selectDevice(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      backgroundColor: 'var(--hw-surface-elevated)',
+                      border: '1px solid var(--hw-border-subtle)',
+                      borderRadius: 'var(--hw-radius-sm)',
+                      color: 'var(--hw-text-primary)',
+                      fontSize: '12px',
+                      marginBottom: '14px',
+                    }}
+                  >
+                    {availableDevices.map((d) => (
+                      <option key={d.id} value={d.id} style={{ background: '#1D1918' }}>
+                        {d.label}
+                      </option>
+                    ))}
+                    {availableDevices.length === 0 && (
+                      <option value="" style={{ background: '#1D1918' }}>
+                        No cameras detected
+                      </option>
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <h4 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--hw-text-primary)', marginBottom: '4px' }}>
                     Capture Resolution
                   </h4>
                   <p style={{ fontSize: '11px', color: 'var(--hw-text-muted)', marginBottom: '10px' }}>
@@ -163,7 +200,7 @@ export const SettingsModal: React.FC = () => {
                     value={selectedResolution.id}
                     onChange={(e) => {
                       const found = RESOLUTION_PRESETS.find((r) => r.id === e.target.value);
-                      if (found) setSelectedResolution(found);
+                      if (found) selectResolution(found);
                     }}
                     style={{
                       width: '100%',

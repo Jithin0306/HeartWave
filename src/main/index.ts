@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, session } from 'electron';
 import path from 'path';
 import fs from 'fs';
 
@@ -80,6 +80,17 @@ ipcMain.handle('app:getInfo', () => {
 });
 
 app.whenReady().then(() => {
+  // Allow camera media permissions in the Electron shell
+  session.defaultSession.setPermissionCheckHandler((_webContents, permission) => {
+    if (permission === 'media') return true;
+    return false;
+  });
+
+  session.defaultSession.setDevicePermissionHandler((details) => {
+    if (details.deviceType === 'camera') return true;
+    return false;
+  });
+
   createWindow();
 
   app.on('activate', () => {

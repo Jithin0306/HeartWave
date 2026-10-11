@@ -97,7 +97,7 @@ export const TitleBar: React.FC = () => {
             color: 'var(--hw-accent-rose)',
           }}
         >
-          FOUNDATION v0.1
+          PHASE 2: PHYSICAL CAMERA
         </div>
 
         {/* Tagline */}
