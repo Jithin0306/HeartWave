@@ -8,6 +8,7 @@ import {
   CameraErrorInfo,
   LiveStreamMetrics,
 } from '../types/camera';
+import { GestureEvent } from '../types/gesture';
 import { INITIAL_EFFECTS } from '../data/initialEffects';
 import { cameraManager } from '../services/cameraManager';
 
@@ -52,6 +53,18 @@ interface AppState {
   selectDevice: (deviceId: string) => Promise<void>;
   selectResolution: (profile: ResolutionProfile) => Promise<void>;
   clearCameraError: () => void;
+
+  // Hand Tracking & Gesture State
+  isTrackingActive: boolean;
+  toggleTracking: () => void;
+  activeGestureEvent: GestureEvent | null;
+  setActiveGestureEvent: (event: GestureEvent | null) => void;
+  showSkeletonDiagnostics: boolean;
+  setShowSkeletonDiagnostics: (show: boolean) => void;
+  gestureHoldDuration: number;
+  setGestureHoldDuration: (sec: number) => void;
+  gestureConfidence: number;
+  setGestureConfidence: (val: number) => void;
 
   // Virtual Camera State
   virtualCameraStatus: VirtualCameraStatus;
@@ -168,6 +181,18 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   clearCameraError: () => set({ cameraError: null, cameraStatus: 'standby' }),
+
+  // Hand Tracking & Gesture State
+  isTrackingActive: true,
+  toggleTracking: () => set((state) => ({ isTrackingActive: !state.isTrackingActive })),
+  activeGestureEvent: null,
+  setActiveGestureEvent: (event) => set({ activeGestureEvent: event }),
+  showSkeletonDiagnostics: false,
+  setShowSkeletonDiagnostics: (show) => set({ showSkeletonDiagnostics: show }),
+  gestureHoldDuration: 0.7,
+  setGestureHoldDuration: (sec) => set({ gestureHoldDuration: sec }),
+  gestureConfidence: 70,
+  setGestureConfidence: (val) => set({ gestureConfidence: val }),
 
   virtualCameraStatus: 'offline',
   toggleVirtualCamera: () =>

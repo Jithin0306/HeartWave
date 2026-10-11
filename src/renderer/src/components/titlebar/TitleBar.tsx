@@ -97,7 +97,7 @@ export const TitleBar: React.FC = () => {
             color: 'var(--hw-accent-rose)',
           }}
         >
-          PHASE 2: PHYSICAL CAMERA
+          PHASE 3: HAND TRACKING
         </div>
 
         {/* Tagline */}

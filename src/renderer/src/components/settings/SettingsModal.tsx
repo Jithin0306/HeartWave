@@ -16,12 +16,15 @@ export const SettingsModal: React.FC = () => {
     isMirrored,
     toggleMirror,
     virtualCameraStatus,
+    showSkeletonDiagnostics,
+    setShowSkeletonDiagnostics,
+    gestureHoldDuration,
+    setGestureHoldDuration,
+    gestureConfidence,
+    setGestureConfidence,
   } = useAppStore();
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('camera');
-  const [gestureConfidence, setGestureConfidence] = useState(75);
-  const [holdDuration, setHoldDuration] = useState(0.8);
-  const [showSkeletonDiagnostics, setShowSkeletonDiagnostics] = useState(false);
 
   if (!isSettingsOpen) return null;
 
@@ -279,7 +282,7 @@ export const SettingsModal: React.FC = () => {
                       Gesture Hold Duration
                     </h4>
                     <span style={{ fontSize: '12px', color: 'var(--hw-accent-champagne)', fontWeight: 600 }}>
-                      {holdDuration}s
+                      {gestureHoldDuration}s
                     </span>
                   </div>
                   <p style={{ fontSize: '11px', color: 'var(--hw-text-muted)', marginBottom: '10px' }}>
@@ -290,8 +293,8 @@ export const SettingsModal: React.FC = () => {
                     min="0.3"
                     max="2.0"
                     step="0.1"
-                    value={holdDuration}
-                    onChange={(e) => setHoldDuration(Number(e.target.value))}
+                    value={gestureHoldDuration}
+                    onChange={(e) => setGestureHoldDuration(Number(e.target.value))}
                     style={{ width: '100%', accentColor: 'var(--hw-accent-champagne)' }}
                   />
                 </div>

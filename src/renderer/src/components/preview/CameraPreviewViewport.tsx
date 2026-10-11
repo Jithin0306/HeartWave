@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   Camera,
   FlipHorizontal,
@@ -7,12 +7,21 @@ import {
   AlertTriangle,
   RefreshCw,
   VideoOff,
+  Hand,
+  Sparkles,
 } from 'lucide-react';
 import { useAppStore, RESOLUTION_PRESETS } from '../../store/appStore';
 import { cameraManager } from '../../services/cameraManager';
+import { handTracker } from '../../tracking/handTracker';
+import { DiagnosticsRenderer } from '../../tracking/diagnosticsRenderer';
 
 export const CameraPreviewViewport: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const diagnosticsRendererRef = useRef<DiagnosticsRenderer>(new DiagnosticsRenderer());
+  const rafIdRef = useRef<number | null>(null);
+
+  const [isTrackerWarming, setIsTrackerWarming] = useState(false);
 
   const {
     cameraStatus,
@@ -32,6 +41,12 @@ export const CameraPreviewViewport: React.FC = () => {
     clearCameraError,
     virtualCameraStatus,
     toggleVirtualCamera,
+    isTrackingActive,
+    toggleTracking,
+    activeGestureEvent,
+    setActiveGestureEvent,
+    showSkeletonDiagnostics,
+    gestureHoldDuration,
   } = useAppStore();
 
   // Initialize hardware enumeration and device change listeners
@@ -65,6 +80,103 @@ export const CameraPreviewViewport: React.FC = () => {
       }
     }
   }, [activeStream]);
+
+  // Sync hold duration with tracker state machine
+  useEffect(() => {
+    handTracker.setHoldDuration(gestureHoldDuration);
+  }, [gestureHoldDuration]);
+
+  // Pre-initialize MediaPipe Hand Tracker
+  useEffect(() => {
+    setIsTrackerWarming(true);
+    handTracker
+      .initialize()
+      .then(() => setIsTrackerWarming(false))
+      .catch((err) => {
+        console.warn('MediaPipe initialization warning:', err);
+        setIsTrackerWarming(false);
+      });
+
+    return () => {
+      handTracker.close();
+    };
+  }, []);
+
+  // Main Hand Tracking Inference Loop via requestAnimationFrame
+  const runTrackingLoop = useCallback(() => {
+    if (
+      cameraStatus === 'active' &&
+      isTrackingActive &&
+      videoRef.current &&
+      videoRef.current.readyState >= 2
+    ) {
+      const video = videoRef.current;
+      const result = handTracker.processVideoFrame(video, performance.now());
+
+      if (result) {
+        setActiveGestureEvent(result.gestureEvent);
+
+        // Render diagnostics wireframe if enabled in settings
+        if (showSkeletonDiagnostics && canvasRef.current) {
+          const canvas = canvasRef.current;
+          if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+            canvas.width = video.videoWidth || 1280;
+            canvas.height = video.videoHeight || 720;
+          }
+
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            diagnosticsRendererRef.current.render(
+              ctx,
+              canvas.width,
+              canvas.height,
+              result.smoothedHands,
+              result.gestureEvent,
+              isMirrored
+            );
+          }
+        } else if (canvasRef.current) {
+          // Clear canvas when diagnostics are disabled
+          const ctx = canvasRef.current.getContext('2d');
+          if (ctx) {
+            ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+          }
+        }
+      } else {
+        setActiveGestureEvent(null);
+      }
+    } else {
+      setActiveGestureEvent(null);
+    }
+
+    if (cameraStatus === 'active') {
+      rafIdRef.current = requestAnimationFrame(runTrackingLoop);
+    }
+  }, [cameraStatus, isTrackingActive, isMirrored, showSkeletonDiagnostics, setActiveGestureEvent]);
+
+  // Start / Stop tracking RAF loop
+  useEffect(() => {
+    if (cameraStatus === 'active') {
+      rafIdRef.current = requestAnimationFrame(runTrackingLoop);
+    } else {
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+      setActiveGestureEvent(null);
+      if (canvasRef.current) {
+        const ctx = canvasRef.current.getContext('2d');
+        if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      }
+    }
+
+    return () => {
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+    };
+  }, [cameraStatus, runTrackingLoop, setActiveGestureEvent]);
 
   const handleToggleCamera = () => {
     if (cameraStatus === 'active') {
@@ -160,6 +272,26 @@ export const CameraPreviewViewport: React.FC = () => {
               ? 'Hardware Notice'
               : 'Standby Mode'}
           </div>
+
+          {/* Hand Tracking Engine Status Badge */}
+          {cameraStatus === 'active' && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '2px 8px',
+                borderRadius: 'var(--hw-radius-full)',
+                backgroundColor: isTrackingActive ? 'rgba(214, 189, 145, 0.12)' : 'var(--hw-surface-elevated)',
+                border: `1px solid ${isTrackingActive ? 'rgba(214, 189, 145, 0.35)' : 'var(--hw-border-subtle)'}`,
+                fontSize: '10px',
+                color: isTrackingActive ? 'var(--hw-accent-champagne)' : 'var(--hw-text-muted)',
+              }}
+            >
+              <Hand size={11} strokeWidth={2} />
+              {isTrackerWarming ? 'Loading Model...' : isTrackingActive ? 'MediaPipe Tracking On' : 'Tracking Off'}
+            </div>
+          )}
         </div>
 
         {/* Real Device Dropdown */}
@@ -240,6 +372,21 @@ export const CameraPreviewViewport: React.FC = () => {
             display: cameraStatus === 'active' ? 'block' : 'none',
             transform: isMirrored ? 'scaleX(-1)' : 'none',
             transition: 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+          }}
+        />
+
+        {/* Diagnostics Canvas Overlay */}
+        <canvas
+          ref={canvasRef}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            pointerEvents: 'none',
+            zIndex: 15,
+            display: cameraStatus === 'active' && showSkeletonDiagnostics ? 'block' : 'none',
           }}
         />
 
@@ -395,6 +542,96 @@ export const CameraPreviewViewport: React.FC = () => {
           </select>
         </div>
 
+        {/* Active Gesture Detection Floating Feedback Pill */}
+        {cameraStatus === 'active' && activeGestureEvent && activeGestureEvent.gesture !== 'none' && (
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '8px 16px',
+              borderRadius: 'var(--hw-radius-full)',
+              backgroundColor: 'rgba(29, 25, 24, 0.92)',
+              border: `1px solid ${
+                activeGestureEvent.isTriggered
+                  ? 'var(--hw-accent-champagne)'
+                  : activeGestureEvent.holdProgress > 0
+                  ? 'var(--hw-accent-rose)'
+                  : 'var(--hw-border-subtle)'
+              }`,
+              boxShadow: activeGestureEvent.isTriggered
+                ? '0 0 20px rgba(214, 189, 145, 0.4)'
+                : '0 4px 16px rgba(0, 0, 0, 0.6)',
+              zIndex: 30,
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <div
+              style={{
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                backgroundColor: activeGestureEvent.isTriggered
+                  ? 'var(--hw-accent-champagne)'
+                  : 'var(--hw-accent-burgundy)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: activeGestureEvent.isTriggered ? '#141211' : 'var(--hw-accent-rose)',
+              }}
+            >
+              {activeGestureEvent.isTriggered ? (
+                <Sparkles size={12} strokeWidth={2.5} />
+              ) : (
+                <Hand size={12} strokeWidth={2} />
+              )}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span
+                style={{
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: activeGestureEvent.isTriggered ? 'var(--hw-accent-champagne)' : 'var(--hw-text-primary)',
+                  letterSpacing: '0.02em',
+                }}
+              >
+                {activeGestureEvent.label}
+              </span>
+              <span style={{ fontSize: '10px', color: 'var(--hw-text-muted)' }}>
+                {activeGestureEvent.isTriggered
+                  ? 'Gesture Activated!'
+                  : `Hold progress: ${Math.round(activeGestureEvent.holdProgress * 100)}%`}
+              </span>
+            </div>
+
+            {/* Progress Mini Bar */}
+            <div
+              style={{
+                width: '40px',
+                height: '4px',
+                borderRadius: '2px',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                overflow: 'hidden',
+                marginLeft: '4px',
+              }}
+            >
+              <div
+                style={{
+                  width: `${activeGestureEvent.holdProgress * 100}%`,
+                  height: '100%',
+                  backgroundColor: activeGestureEvent.isTriggered
+                    ? 'var(--hw-accent-champagne)'
+                    : 'var(--hw-accent-rose)',
+                  transition: 'width 0.05s linear',
+                }}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Center Overlay: Standby State */}
         {cameraStatus === 'standby' && (
           <div
@@ -445,7 +682,7 @@ export const CameraPreviewViewport: React.FC = () => {
               }}
             >
               {availableDevices.length > 0
-                ? `Selected: ${selectedDevice?.label || 'Default Camera'}. Click below to start live hardware capture.`
+                ? `Selected: ${selectedDevice?.label || 'Default Camera'}. MediaPipe Hand Tracking is pre-warmed and ready.`
                 : 'No webcams detected yet. Connect a camera or check Windows device permissions.'}
             </p>
 
@@ -605,7 +842,7 @@ export const CameraPreviewViewport: React.FC = () => {
           border: '1px solid var(--hw-border-subtle)',
         }}
       >
-        {/* Left: Mirror Video Toggle */}
+        {/* Left: Mirror Video & Tracking Toggle */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
             onClick={toggleMirror}
@@ -625,6 +862,26 @@ export const CameraPreviewViewport: React.FC = () => {
           >
             <FlipHorizontal size={13} strokeWidth={1.8} />
             Mirror Feed
+          </button>
+
+          <button
+            onClick={toggleTracking}
+            title="Enable or disable MediaPipe hand tracking"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: 'var(--hw-radius-sm)',
+              backgroundColor: isTrackingActive ? 'var(--hw-surface-elevated)' : 'transparent',
+              border: `1px solid ${isTrackingActive ? 'var(--hw-accent-champagne)' : 'var(--hw-border-subtle)'}`,
+              color: isTrackingActive ? 'var(--hw-accent-champagne)' : 'var(--hw-text-muted)',
+              fontSize: '11px',
+              transition: 'all var(--hw-transition-fast)',
+            }}
+          >
+            <Hand size={13} strokeWidth={1.8} />
+            Tracking: {isTrackingActive ? 'On' : 'Off'}
           </button>
         </div>
 
