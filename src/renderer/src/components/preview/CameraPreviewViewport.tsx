@@ -46,6 +46,7 @@ export const CameraPreviewViewport: React.FC = () => {
     activeGestureEvent,
     setActiveGestureEvent,
     showSkeletonDiagnostics,
+    setShowSkeletonDiagnostics,
     gestureHoldDuration,
   } = useAppStore();
 
@@ -882,6 +883,26 @@ export const CameraPreviewViewport: React.FC = () => {
           >
             <Hand size={13} strokeWidth={1.8} />
             Tracking: {isTrackingActive ? 'On' : 'Off'}
+          </button>
+
+          <button
+            onClick={() => setShowSkeletonDiagnostics(!showSkeletonDiagnostics)}
+            title="Toggle landmark wireframe skeleton overlay"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: 'var(--hw-radius-sm)',
+              backgroundColor: showSkeletonDiagnostics ? 'var(--hw-surface-elevated)' : 'transparent',
+              border: `1px solid ${showSkeletonDiagnostics ? 'var(--hw-accent-rose)' : 'var(--hw-border-subtle)'}`,
+              color: showSkeletonDiagnostics ? 'var(--hw-accent-rose)' : 'var(--hw-text-muted)',
+              fontSize: '11px',
+              transition: 'all var(--hw-transition-fast)',
+            }}
+          >
+            <Sparkles size={13} strokeWidth={1.8} />
+            Skeleton: {showSkeletonDiagnostics ? 'On' : 'Off'}
           </button>
         </div>
 

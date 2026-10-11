@@ -35,6 +35,19 @@ function createWindow(): void {
     mainWindow?.webContents.send('window:maximized-change', false);
   });
 
+  // Forward console messages to terminal for instant debugging
+  mainWindow.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+    console.log(`[Renderer Level ${level}] ${message} (${sourceId}:${line})`);
+  });
+
+  // Enable F12 toggle for DevTools
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'F12' && input.type === 'keyDown') {
+      mainWindow?.webContents.toggleDevTools();
+      event.preventDefault();
+    }
+  });
+
   // In development without built files, load dev server; otherwise load built dist/index.html
   const distHtmlPath = path.join(__dirname, '../dist/index.html');
   const isDev = process.env.NODE_ENV === 'development' || (!app.isPackaged && !fs.existsSync(distHtmlPath));
