@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, Sparkles, Heart, Flower2, Flame, SunMedium, CloudRain } from 'lucide-react';
+import { Star, Sparkles, Heart, Flower2, Flame, CloudRain } from 'lucide-react';
 import { EffectItem } from '../../types/effect';
 
 interface EffectCardProps {
@@ -18,14 +18,14 @@ export const EffectCard: React.FC<EffectCardProps> = ({
   // Render bespoke vector thumbnails for each romantic effect
   const renderThumbnail = () => {
     switch (effect.proceduralType) {
-      case 'heart_draw':
+      case 'golden_finger_heart':
         return (
           <div
             style={{
               width: '100%',
               height: '76px',
               borderRadius: 'var(--hw-radius-sm)',
-              background: 'radial-gradient(circle at center, rgba(184, 92, 112, 0.25) 0%, rgba(38, 32, 31, 0.8) 100%)',
+              background: 'radial-gradient(circle at center, rgba(214, 189, 145, 0.3) 0%, rgba(38, 32, 31, 0.8) 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -33,11 +33,35 @@ export const EffectCard: React.FC<EffectCardProps> = ({
               overflow: 'hidden',
             }}
           >
-            <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="var(--hw-accent-rose)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="var(--hw-accent-champagne)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
             </svg>
             <span style={{ position: 'absolute', bottom: '6px', right: '8px', fontSize: '9px', color: 'var(--hw-accent-champagne)' }}>
-              ✦ Pulse
+              ✦ Gold Finger
+            </span>
+          </div>
+        );
+
+      case 'big_heart':
+        return (
+          <div
+            style={{
+              width: '100%',
+              height: '76px',
+              borderRadius: 'var(--hw-radius-sm)',
+              background: 'radial-gradient(circle at center, rgba(184, 92, 112, 0.35) 0%, rgba(38, 32, 31, 0.8) 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--hw-accent-rose)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+            </svg>
+            <span style={{ position: 'absolute', bottom: '6px', right: '8px', fontSize: '9px', color: 'var(--hw-accent-rose)' }}>
+              ✦ Twin Hands
             </span>
           </div>
         );
@@ -102,24 +126,6 @@ export const EffectCard: React.FC<EffectCardProps> = ({
           </div>
         );
 
-      case 'love_aura':
-        return (
-          <div
-            style={{
-              width: '100%',
-              height: '76px',
-              borderRadius: 'var(--hw-radius-sm)',
-              background: 'radial-gradient(circle at center, rgba(184, 92, 112, 0.3) 0%, rgba(38, 32, 31, 0.8) 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            <SunMedium size={36} color="var(--hw-accent-rose)" strokeWidth={1.8} />
-          </div>
-        );
 
       case 'petal_rain':
         return (

@@ -1,11 +1,11 @@
 export type EffectCategory = 'all' | 'romantic' | 'couples' | 'streamer' | 'favorites';
 
 export type GestureType =
-  | 'heart_hands'
+  | 'korean_finger_heart'
+  | 'two_hand_heart'
   | 'open_palm_up'
   | 'open_palm'
   | 'index_point'
-  | 'two_hands_aura'
   | 'petal_rain_pose';
 
 export interface EffectItem {
@@ -18,7 +18,7 @@ export interface EffectItem {
   accentColor: string;
   defaultIntensity: number;
   isFavorite: boolean;
-  proceduralType: 'heart_draw' | 'rose_bloom' | 'floating_hearts' | 'cupid_spark' | 'love_aura' | 'petal_rain';
+  proceduralType: 'golden_finger_heart' | 'big_heart' | 'rose_bloom' | 'floating_hearts' | 'cupid_spark' | 'petal_rain';
   previewIcon: string;
   phaseAvailability: string;
 }

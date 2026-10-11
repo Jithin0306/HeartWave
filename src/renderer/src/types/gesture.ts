@@ -6,11 +6,11 @@ export interface Point3D {
 
 export type SemanticGesture =
   | 'none'
-  | 'heart_hands'
+  | 'korean_finger_heart'
+  | 'two_hand_heart'
   | 'open_palm_up'
   | 'open_palm'
   | 'index_point'
-  | 'two_hands_aura'
   | 'petal_rain_pose';
 
 export interface TrackedHand {
@@ -40,10 +40,10 @@ export interface GestureEvent {
 
 export const GESTURE_LABELS: Record<SemanticGesture, string> = {
   none: 'No Gesture',
-  heart_hands: 'Heart Hand Pose',
+  korean_finger_heart: 'Korean Finger Heart',
+  two_hand_heart: 'Two-Hand Heart',
   open_palm_up: 'Upward Palm',
   open_palm: 'Open Palm Float',
   index_point: 'Index Point / Pinch',
-  two_hands_aura: 'Love Aura Pose',
   petal_rain_pose: 'Petal Rain Pose',
 };

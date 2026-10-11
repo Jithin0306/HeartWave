@@ -1,26 +1,25 @@
 import { VisualEffect, EffectAnchor, Particle } from '../types';
-import { drawBloomingRose, drawPetal } from '../proceduralShapes';
+import { drawBotanical3DRose, drawPetal } from '../proceduralShapes';
 
-interface ActiveRose {
-  x: number;
+interface Active3DRose {
+  x: number; // Normalized 0..1 in video space (palm anchor)
   y: number;
-  size: number;
+  stemHeight: number; // in pixels
   bloomProgress: number; // 0.0 -> 1.0
+  swayTime: number;
   alpha: number;
-  life: number;
-  maxLife: number;
 }
 
 export class RoseBloomEffect implements VisualEffect {
   id = 'rose-bloom';
   name = 'Rose Bloom';
 
-  private roses: ActiveRose[] = [];
+  private rose: Active3DRose | null = null;
   private petals: Particle[] = [];
   private width: number = 1280;
   private height: number = 720;
-  private petalSpawnTimer: number = 0;
-  private lastAnchor: EffectAnchor = { x: 0.5, y: 0.5 };
+  private petalTimer: number = 0;
+  private targetAnchor: EffectAnchor = { x: 0.5, y: 0.6 };
   private isHolding: boolean = false;
 
   init(width: number, height: number): void {
@@ -30,79 +29,81 @@ export class RoseBloomEffect implements VisualEffect {
   }
 
   onGestureTrigger(anchor: EffectAnchor, _confidence: number): void {
-    this.lastAnchor = anchor;
+    this.targetAnchor = anchor;
     this.isHolding = true;
 
-    // Spawn a new blooming rose hovering just above the palm
-    this.roses.push({
-      x: anchor.x,
-      y: anchor.y,
-      size: 55,
-      bloomProgress: 0,
-      alpha: 1.0,
-      life: 0,
-      maxLife: 3.5,
-    });
-
-    // Spawn initial shedding petals
-    for (let i = 0; i < 6; i++) {
-      this.petals.push({
-        x: anchor.x * this.width + (Math.random() - 0.5) * 30,
-        y: anchor.y * this.height + (Math.random() - 0.5) * 20,
-        vx: (Math.random() - 0.5) * 40,
-        vy: 30 + Math.random() * 40,
-        size: 10 + Math.random() * 8,
-        alpha: 0.95,
-        maxLife: 2.5 + Math.random() * 1.5,
-        life: 0,
-        rotation: Math.random() * Math.PI * 2,
-        vRot: (Math.random() - 0.5) * 2.0,
-        color: i % 2 === 0 ? '#B85C70' : '#672F40',
-      });
+    if (!this.rose) {
+      // Create single persistent 3D rose rooted at the palm
+      this.rose = {
+        x: anchor.x,
+        y: anchor.y,
+        stemHeight: 120,
+        bloomProgress: 0.05,
+        swayTime: 0,
+        alpha: 1.0,
+      };
     }
   }
 
   update(dt: number, intensity: number, anchor?: EffectAnchor): void {
-    if (anchor) this.lastAnchor = anchor;
+    if (anchor && this.isHolding) {
+      this.targetAnchor = anchor;
+    }
 
-    const intensityMult = intensity / 100;
+    if (!this.rose && this.petals.length === 0) return;
 
-    // Continuous shedding while holding palm
-    if (this.isHolding) {
-      this.petalSpawnTimer += dt;
-      if (this.petalSpawnTimer >= Math.max(0.1, 0.25 / intensityMult)) {
-        this.petalSpawnTimer = 0;
-        this.petals.push({
-          x: this.lastAnchor.x * this.width + (Math.random() - 0.5) * 40,
-          y: this.lastAnchor.y * this.height + (Math.random() - 0.5) * 15,
-          vx: (Math.random() - 0.5) * 30,
-          vy: 25 + Math.random() * 45,
-          size: 9 + Math.random() * 8,
-          alpha: 0.9,
-          maxLife: 2.8,
-          life: 0,
-          rotation: Math.random() * Math.PI * 2,
-          vRot: (Math.random() - 0.5) * 1.8,
-          color: Math.random() > 0.4 ? '#B85C70' : '#D79AA6',
-        });
+    const intensityMult = 0.8 + (intensity / 100) * 0.4;
+
+    if (this.rose) {
+      if (this.isHolding) {
+        // 1. Smoothly follow palm position
+        const followSpeed = 12;
+        this.rose.x += (this.targetAnchor.x - this.rose.x) * Math.min(1.0, followSpeed * dt);
+        this.rose.y += (this.targetAnchor.y - this.rose.y) * Math.min(1.0, followSpeed * dt);
+
+        // 2. Bloom & growth progression
+        if (this.rose.bloomProgress < 1.0) {
+          this.rose.bloomProgress = Math.min(1.0, this.rose.bloomProgress + dt * 1.4);
+        }
+
+        // 3. Organic sway
+        this.rose.swayTime += dt * 2.2;
+        this.rose.alpha = 1.0;
+
+        // 4. Occasional single petal shedding (zero spam, restrained & elegant)
+        if (this.rose.bloomProgress > 0.6) {
+          this.petalTimer += dt;
+          if (this.petalTimer >= 0.85 / intensityMult) {
+            this.petalTimer = 0;
+            const topY = this.rose.y * this.height - this.rose.stemHeight;
+            this.petals.push({
+              x: this.rose.x * this.width + (Math.random() - 0.5) * 20,
+              y: topY + 10,
+              vx: (Math.random() - 0.5) * 25,
+              vy: 35 + Math.random() * 35,
+              size: 10 + Math.random() * 6,
+              alpha: 0.9,
+              maxLife: 2.6,
+              life: 0,
+              rotation: Math.random() * Math.PI * 2,
+              vRot: (Math.random() - 0.5) * 1.5,
+              color: Math.random() > 0.4 ? '#B85C70' : '#672F40',
+            });
+          }
+        }
+      } else {
+        // Smoothly fade rose when palm is withdrawn
+        this.rose.alpha -= dt * 3.0;
+        if (this.rose.alpha <= 0.02) {
+          this.rose = null;
+        }
       }
     }
 
-    // Update roses
-    this.roses = this.roses.filter((rose) => {
-      rose.life += dt;
-      if (rose.bloomProgress < 1.0) {
-        rose.bloomProgress = Math.min(1.0, rose.bloomProgress + dt * 1.2);
-      }
-      rose.alpha = Math.max(0, 1 - rose.life / rose.maxLife);
-      return rose.life < rose.maxLife;
-    });
-
-    // Update drifting petals
+    // Update shedding petals
     this.petals = this.petals.filter((p) => {
       p.life += dt;
-      // Fluttering sine wave horizontal sway
-      p.x += p.vx * dt + Math.sin(p.life * 4) * 0.8;
+      p.x += p.vx * dt + Math.sin(p.life * 3) * 0.7;
       p.y += p.vy * dt;
       p.rotation += p.vRot * dt;
       p.alpha = Math.max(0, 1 - p.life / p.maxLife);
@@ -114,7 +115,7 @@ export class RoseBloomEffect implements VisualEffect {
     this.width = width;
     this.height = height;
 
-    if (this.roses.length === 0 && this.petals.length === 0) return;
+    if (!this.rose && this.petals.length === 0) return;
 
     ctx.save();
 
@@ -123,19 +124,22 @@ export class RoseBloomEffect implements VisualEffect {
       ctx.scale(-1, 1);
     }
 
-    // 1. Render Blooming Roses
-    this.roses.forEach((rose) => {
-      const rx = rose.x * width;
-      const ry = rose.y * height;
+    // 1. Render 3D Botanical Rose with Stem and Leaves
+    if (this.rose) {
+      const rx = this.rose.x * width;
+      const ry = this.rose.y * height;
+      const swayOffset = Math.sin(this.rose.swayTime) * 0.08;
 
-      ctx.save();
-      ctx.shadowColor = 'rgba(103, 47, 64, 0.5)';
-      ctx.shadowBlur = 20;
-
-      drawBloomingRose(ctx, rx, ry, rose.size, rose.bloomProgress, rose.alpha);
-
-      ctx.restore();
-    });
+      drawBotanical3DRose(
+        ctx,
+        rx,
+        ry,
+        this.rose.stemHeight,
+        this.rose.bloomProgress,
+        swayOffset,
+        this.rose.alpha
+      );
+    }
 
     // 2. Render Falling Petals
     this.petals.forEach((p) => {
@@ -150,14 +154,14 @@ export class RoseBloomEffect implements VisualEffect {
   }
 
   hasActiveParticles(): boolean {
-    return this.roses.length > 0 || this.petals.length > 0;
+    return this.rose !== null || this.petals.length > 0;
   }
 
   reset(): void {
-    this.roses = [];
+    this.rose = null;
     this.petals = [];
     this.isHolding = false;
-    this.petalSpawnTimer = 0;
+    this.petalTimer = 0;
   }
 
   destroy(): void {

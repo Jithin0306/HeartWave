@@ -1,32 +1,32 @@
 import { VisualEffect, EffectAnchor } from './types';
 import { SemanticGesture, GestureEvent } from '../types/gesture';
-import { HeartDrawEffect } from './romantic/heartDraw';
+import { GoldenFingerHeartEffect } from './romantic/goldenFingerHeart';
+import { TwinHandsHeartEffect } from './romantic/twinHandsHeart';
 import { RoseBloomEffect } from './romantic/roseBloom';
 import { FloatingHeartsEffect } from './romantic/floatingHearts';
 import { CupidSparkEffect } from './romantic/cupidSpark';
-import { LoveAuraEffect } from './romantic/loveAura';
 import { PetalRainEffect } from './romantic/petalRain';
 
 export class EffectManager {
   private effects: Map<string, VisualEffect> = new Map();
   private gestureToEffectMap: Map<SemanticGesture, string> = new Map([
-    ['heart_hands', 'heart-draw'],
+    ['korean_finger_heart', 'golden-finger-heart'],
+    ['two_hand_heart', 'big-heart'],
     ['open_palm_up', 'rose-bloom'],
     ['open_palm', 'floating-hearts'],
     ['index_point', 'cupid-spark'],
-    ['two_hands_aura', 'love-aura'],
     ['petal_rain_pose', 'petal-rain'],
   ]);
 
-  private activeEffectId: string = 'heart-draw';
+  private activeEffectId: string = 'golden-finger-heart';
   private lastTime: number = performance.now();
 
   constructor() {
-    this.registerEffect(new HeartDrawEffect());
+    this.registerEffect(new GoldenFingerHeartEffect());
+    this.registerEffect(new TwinHandsHeartEffect());
     this.registerEffect(new RoseBloomEffect());
     this.registerEffect(new FloatingHeartsEffect());
     this.registerEffect(new CupidSparkEffect());
-    this.registerEffect(new LoveAuraEffect());
     this.registerEffect(new PetalRainEffect());
   }
 
@@ -62,14 +62,12 @@ export class EffectManager {
     if (targetEffect) {
       const anchor: EffectAnchor = { x: event.anchor.x, y: event.anchor.y };
 
-      // If holding or triggered, activate effect
+      // Set holding true while gesture is detected
       if ('setHolding' in targetEffect) {
         (targetEffect as any).setHolding(true);
       }
 
-      if (event.isTriggered || event.holdProgress > 0.4) {
-        targetEffect.onGestureTrigger(anchor, event.confidence);
-      }
+      targetEffect.onGestureTrigger(anchor, event.confidence);
     }
   }
 
@@ -110,13 +108,11 @@ export class EffectManager {
     });
   }
 
+  /**
+   * Reset all effects.
+   */
   resetAll(): void {
-    this.effects.forEach((e) => e.reset());
-  }
-
-  destroy(): void {
-    this.effects.forEach((e) => e.destroy());
-    this.effects.clear();
+    this.effects.forEach((effect) => effect.reset());
   }
 }
 

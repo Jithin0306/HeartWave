@@ -64,7 +64,7 @@ export class GestureClassifier {
         const confidence = Math.max(0.7, 1 - (indexTipsDist + thumbTipsDist) * 1.8);
 
         return {
-          gesture: 'heart_hands',
+          gesture: 'two_hand_heart',
           confidence,
           anchor: { x: anchorX, y: anchorY },
           handsCount: 2,
@@ -72,8 +72,8 @@ export class GestureClassifier {
         };
       }
 
-      // Two-Hands Love Aura Pose:
-      // Both hands open, facing each other in central region
+      // Petal Rain Pose:
+      // Both hands in upper frame (y < 0.65) with open palms
       const h1Extended =
         this.isFingerExtended(h1.landmarks, 8, 6, 5) &&
         this.isFingerExtended(h1.landmarks, 12, 10, 9) &&
@@ -83,22 +83,6 @@ export class GestureClassifier {
         this.isFingerExtended(h2.landmarks, 12, 10, 9) &&
         this.isFingerExtended(h2.landmarks, 16, 14, 13);
 
-      const wristsDist = dist2D(h1.landmarks[0], h2.landmarks[0]);
-      if (h1Extended && h2Extended && wristsDist > 0.18 && wristsDist < 0.6) {
-        const anchorX = (h1.landmarks[0].x + h2.landmarks[0].x) / 2;
-        const anchorY = (h1.landmarks[0].y + h2.landmarks[0].y) / 2;
-
-        return {
-          gesture: 'two_hands_aura',
-          confidence: 0.85,
-          anchor: { x: anchorX, y: anchorY },
-          handsCount: 2,
-          rawHands: hands,
-        };
-      }
-
-      // Petal Rain Pose:
-      // Both hands in upper frame (y < 0.65) with open palms
       if (h1Extended && h2Extended && h1.landmarks[0].y < 0.65 && h2.landmarks[0].y < 0.65) {
         return {
           gesture: 'petal_rain_pose',
@@ -134,7 +118,7 @@ export class GestureClassifier {
 
       if (isFingerHeartCrossing && middleCurled && ringCurled && pinkyCurled) {
         return {
-          gesture: 'heart_hands',
+          gesture: 'korean_finger_heart',
           confidence: 0.9,
           anchor: {
             x: (lm[4].x + lm[8].x) / 2,
