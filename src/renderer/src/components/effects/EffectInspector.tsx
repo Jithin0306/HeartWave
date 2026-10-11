@@ -1,6 +1,7 @@
 import React from 'react';
-import { Sliders, Hand, ShieldCheck } from 'lucide-react';
+import { Sliders, Hand, ShieldCheck, Sparkles } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
+import { effectManager } from '../../effects/effectManager';
 
 export const EffectInspector: React.FC = () => {
   const {
@@ -99,7 +100,31 @@ export const EffectInspector: React.FC = () => {
         />
       </div>
 
-      {/* Gesture Engine Note */}
+      {/* Manual Trigger / Preview Button */}
+      <button
+        onClick={() => effectManager.manualTrigger(activeEffect.id)}
+        style={{
+          padding: '8px 14px',
+          borderRadius: 'var(--hw-radius-sm)',
+          backgroundColor: 'var(--hw-accent-primary)',
+          color: '#FFFFFF',
+          fontSize: '11px',
+          fontWeight: 600,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '6px',
+          boxShadow: 'var(--hw-shadow-accent)',
+          transition: 'all var(--hw-transition-fast)',
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--hw-accent-primary-hover)')}
+        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--hw-accent-primary)')}
+      >
+        <Sparkles size={13} strokeWidth={2} />
+        Preview Animation Now
+      </button>
+
+      {/* Engine Status Note */}
       <div
         style={{
           display: 'flex',
@@ -113,8 +138,8 @@ export const EffectInspector: React.FC = () => {
           color: 'var(--hw-text-muted)',
         }}
       >
-        <ShieldCheck size={13} color="var(--hw-accent-rose)" />
-        <span>MediaPipe Hand Tracking will feed coordinates here in Phase 3.</span>
+        <ShieldCheck size={13} color="var(--hw-status-active)" />
+        <span>Phase 4 Engine Active. Trigger hands-free via gesture or test above.</span>
       </div>
     </div>
   );

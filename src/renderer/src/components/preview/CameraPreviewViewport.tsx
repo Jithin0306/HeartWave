@@ -14,10 +14,12 @@ import { useAppStore, RESOLUTION_PRESETS } from '../../store/appStore';
 import { cameraManager } from '../../services/cameraManager';
 import { handTracker } from '../../tracking/handTracker';
 import { DiagnosticsRenderer } from '../../tracking/diagnosticsRenderer';
+import { effectManager } from '../../effects/effectManager';
 
 export const CameraPreviewViewport: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const effectsCanvasRef = useRef<HTMLCanvasElement>(null);
   const diagnosticsRendererRef = useRef<DiagnosticsRenderer>(new DiagnosticsRenderer());
   const rafIdRef = useRef<number | null>(null);
 
@@ -48,6 +50,8 @@ export const CameraPreviewViewport: React.FC = () => {
     showSkeletonDiagnostics,
     setShowSkeletonDiagnostics,
     gestureHoldDuration,
+    selectedEffectId,
+    activeIntensity,
   } = useAppStore();
 
   // Initialize hardware enumeration and device change listeners
@@ -103,19 +107,29 @@ export const CameraPreviewViewport: React.FC = () => {
     };
   }, []);
 
-  // Main Hand Tracking Inference Loop via requestAnimationFrame
+  // Sync active effect with selectedEffectId
+  useEffect(() => {
+    effectManager.setActiveEffect(selectedEffectId);
+  }, [selectedEffectId]);
+
+  // Main Hand Tracking and Romantic Effect Render Loop via requestAnimationFrame
   const runTrackingLoop = useCallback(() => {
     if (
       cameraStatus === 'active' &&
-      isTrackingActive &&
       videoRef.current &&
       videoRef.current.readyState >= 2
     ) {
       const video = videoRef.current;
-      const result = handTracker.processVideoFrame(video, performance.now());
+      const now = performance.now();
 
-      if (result) {
-        setActiveGestureEvent(result.gestureEvent);
+      let gestureResult = null;
+      if (isTrackingActive) {
+        gestureResult = handTracker.processVideoFrame(video, now);
+      }
+
+      if (gestureResult) {
+        setActiveGestureEvent(gestureResult.gestureEvent);
+        effectManager.handleGestureEvent(gestureResult.gestureEvent);
 
         // Render diagnostics wireframe if enabled in settings
         if (showSkeletonDiagnostics && canvasRef.current) {
@@ -131,20 +145,37 @@ export const CameraPreviewViewport: React.FC = () => {
               ctx,
               canvas.width,
               canvas.height,
-              result.smoothedHands,
-              result.gestureEvent,
+              gestureResult.smoothedHands,
+              gestureResult.gestureEvent,
               isMirrored
             );
           }
         } else if (canvasRef.current) {
-          // Clear canvas when diagnostics are disabled
           const ctx = canvasRef.current.getContext('2d');
-          if (ctx) {
-            ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-          }
+          if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
         }
       } else {
         setActiveGestureEvent(null);
+        effectManager.handleGestureEvent(null);
+        if (canvasRef.current) {
+          const ctx = canvasRef.current.getContext('2d');
+          if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        }
+      }
+
+      // Update and render active Romantic Effects on effects canvas
+      if (effectsCanvasRef.current) {
+        const effectsCanvas = effectsCanvasRef.current;
+        if (effectsCanvas.width !== video.videoWidth || effectsCanvas.height !== video.videoHeight) {
+          effectsCanvas.width = video.videoWidth || 1280;
+          effectsCanvas.height = video.videoHeight || 720;
+        }
+
+        const eCtx = effectsCanvas.getContext('2d');
+        if (eCtx) {
+          effectManager.update(activeIntensity, gestureResult?.gestureEvent?.anchor, now);
+          effectManager.render(eCtx, effectsCanvas.width, effectsCanvas.height, isMirrored);
+        }
       }
     } else {
       setActiveGestureEvent(null);
@@ -153,7 +184,14 @@ export const CameraPreviewViewport: React.FC = () => {
     if (cameraStatus === 'active') {
       rafIdRef.current = requestAnimationFrame(runTrackingLoop);
     }
-  }, [cameraStatus, isTrackingActive, isMirrored, showSkeletonDiagnostics, setActiveGestureEvent]);
+  }, [
+    cameraStatus,
+    isTrackingActive,
+    isMirrored,
+    showSkeletonDiagnostics,
+    activeIntensity,
+    setActiveGestureEvent,
+  ]);
 
   // Start / Stop tracking RAF loop
   useEffect(() => {
@@ -165,9 +203,14 @@ export const CameraPreviewViewport: React.FC = () => {
         rafIdRef.current = null;
       }
       setActiveGestureEvent(null);
+      effectManager.resetAll();
       if (canvasRef.current) {
         const ctx = canvasRef.current.getContext('2d');
         if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      }
+      if (effectsCanvasRef.current) {
+        const eCtx = effectsCanvasRef.current.getContext('2d');
+        if (eCtx) eCtx.clearRect(0, 0, effectsCanvasRef.current.width, effectsCanvasRef.current.height);
       }
     }
 
@@ -373,6 +416,21 @@ export const CameraPreviewViewport: React.FC = () => {
             display: cameraStatus === 'active' ? 'block' : 'none',
             transform: isMirrored ? 'scaleX(-1)' : 'none',
             transition: 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+          }}
+        />
+
+        {/* Real-time Romantic Effects Canvas Overlay */}
+        <canvas
+          ref={effectsCanvasRef}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            pointerEvents: 'none',
+            zIndex: 12,
+            display: cameraStatus === 'active' ? 'block' : 'none',
           }}
         />
 

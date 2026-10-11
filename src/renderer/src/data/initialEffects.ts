@@ -13,7 +13,7 @@ export const INITIAL_EFFECTS: EffectItem[] = [
     isFavorite: true,
     proceduralType: 'heart_draw',
     previewIcon: 'Heart',
-    phaseAvailability: 'Phase 4',
+    phaseAvailability: 'Active',
   },
   {
     id: 'rose-bloom',
@@ -27,7 +27,7 @@ export const INITIAL_EFFECTS: EffectItem[] = [
     isFavorite: true,
     proceduralType: 'rose_bloom',
     previewIcon: 'Flower2',
-    phaseAvailability: 'Phase 4',
+    phaseAvailability: 'Active',
   },
   {
     id: 'floating-hearts',
@@ -41,7 +41,7 @@ export const INITIAL_EFFECTS: EffectItem[] = [
     isFavorite: false,
     proceduralType: 'floating_hearts',
     previewIcon: 'Sparkles',
-    phaseAvailability: 'Phase 4',
+    phaseAvailability: 'Active',
   },
   {
     id: 'cupid-spark',
@@ -55,7 +55,7 @@ export const INITIAL_EFFECTS: EffectItem[] = [
     isFavorite: false,
     proceduralType: 'cupid_spark',
     previewIcon: 'Flame',
-    phaseAvailability: 'Phase 4',
+    phaseAvailability: 'Active',
   },
   {
     id: 'love-aura',
@@ -69,7 +69,7 @@ export const INITIAL_EFFECTS: EffectItem[] = [
     isFavorite: true,
     proceduralType: 'love_aura',
     previewIcon: 'SunMedium',
-    phaseAvailability: 'Phase 4',
+    phaseAvailability: 'Active',
   },
   {
     id: 'petal-rain',
@@ -83,6 +83,6 @@ export const INITIAL_EFFECTS: EffectItem[] = [
     isFavorite: false,
     proceduralType: 'petal_rain',
     previewIcon: 'CloudRain',
-    phaseAvailability: 'Phase 4',
+    phaseAvailability: 'Active',
   },
 ];
