@@ -103,6 +103,17 @@ export class DiagnosticsRenderer {
         ctx.lineWidth = 2.5;
         ctx.stroke();
       }
+
+      // Discrete gesture label pill above reticle
+      ctx.font = '600 10px monospace';
+      const textWidth = ctx.measureText(gestureEvent.label).width;
+      ctx.fillStyle = 'rgba(20, 18, 17, 0.85)';
+      ctx.fillRect(ax - textWidth / 2 - 6, ay - 30, textWidth + 12, 16);
+      ctx.strokeStyle = 'rgba(214, 189, 145, 0.5)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(ax - textWidth / 2 - 6, ay - 30, textWidth + 12, 16);
+      ctx.fillStyle = '#F5EFE9';
+      ctx.fillText(gestureEvent.label, ax - textWidth / 2, ay - 18);
     }
 
     ctx.restore();
