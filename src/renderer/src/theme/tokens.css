@@ -1,0 +1,59 @@
+/* Heartwave Design Tokens */
+:root {
+  /* Surfaces & Backgrounds */
+  --hw-bg-primary: #141211;
+  --hw-bg-secondary: #1D1918;
+  --hw-surface-elevated: #26201F;
+  --hw-surface-subtle: #302725;
+  --hw-surface-active: #382D2B;
+  --hw-surface-hover: #2B2322;
+
+  /* Accents & Brand Palette */
+  --hw-accent-primary: #B85C70;
+  --hw-accent-primary-hover: #C96B80;
+  --hw-accent-burgundy: #672F40;
+  --hw-accent-rose: #D79AA6;
+  --hw-accent-rose-soft: rgba(215, 154, 166, 0.15);
+  --hw-accent-champagne: #D6BD91;
+  --hw-accent-champagne-soft: rgba(214, 189, 145, 0.12);
+
+  /* Typography Colors */
+  --hw-text-primary: #F5EFE9;
+  --hw-text-secondary: #B8AAA4;
+  --hw-text-muted: #857873;
+  --hw-text-highlight: #FFFFFF;
+
+  /* Borders & Dividers */
+  --hw-border-subtle: #3A302D;
+  --hw-border-medium: #4D403D;
+  --hw-border-focus: #B85C70;
+  --hw-border-active: #672F40;
+
+  /* Status Colors */
+  --hw-status-idle: #857873;
+  --hw-status-active: #4EAA79;
+  --hw-status-warning: #D6BD91;
+  --hw-status-error: #D05D5D;
+
+  /* Radii */
+  --hw-radius-xs: 4px;
+  --hw-radius-sm: 6px;
+  --hw-radius-md: 10px;
+  --hw-radius-lg: 14px;
+  --hw-radius-xl: 18px;
+  --hw-radius-full: 9999px;
+
+  /* Typography Stacks */
+  --hw-font-sans: 'Segoe UI Variable Display', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Inter', Roboto, sans-serif;
+  --hw-font-serif: 'Georgia', 'Playfair Display', 'Cinzel', serif;
+
+  /* Transitions */
+  --hw-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --hw-transition-smooth: 240ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Shadows */
+  --hw-shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.3);
+  --hw-shadow-md: 0 6px 18px rgba(0, 0, 0, 0.4);
+  --hw-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
+  --hw-shadow-accent: 0 4px 20px rgba(184, 92, 112, 0.22);
+}
