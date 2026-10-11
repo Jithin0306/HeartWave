@@ -24,6 +24,7 @@ export const CameraPreviewViewport: React.FC = () => {
   const effectsCanvasRef = useRef<HTMLCanvasElement>(null);
   const diagnosticsRendererRef = useRef<DiagnosticsRenderer>(new DiagnosticsRenderer());
   const rafIdRef = useRef<number | null>(null);
+  const lastMetricsTimeRef = useRef<number>(0);
 
   const [isTrackerWarming, setIsTrackerWarming] = useState(false);
 
@@ -191,7 +192,10 @@ export const CameraPreviewViewport: React.FC = () => {
           isBypassActive,
           isPrivacyShutterActive
         );
-        setCompositorMetrics(compMetrics);
+        if (now - lastMetricsTimeRef.current >= 600) {
+          lastMetricsTimeRef.current = now;
+          setCompositorMetrics(compMetrics);
+        }
       }
     } else {
       setActiveGestureEvent(null);

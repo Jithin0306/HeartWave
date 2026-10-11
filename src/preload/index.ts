@@ -14,6 +14,9 @@ export interface HeartwaveApi {
   closeWindow: () => Promise<void>;
   getAppInfo: () => Promise<AppInfo>;
   onMaximizedChange: (callback: (isMaximized: boolean) => void) => () => void;
+  startVirtualCamera: (width?: number, height?: number, fps?: number) => Promise<boolean>;
+  stopVirtualCamera: () => Promise<boolean>;
+  getVirtualCameraStatus: () => Promise<{ isRegistered: boolean; isBroadcasting: boolean }>;
 }
 
 const api: HeartwaveApi = {
@@ -31,6 +34,10 @@ const api: HeartwaveApi = {
       ipcRenderer.removeListener('window:maximized-change', listener);
     };
   },
+  startVirtualCamera: (width?: number, height?: number, fps?: number) =>
+    ipcRenderer.invoke('vcam:start', width, height, fps),
+  stopVirtualCamera: () => ipcRenderer.invoke('vcam:stop'),
+  getVirtualCameraStatus: () => ipcRenderer.invoke('vcam:status'),
 };
 
 contextBridge.exposeInMainWorld('heartwaveApi', api);

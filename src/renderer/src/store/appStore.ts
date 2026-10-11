@@ -217,10 +217,21 @@ export const useAppStore = create<AppState>((set, get) => ({
   isPrivacyShutterActive: false,
   isBypassActive: false,
   compositorMetrics: null,
-  toggleVirtualOutput: () =>
-    set((state) => ({
-      virtualOutputStatus: state.virtualOutputStatus === 'broadcasting' ? 'standby' : 'broadcasting',
-    })),
+  toggleVirtualOutput: () => {
+    const isCurrentlyBroadcasting = get().virtualOutputStatus === 'broadcasting';
+    if (isCurrentlyBroadcasting) {
+      if (typeof window !== 'undefined' && window.heartwaveApi?.stopVirtualCamera) {
+        window.heartwaveApi.stopVirtualCamera();
+      }
+      set({ virtualOutputStatus: 'standby' });
+    } else {
+      const res = get().selectedResolution;
+      if (typeof window !== 'undefined' && window.heartwaveApi?.startVirtualCamera) {
+        window.heartwaveApi.startVirtualCamera(res.width, res.height, res.fps);
+      }
+      set({ virtualOutputStatus: 'broadcasting' });
+    }
+  },
   togglePrivacyShutter: () =>
     set((state) => ({
       isPrivacyShutterActive: !state.isPrivacyShutterActive,

@@ -169,6 +169,8 @@ export const VirtualOutputBar: React.FC = () => {
             style={{
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'center',
+              minWidth: '128px',
               gap: '6px',
               padding: '5px 10px',
               borderRadius: 'var(--hw-radius-xs)',
@@ -176,12 +178,14 @@ export const VirtualOutputBar: React.FC = () => {
               border: '1px solid var(--hw-border-subtle)',
               fontSize: '10px',
               fontFamily: 'monospace',
+              fontVariantNumeric: 'tabular-nums',
               color: 'var(--hw-text-muted)',
+              whiteSpace: 'nowrap',
             }}
           >
             <Activity size={12} color="var(--hw-accent-champagne)" />
             <span>
-              {compositorMetrics.compositeFps}fps • {compositorMetrics.renderTimeMs}ms
+              {compositorMetrics.compositeFps}fps • {compositorMetrics.renderTimeMs.toFixed(1)}ms
             </span>
           </div>
         )}

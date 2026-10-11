@@ -83,12 +83,32 @@ ipcMain.handle('window:close', () => {
   mainWindow?.close();
 });
 
+import { virtualCameraDriverManager } from './virtualCamera/driverManager';
+import { virtualCameraBridgeManager } from './virtualCamera/bridgeManager';
+
 ipcMain.handle('app:getInfo', () => {
   return {
     version: app.getVersion(),
     name: 'Heartwave',
     platform: process.platform,
     arch: process.arch,
+  };
+});
+
+// Phase 6 Windows Virtual Camera IPC Handlers
+ipcMain.handle('vcam:start', (_event, width?: number, height?: number, fps?: number) => {
+  return virtualCameraBridgeManager.startBroadcasting(width || 1280, height || 720, fps || 30);
+});
+
+ipcMain.handle('vcam:stop', () => {
+  virtualCameraBridgeManager.stopBroadcasting();
+  return true;
+});
+
+ipcMain.handle('vcam:status', () => {
+  return {
+    isRegistered: virtualCameraDriverManager.isDeviceRegistered(),
+    isBroadcasting: virtualCameraBridgeManager.getStatus().isBroadcasting,
   };
 });
 
