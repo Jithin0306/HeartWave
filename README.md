@@ -13,9 +13,17 @@
   <img src="https://img.shields.io/badge/Virtual%20Camera-DirectShow%20Native-brightgreen?style=for-the-badge" alt="DirectShow Native">
 </p>
 
+<p align="center">
+  <img src="resources/screenshots/2_heartwave_hero_showcase.jpg" alt="HeartWave Hero Showcase" width="100%">
+</p>
+
 ---
 
 ## 🌟 Overview
+
+<p align="center">
+  <img src="resources/screenshots/1_heartwave_ui_dashboard.png" alt="HeartWave App Dashboard" width="100%">
+</p>
 
 **HeartWave** transforms your ordinary webcam into an interactive, gesture-responsive virtual broadcast camera. Powered by Google MediaPipe AI running 100% locally on your machine, HeartWave detects your hand gestures in real time and renders procedural 3D visual effects directly onto your video feed.
 
@@ -79,6 +87,10 @@ The output streams seamlessly as **"Heartwave Virtual Camera"** into any Windows
 ---
 
 ## 🛠️ Tech Stack & Architecture
+
+<p align="center">
+  <img src="resources/screenshots/3_heartwave_architecture_diagram.jpg" alt="HeartWave Architecture Diagram" width="100%">
+</p>
 
 ```
 [ Physical Webcam ]
