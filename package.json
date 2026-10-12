@@ -1,6 +1,6 @@
 {
   "name": "heartwave",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "HeartWave - Gesture-Powered Virtual Camera",
   "main": "dist-electron/main.js",
   "author": "HeartWave",
