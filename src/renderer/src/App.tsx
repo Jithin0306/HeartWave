@@ -1,11 +1,28 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { TitleBar } from './components/titlebar/TitleBar';
 import { NavigationSidebar } from './components/navigation/NavigationSidebar';
 import { CameraPreviewViewport } from './components/preview/CameraPreviewViewport';
 import { EffectsLibrary } from './components/effects/EffectsLibrary';
 import { SettingsModal } from './components/settings/SettingsModal';
+import { useAppStore } from './store/appStore';
 
 export const App: React.FC = () => {
+  const { togglePrivacyShutter, toggleBypass, toggleVirtualOutput, toggleMirror } = useAppStore();
+
+  useEffect(() => {
+    if (!window.heartwaveApi) return;
+
+    const unsubs = [
+      window.heartwaveApi.onHotkeyPrivacy?.(() => togglePrivacyShutter()),
+      window.heartwaveApi.onHotkeyBypass?.(() => toggleBypass()),
+      window.heartwaveApi.onHotkeyVirtualOutput?.(() => toggleVirtualOutput()),
+      window.heartwaveApi.onHotkeyMirror?.(() => toggleMirror()),
+    ].filter(Boolean) as (() => void)[];
+
+    return () => {
+      unsubs.forEach((unsub) => unsub());
+    };
+  }, [togglePrivacyShutter, toggleBypass, toggleVirtualOutput, toggleMirror]);
   return (
     <div
       style={{

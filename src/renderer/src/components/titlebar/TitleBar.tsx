@@ -1,13 +1,39 @@
 import React, { useEffect, useState } from 'react';
-import { Minus, Square, Copy, X } from 'lucide-react';
-import { useAppStore } from '../../store/appStore';
+import { Minus, Square, Copy, X, Palette, Check, ChevronDown } from 'lucide-react';
+import { useAppStore, THEMES, AppTheme } from '../../store/appStore';
+import logoIconRomantic from '../../assets/logo-icon-romantic.png';
+import logoIconStudio from '../../assets/logo-icon-studio.png';
+import logoIconCyber from '../../assets/logo-icon-cyber.png';
+import logoIconMidnight from '../../assets/logo-icon-midnight.png';
+
+import wordmarkRomantic from '../../assets/wordmark-romantic.png';
+import wordmarkStudio from '../../assets/wordmark-studio.png';
+import wordmarkCyber from '../../assets/wordmark-cyber.png';
+import wordmarkMidnight from '../../assets/wordmark-midnight.png';
+
+const THEME_ICONS: Record<AppTheme, string> = {
+  romantic: logoIconRomantic,
+  studio: logoIconStudio,
+  cyber: logoIconCyber,
+  midnight: logoIconMidnight,
+};
+
+const THEME_WORDMARKS: Record<AppTheme, string> = {
+  romantic: wordmarkRomantic,
+  studio: wordmarkStudio,
+  cyber: wordmarkCyber,
+  midnight: wordmarkMidnight,
+};
 
 export const TitleBar: React.FC = () => {
   const [isMaximized, setIsMaximized] = useState(false);
-  const { virtualCameraStatus } = useAppStore();
+  const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
+  const { virtualCameraStatus, currentTheme, setTheme } = useAppStore();
+
+  const activeThemeConfig = THEMES.find((t) => t.id === currentTheme) || THEMES[0];
 
   useEffect(() => {
-    if (window.heartwaveApi?.isWindowMaximized) {
+    if (window.heartwaveApi?.isWindowMaximized && window.heartwaveApi?.onMaximizedChange) {
       window.heartwaveApi.isWindowMaximized().then(setIsMaximized);
       const unsubscribe = window.heartwaveApi.onMaximizedChange((maximized) => {
         setIsMaximized(maximized);
@@ -15,6 +41,19 @@ export const TitleBar: React.FC = () => {
       return unsubscribe;
     }
   }, []);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest?.('[data-theme-picker]')) {
+        setIsThemePickerOpen(false);
+      }
+    };
+    if (isThemePickerOpen) {
+      window.addEventListener('click', handleOutsideClick);
+      return () => window.removeEventListener('click', handleOutsideClick);
+    }
+  }, [isThemePickerOpen]);
 
   const handleMinimize = () => {
     window.heartwaveApi?.minimizeWindow?.();
@@ -51,38 +90,62 @@ export const TitleBar: React.FC = () => {
         } as React.CSSProperties
       }
     >
-      {/* Brand & Wordmark */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        {/* Heartwave Bespoke Wave-Heart Icon */}
+      {/* Brand & Wordmark matching active theme styling */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Heartwave Bespoke 3D Heart-Lens Icon (Theme Adaptive & Transparent) */}
         <div
           style={{
-            width: '22px',
-            height: '22px',
-            borderRadius: '6px',
-            background: 'linear-gradient(135deg, var(--hw-accent-burgundy), var(--hw-accent-primary))',
+            width: '24px',
+            height: '24px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: 'var(--hw-shadow-accent)',
+            flexShrink: 0,
+            filter:
+              currentTheme === 'romantic'
+                ? 'drop-shadow(0 0 6px rgba(230, 42, 84, 0.45))'
+                : currentTheme === 'studio'
+                ? 'drop-shadow(0 0 6px rgba(229, 168, 59, 0.4))'
+                : currentTheme === 'cyber'
+                ? 'drop-shadow(0 0 6px rgba(0, 229, 255, 0.5))'
+                : 'drop-shadow(0 0 6px rgba(16, 185, 129, 0.45))',
           }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F5EFE9" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-          </svg>
+          <img
+            src={THEME_ICONS[currentTheme] || logoIconRomantic}
+            alt="Heartwave"
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+          />
         </div>
 
-        <span
+        {/* Master Stylized Wordmark: HEΛRT ♡-W ΛVE (Authentic Master Typography in every theme) */}
+        <div
           style={{
-            fontFamily: 'var(--hw-font-serif)',
-            fontSize: '13px',
-            fontWeight: 600,
-            letterSpacing: '0.08em',
-            color: 'var(--hw-text-primary)',
-            textTransform: 'uppercase',
+            height: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            userSelect: 'none',
           }}
         >
-          Heartwave
-        </span>
+          <img
+            src={THEME_WORDMARKS[currentTheme] || wordmarkRomantic}
+            alt="HEΛRTWAVE"
+            style={{
+              height: '14px',
+              width: 'auto',
+              objectFit: 'contain',
+              display: 'block',
+              filter:
+                currentTheme === 'romantic'
+                  ? 'drop-shadow(0 0 5px rgba(232, 44, 85, 0.35))'
+                  : currentTheme === 'studio'
+                  ? 'drop-shadow(0 0 5px rgba(229, 168, 59, 0.35))'
+                  : currentTheme === 'cyber'
+                  ? 'drop-shadow(0 0 5px rgba(0, 229, 255, 0.45))'
+                  : 'drop-shadow(0 0 5px rgba(16, 185, 129, 0.4))',
+            }}
+          />
+        </div>
 
         {/* Phase Badge */}
         <div
@@ -95,26 +158,184 @@ export const TitleBar: React.FC = () => {
             fontWeight: 500,
             letterSpacing: '0.04em',
             color: 'var(--hw-accent-rose)',
+            marginLeft: '4px',
           }}
         >
-          PHASE 6: WINDOWS VIRTUAL CAMERA
+          PHASE 7: PRODUCTION RELEASE
         </div>
 
-        {/* Tagline */}
+        {/* Dynamic Tagline based on active theme */}
         <span
           style={{
             fontSize: '11px',
             color: 'var(--hw-text-muted)',
+            letterSpacing: '0.04em',
+            fontFamily: 'var(--hw-font-sans)',
             fontStyle: 'italic',
-            marginLeft: '8px',
+            marginLeft: '6px',
           }}
         >
-          "Make every gesture mean something"
+          "{activeThemeConfig.tagline}"
         </span>
       </div>
 
-      {/* Right Controls: Status & Window Buttons */}
+      {/* Right Controls: Theme Quick Switcher, Status & Window Buttons */}
       <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+        {/* Quick Theme Switcher Popover */}
+        <div
+          data-theme-picker="true"
+          style={
+            {
+              position: 'relative',
+              marginRight: '10px',
+              WebkitAppRegion: 'no-drag',
+            } as React.CSSProperties
+          }
+        >
+          <button
+            onClick={() => setIsThemePickerOpen(!isThemePickerOpen)}
+            title={`Current Theme: ${activeThemeConfig.name} (${activeThemeConfig.category})`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 10px',
+              borderRadius: 'var(--hw-radius-sm)',
+              backgroundColor: isThemePickerOpen ? 'var(--hw-surface-active)' : 'var(--hw-bg-secondary)',
+              border: `1px solid ${isThemePickerOpen ? 'var(--hw-border-focus)' : 'var(--hw-border-subtle)'}`,
+              fontSize: '11px',
+              fontWeight: 500,
+              color: 'var(--hw-text-primary)',
+              transition: 'all var(--hw-transition-fast)',
+            }}
+            onMouseEnter={(e) => {
+              if (!isThemePickerOpen) e.currentTarget.style.backgroundColor = 'var(--hw-surface-hover)';
+            }}
+            onMouseLeave={(e) => {
+              if (!isThemePickerOpen) e.currentTarget.style.backgroundColor = 'var(--hw-bg-secondary)';
+            }}
+          >
+            <span
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: activeThemeConfig.previewColor,
+                boxShadow: `0 0 6px ${activeThemeConfig.previewColor}`,
+              }}
+            />
+            <Palette size={13} strokeWidth={2} style={{ color: 'var(--hw-accent-rose)' }} />
+            <span>{activeThemeConfig.name}</span>
+            <ChevronDown size={11} strokeWidth={2} style={{ color: 'var(--hw-text-muted)' }} />
+          </button>
+
+          {/* Theme Dropdown Menu */}
+          {isThemePickerOpen && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 'calc(100% + 6px)',
+                right: 0,
+                width: '270px',
+                backgroundColor: 'var(--hw-bg-secondary)',
+                borderRadius: 'var(--hw-radius-md)',
+                border: '1px solid var(--hw-border-subtle)',
+                boxShadow: 'var(--hw-shadow-lg)',
+                padding: '6px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '3px',
+                zIndex: 1000,
+              }}
+            >
+              <div
+                style={{
+                  padding: '6px 10px 4px',
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  color: 'var(--hw-text-muted)',
+                }}
+              >
+                Select Interface Theme
+              </div>
+
+              {THEMES.map((theme) => {
+                const isCurrent = theme.id === currentTheme;
+                return (
+                  <button
+                    key={theme.id}
+                    onClick={() => {
+                      setTheme(theme.id);
+                      setIsThemePickerOpen(false);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '8px 10px',
+                      borderRadius: 'var(--hw-radius-sm)',
+                      backgroundColor: isCurrent ? 'var(--hw-surface-elevated)' : 'transparent',
+                      border: `1px solid ${isCurrent ? 'var(--hw-border-focus)' : 'transparent'}`,
+                      textAlign: 'left',
+                      transition: 'all var(--hw-transition-fast)',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isCurrent) e.currentTarget.style.backgroundColor = 'var(--hw-surface-hover)';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+                      <span
+                        style={{
+                          width: '12px',
+                          height: '12px',
+                          borderRadius: '50%',
+                          backgroundColor: theme.previewColor,
+                          border: '2px solid rgba(255, 255, 255, 0.2)',
+                          boxShadow: `0 0 8px ${theme.previewColor}88`,
+                          flexShrink: 0,
+                        }}
+                      />
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--hw-text-primary)' }}>
+                            {theme.name}
+                          </span>
+                          {theme.badge && (
+                            <span
+                              style={{
+                                fontSize: '9px',
+                                padding: '1px 5px',
+                                borderRadius: 'var(--hw-radius-full)',
+                                backgroundColor: isCurrent ? 'var(--hw-accent-rose-soft)' : 'rgba(255, 255, 255, 0.06)',
+                                color: isCurrent ? 'var(--hw-accent-rose)' : 'var(--hw-text-muted)',
+                                fontWeight: 500,
+                              }}
+                            >
+                              {theme.badge}
+                            </span>
+                          )}
+                        </div>
+                        <span style={{ fontSize: '10px', color: 'var(--hw-text-muted)', marginTop: '1px' }}>
+                          {theme.category}
+                        </span>
+                      </div>
+                    </div>
+
+                    {isCurrent && (
+                      <Check size={14} strokeWidth={2.5} style={{ color: 'var(--hw-accent-primary)', flexShrink: 0 }} />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         {/* Virtual Driver Status Indicator */}
         <div
           style={

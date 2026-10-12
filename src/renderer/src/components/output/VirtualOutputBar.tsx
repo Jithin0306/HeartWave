@@ -32,15 +32,18 @@ export const VirtualOutputBar: React.FC = () => {
       }}
     >
       {/* Left: Main Virtual Output Activation Button & Status Pill */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
         <button
           onClick={toggleVirtualOutput}
           disabled={cameraStatus !== 'active'}
           style={{
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: '8px',
             padding: '7px 16px',
+            minWidth: '175px',
+            flexShrink: 0,
             borderRadius: 'var(--hw-radius-sm)',
             backgroundColor: isBroadcasting ? 'var(--hw-status-active)' : 'var(--hw-accent-primary)',
             color: '#FFFFFF',
@@ -74,8 +77,11 @@ export const VirtualOutputBar: React.FC = () => {
           style={{
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: '6px',
             padding: '4px 10px',
+            minWidth: '155px',
+            flexShrink: 0,
             borderRadius: 'var(--hw-radius-xs)',
             backgroundColor: 'rgba(20, 18, 17, 0.75)',
             border: '1px solid var(--hw-border-subtle)',
@@ -90,6 +96,7 @@ export const VirtualOutputBar: React.FC = () => {
               borderRadius: '50%',
               backgroundColor: isBroadcasting ? 'var(--hw-status-active)' : 'var(--hw-text-muted)',
               boxShadow: isBroadcasting ? '0 0 8px var(--hw-status-active)' : 'none',
+              flexShrink: 0,
             }}
           />
           <span style={{ fontWeight: 500, letterSpacing: '0.04em' }}>
@@ -99,7 +106,7 @@ export const VirtualOutputBar: React.FC = () => {
       </div>
 
       {/* Center / Right: Quick Controls (Privacy Shutter & Effect Bypass) */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
         {/* Privacy Shutter / Cover Camera Button */}
         <button
           onClick={togglePrivacyShutter}
@@ -107,8 +114,11 @@ export const VirtualOutputBar: React.FC = () => {
           style={{
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: '6px',
             padding: '6px 12px',
+            minWidth: '125px',
+            flexShrink: 0,
             borderRadius: 'var(--hw-radius-xs)',
             backgroundColor: isPrivacyShutterActive
               ? 'rgba(184, 92, 112, 0.25)'
@@ -143,8 +153,11 @@ export const VirtualOutputBar: React.FC = () => {
           style={{
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: '6px',
             padding: '6px 12px',
+            minWidth: '108px',
+            flexShrink: 0,
             borderRadius: 'var(--hw-radius-xs)',
             backgroundColor: isBypassActive
               ? 'rgba(214, 189, 145, 0.2)'
@@ -170,7 +183,8 @@ export const VirtualOutputBar: React.FC = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              minWidth: '128px',
+              width: '135px',
+              flexShrink: 0,
               gap: '6px',
               padding: '5px 10px',
               borderRadius: 'var(--hw-radius-xs)',

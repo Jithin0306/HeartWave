@@ -10,13 +10,16 @@ import {
   Hand,
   Sparkles,
 } from 'lucide-react';
-import { useAppStore, RESOLUTION_PRESETS } from '../../store/appStore';
+import { useAppStore, RESOLUTION_PRESETS, THEMES } from '../../store/appStore';
 import { cameraManager } from '../../services/cameraManager';
 import { handTracker } from '../../tracking/handTracker';
 import { DiagnosticsRenderer } from '../../tracking/diagnosticsRenderer';
 import { effectManager } from '../../effects/effectManager';
 import { videoCompositor } from '../../services/videoCompositor';
 import { VirtualOutputBar } from '../output/VirtualOutputBar';
+import { AudioKeepAlive } from '../../services/audioKeepAlive';
+import { soundEngine } from '../../services/soundEngine';
+import logoIcon from '../../assets/logo-icon.png';
 
 export const CameraPreviewViewport: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -24,11 +27,21 @@ export const CameraPreviewViewport: React.FC = () => {
   const effectsCanvasRef = useRef<HTMLCanvasElement>(null);
   const diagnosticsRendererRef = useRef<DiagnosticsRenderer>(new DiagnosticsRenderer());
   const rafIdRef = useRef<number | null>(null);
+  const fallbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isLoopRunningRef = useRef<boolean>(false);
+  const lastRenderTimeRef = useRef<number>(0);
   const lastMetricsTimeRef = useRef<number>(0);
+  const lastTrackingTimeRef = useRef<number>(0);
+  const lastGestureResultRef = useRef<any>(null);
+  const lastReportedGestureRef = useRef<string | null>(null);
+  const audioKeepAliveRef = useRef<AudioKeepAlive | null>(null);
+  const framesSentCountRef = useRef<number>(0);
+  const lastTelemetryLogRef = useRef<number>(0);
 
   const [isTrackerWarming, setIsTrackerWarming] = useState(false);
 
   const {
+    currentTheme,
     cameraStatus,
     availableDevices,
     selectedDeviceId,
@@ -54,9 +67,7 @@ export const CameraPreviewViewport: React.FC = () => {
     setShowSkeletonDiagnostics,
     gestureHoldDuration,
     selectedEffectId,
-    activeIntensity,
     isPrivacyShutterActive,
-    isBypassActive,
     setCompositorMetrics,
   } = useAppStore();
 
@@ -83,6 +94,8 @@ export const CameraPreviewViewport: React.FC = () => {
     if (videoRef.current) {
       if (activeStream) {
         videoRef.current.srcObject = activeStream;
+        videoRef.current.volume = 0;
+        videoRef.current.muted = false;
         videoRef.current.play().catch((err) => {
           console.warn('Auto-play was interrupted:', err);
         });
@@ -118,112 +131,202 @@ export const CameraPreviewViewport: React.FC = () => {
     effectManager.setActiveEffect(selectedEffectId);
   }, [selectedEffectId]);
 
-  // Main Hand Tracking and Romantic Effect Render Loop via requestAnimationFrame
-  const runTrackingLoop = useCallback(() => {
-    if (
-      cameraStatus === 'active' &&
-      videoRef.current &&
-      videoRef.current.readyState >= 2
-    ) {
+  // Initialize background keep-alive audio session
+  useEffect(() => {
+    audioKeepAliveRef.current = new AudioKeepAlive();
+
+    return () => {
+      audioKeepAliveRef.current?.stop();
+      audioKeepAliveRef.current = null;
+    };
+  }, []);
+
+  // Core unified frame renderer: processes tracking, renders procedural effects, composites and broadcasts
+  const renderFrame = useCallback((now: number) => {
+    try {
+      const store = useAppStore.getState();
+      const liveCameraStatus = store.cameraStatus;
+      const liveVcamStatus = store.virtualOutputStatus;
+      const liveTrackingActive = store.isTrackingActive;
+      const liveBypassActive = store.isBypassActive;
+      const livePrivacyActive = store.isPrivacyShutterActive;
+      const liveMirrored = store.isMirrored;
+      const liveDiagnostics = store.showSkeletonDiagnostics;
+      const liveIntensity = store.activeIntensity;
+      const liveResolution = store.selectedResolution;
+
       const video = videoRef.current;
-      const now = performance.now();
+      const hasValidFrame = livePrivacyActive || (video && video.readyState >= 2 && video.videoWidth > 0);
 
-      let gestureResult = null;
-      if (isTrackingActive) {
-        gestureResult = handTracker.processVideoFrame(video, now);
-      }
+      if (liveCameraStatus === 'active' && hasValidFrame) {
+        // 1. Gesture Tracking (only when tracking active, not in bypass mode, and privacy shutter is off)
+        let gestureResult = null;
+        if (liveTrackingActive && !liveBypassActive && !livePrivacyActive && video && video.readyState >= 2) {
+          if (now - lastTrackingTimeRef.current >= 30) {
+            lastTrackingTimeRef.current = now;
+            try {
+              lastGestureResultRef.current = handTracker.processVideoFrame(video, now);
+            } catch (trackErr) {
+              console.warn('[HandTracker] Frame tracking glitch:', trackErr);
+            }
+          }
+          gestureResult = lastGestureResultRef.current;
+        } else {
+          lastGestureResultRef.current = null;
+        }
 
-      if (gestureResult) {
-        setActiveGestureEvent(gestureResult.gestureEvent);
-        effectManager.handleGestureEvent(gestureResult.gestureEvent);
+        // Only update activeGestureEvent in store when gesture identity changes to prevent React re-render thrashing
+        const curGestureName = gestureResult?.gestureEvent?.name || null;
+        if (lastReportedGestureRef.current !== curGestureName) {
+          lastReportedGestureRef.current = curGestureName;
+          setActiveGestureEvent(gestureResult ? gestureResult.gestureEvent : null);
+          if (curGestureName && gestureResult?.gestureEvent) {
+            soundEngine.playForEffect(gestureResult.gestureEvent.type || curGestureName);
+          }
+        }
 
-        // Render diagnostics wireframe if enabled in settings
-        if (showSkeletonDiagnostics && canvasRef.current) {
-          const canvas = canvasRef.current;
-          if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-            canvas.width = video.videoWidth || 1280;
-            canvas.height = video.videoHeight || 720;
+        if (gestureResult) {
+          effectManager.handleGestureEvent(gestureResult.gestureEvent);
+
+          if (liveDiagnostics && canvasRef.current && video) {
+            const canvas = canvasRef.current;
+            const targetW = video.videoWidth || liveResolution?.width || 1280;
+            const targetH = video.videoHeight || liveResolution?.height || 720;
+            if (canvas.width !== targetW || canvas.height !== targetH) {
+              canvas.width = targetW;
+              canvas.height = targetH;
+            }
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              diagnosticsRendererRef.current.render(
+                ctx,
+                canvas.width,
+                canvas.height,
+                gestureResult.smoothedHands,
+                gestureResult.gestureEvent,
+                liveMirrored
+              );
+            }
+          } else if (canvasRef.current) {
+            const ctx = canvasRef.current.getContext('2d');
+            if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+          }
+        } else {
+          effectManager.handleGestureEvent(null);
+          if (canvasRef.current) {
+            const ctx = canvasRef.current.getContext('2d');
+            if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+          }
+        }
+
+        // 2. Render romantic effects overlay (skip if in Bypass mode or Privacy mode)
+        if (effectsCanvasRef.current && !liveBypassActive && !livePrivacyActive) {
+          const effectsCanvas = effectsCanvasRef.current;
+          const targetW = (video && video.videoWidth) || liveResolution?.width || 1280;
+          const targetH = (video && video.videoHeight) || liveResolution?.height || 720;
+          if (effectsCanvas.width !== targetW || effectsCanvas.height !== targetH) {
+            effectsCanvas.width = targetW;
+            effectsCanvas.height = targetH;
           }
 
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            diagnosticsRendererRef.current.render(
-              ctx,
-              canvas.width,
-              canvas.height,
-              gestureResult.smoothedHands,
-              gestureResult.gestureEvent,
-              isMirrored
-            );
+          const eCtx = effectsCanvas.getContext('2d');
+          if (eCtx) {
+            effectManager.update(liveIntensity, gestureResult?.gestureEvent?.anchor, now);
+            effectManager.render(eCtx, effectsCanvas.width, effectsCanvas.height, liveMirrored);
           }
-        } else if (canvasRef.current) {
-          const ctx = canvasRef.current.getContext('2d');
-          if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-        }
-      } else {
-        setActiveGestureEvent(null);
-        effectManager.handleGestureEvent(null);
-        if (canvasRef.current) {
-          const ctx = canvasRef.current.getContext('2d');
-          if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-        }
-      }
-
-      // Update and render active Romantic Effects on effects canvas
-      if (effectsCanvasRef.current) {
-        const effectsCanvas = effectsCanvasRef.current;
-        if (effectsCanvas.width !== video.videoWidth || effectsCanvas.height !== video.videoHeight) {
-          effectsCanvas.width = video.videoWidth || 1280;
-          effectsCanvas.height = video.videoHeight || 720;
+        } else if (effectsCanvasRef.current) {
+          const eCtx = effectsCanvasRef.current.getContext('2d');
+          if (eCtx) eCtx.clearRect(0, 0, effectsCanvasRef.current.width, effectsCanvasRef.current.height);
         }
 
-        const eCtx = effectsCanvas.getContext('2d');
-        if (eCtx) {
-          effectManager.update(activeIntensity, gestureResult?.gestureEvent?.anchor, now);
-          effectManager.render(eCtx, effectsCanvas.width, effectsCanvas.height, isMirrored);
+        // Keep physical video playing
+        if (video && video.paused && liveCameraStatus === 'active') {
+          video.play().catch(() => {});
         }
 
-        // Phase 5: Composite physical video + effect overlay onto offscreen compositor
-        videoCompositor.setResolution(video.videoWidth || 1280, video.videoHeight || 720);
+        // 3. Composite physical video + effect overlay and stream to Virtual Camera
+        const frameW = (video && video.videoWidth) || liveResolution?.width || 1280;
+        const frameH = (video && video.videoHeight) || liveResolution?.height || 720;
+
+        videoCompositor.setResolution(frameW, frameH);
         const compMetrics = videoCompositor.compositeFrame(
-          video,
-          effectsCanvas,
-          isMirrored,
-          isBypassActive,
-          isPrivacyShutterActive
+          video || videoCompositor.getCanvas(),
+          effectsCanvasRef.current,
+          liveMirrored,
+          liveBypassActive,
+          livePrivacyActive
         );
+
         if (now - lastMetricsTimeRef.current >= 600) {
           lastMetricsTimeRef.current = now;
           setCompositorMetrics(compMetrics);
         }
+
+        if (liveVcamStatus === 'broadcasting') {
+          const frame = videoCompositor.extractFrameBuffer();
+          if (frame && window.heartwaveApi?.sendFrame) {
+            window.heartwaveApi.sendFrame(frame.data.buffer, frame.width, frame.height);
+            framesSentCountRef.current++;
+          }
+        }
+
+        if (now - lastTelemetryLogRef.current >= 1000) {
+          console.log(`[Renderer Telemetry] Sent: ${framesSentCountRef.current} fps, Hidden: ${document.hidden}, Camera: ${liveCameraStatus}, Vcam: ${liveVcamStatus}, VideoReady: ${video?.readyState}`);
+          framesSentCountRef.current = 0;
+          lastTelemetryLogRef.current = now;
+        }
       }
-    } else {
-      setActiveGestureEvent(null);
+    } catch (err) {
+      console.warn('[RenderLoop] Frame render error:', err);
     }
+  }, [setActiveGestureEvent, setCompositorMetrics]);
 
-    if (cameraStatus === 'active') {
-      rafIdRef.current = requestAnimationFrame(runTrackingLoop);
-    }
-  }, [
-    cameraStatus,
-    isTrackingActive,
-    isMirrored,
-    showSkeletonDiagnostics,
-    activeIntensity,
-    isPrivacyShutterActive,
-    isBypassActive,
-    setCompositorMetrics,
-    setActiveGestureEvent,
-  ]);
+  // Keep renderFrameRef updated
+  const renderFrameRef = useRef(renderFrame);
+  useEffect(() => {
+    renderFrameRef.current = renderFrame;
+  });
 
-  // Start / Stop tracking RAF loop
+  // Master dual-clock loop: requestAnimationFrame continuously + 16ms fallback watchdog
+  // Fully unthrottled and immune to window minimization, occlusion, or background state
   useEffect(() => {
     if (cameraStatus === 'active') {
-      rafIdRef.current = requestAnimationFrame(runTrackingLoop);
+      isLoopRunningRef.current = true;
+      audioKeepAliveRef.current?.start();
+
+      const fps = selectedResolution?.fps || 30;
+      const targetInterval = 1000 / fps;
+
+      const onRaf = () => {
+        if (!isLoopRunningRef.current) return;
+        const now = performance.now();
+        if (now - lastRenderTimeRef.current >= targetInterval - 3) {
+          lastRenderTimeRef.current = now;
+          renderFrameRef.current(now);
+        }
+        rafIdRef.current = requestAnimationFrame(onRaf);
+      };
+      rafIdRef.current = requestAnimationFrame(onRaf);
+
+      // Resilient watchdog ticker: if RAF is delayed or skipped by OS DWM when minimized, this ticker fires
+      fallbackIntervalRef.current = setInterval(() => {
+        if (!isLoopRunningRef.current) return;
+        const now = performance.now();
+        if (now - lastRenderTimeRef.current >= targetInterval - 3) {
+          lastRenderTimeRef.current = now;
+          renderFrameRef.current(now);
+        }
+      }, 16);
     } else {
+      isLoopRunningRef.current = false;
+      audioKeepAliveRef.current?.stop();
       if (rafIdRef.current) {
         cancelAnimationFrame(rafIdRef.current);
         rafIdRef.current = null;
+      }
+      if (fallbackIntervalRef.current) {
+        clearInterval(fallbackIntervalRef.current);
+        fallbackIntervalRef.current = null;
       }
       setActiveGestureEvent(null);
       effectManager.resetAll();
@@ -238,12 +341,17 @@ export const CameraPreviewViewport: React.FC = () => {
     }
 
     return () => {
+      isLoopRunningRef.current = false;
       if (rafIdRef.current) {
         cancelAnimationFrame(rafIdRef.current);
         rafIdRef.current = null;
       }
+      if (fallbackIntervalRef.current) {
+        clearInterval(fallbackIntervalRef.current);
+        fallbackIntervalRef.current = null;
+      }
     };
-  }, [cameraStatus, runTrackingLoop, setActiveGestureEvent]);
+  }, [cameraStatus, selectedResolution?.fps]);
 
   const handleToggleCamera = () => {
     if (cameraStatus === 'active') {
@@ -431,7 +539,7 @@ export const CameraPreviewViewport: React.FC = () => {
           ref={videoRef}
           autoPlay
           playsInline
-          muted
+          muted={false}
           style={{
             width: '100%',
             height: '100%',
@@ -488,24 +596,30 @@ export const CameraPreviewViewport: React.FC = () => {
           >
             <div
               style={{
-                width: '72px',
-                height: '72px',
+                width: '84px',
+                height: '84px',
                 border: '1px solid rgba(214, 189, 145, 0.4)',
-                borderRadius: 'var(--hw-radius-sm)',
+                borderRadius: 'var(--hw-radius-md)',
+                overflow: 'hidden',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 marginBottom: '16px',
-                backgroundColor: 'rgba(38, 32, 31, 0.6)',
+                backgroundColor: 'rgba(20, 18, 17, 0.85)',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.6), 0 0 16px rgba(103, 47, 64, 0.3)',
               }}
             >
-              <span style={{ color: '#D6BD91', fontSize: '22px', fontWeight: 600, fontFamily: 'serif' }}>HW</span>
+              <img
+                src={logoIcon}
+                alt="Heartwave"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
             </div>
             <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--hw-text-primary)', letterSpacing: '0.1em' }}>
               CAMERA MUTED
             </span>
-            <span style={{ fontSize: '11px', color: 'var(--hw-text-muted)', marginTop: '4px' }}>
-              Privacy Shutter Active • Video stream obscured
+            <span style={{ fontSize: '11px', color: 'var(--hw-accent-champagne)', marginTop: '4px' }}>
+              Heartwave Privacy Shutter Active
             </span>
           </div>
         )}
@@ -765,32 +879,36 @@ export const CameraPreviewViewport: React.FC = () => {
               zIndex: 10,
             }}
           >
+            {/* Glowing Standby Device Indicator */}
             <div
               style={{
                 width: '64px',
                 height: '64px',
                 borderRadius: '50%',
-                backgroundColor: 'var(--hw-surface-elevated)',
-                border: '1px solid var(--hw-border-subtle)',
+                backgroundColor: 'var(--hw-accent-rose-soft)',
+                border: '1px solid var(--hw-border-focus)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: '16px',
+                marginBottom: '18px',
+                boxShadow: 'var(--hw-shadow-accent)',
                 color: 'var(--hw-accent-rose)',
               }}
             >
-              <Camera size={26} strokeWidth={1.6} />
+              <Camera size={26} strokeWidth={1.8} />
             </div>
 
             <h3
               style={{
-                fontSize: '16px',
+                fontSize: '17px',
                 fontWeight: 600,
                 color: 'var(--hw-text-primary)',
                 marginBottom: '6px',
+                fontFamily: 'var(--hw-font-sans)',
+                letterSpacing: '-0.01em',
               }}
             >
-              Ready to Stream Video
+              {THEMES.find((t) => t.id === currentTheme)?.tagline || 'Make Every Gesture Mean Something'}
             </h3>
 
             <p
@@ -802,7 +920,7 @@ export const CameraPreviewViewport: React.FC = () => {
               }}
             >
               {availableDevices.length > 0
-                ? `Selected: ${selectedDevice?.label || 'Default Camera'}. MediaPipe Hand Tracking is pre-warmed and ready.`
+                ? `Selected: ${selectedDevice?.label || 'Default Camera'}. MediaPipe Hand Tracking engine ready.`
                 : 'No webcams detected yet. Connect a camera or check Windows device permissions.'}
             </p>
 

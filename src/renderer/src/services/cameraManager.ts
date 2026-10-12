@@ -91,6 +91,25 @@ class CameraManager {
 
     this.currentStream = stream;
 
+    // Attach an inaudible silent audio track to prevent Chromium's WebMediaPlayerMS
+    // from suspending video frame decoding when the window is hidden or minimized
+    try {
+      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (AudioContextClass) {
+        const audioCtx = new AudioContextClass();
+        const osc = audioCtx.createOscillator();
+        const dst = audioCtx.createMediaStreamDestination();
+        osc.connect(dst);
+        osc.start();
+        const silentTrack = dst.stream.getAudioTracks()[0];
+        if (silentTrack) {
+          stream.addTrack(silentTrack);
+        }
+      }
+    } catch (e) {
+      console.warn('Could not attach silent audio anchor track:', e);
+    }
+
     // Attach disconnection listener to the active video track
     const videoTrack = stream.getVideoTracks()[0];
     if (videoTrack) {

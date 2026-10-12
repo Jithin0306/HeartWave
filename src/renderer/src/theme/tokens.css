@@ -1,40 +1,7 @@
-/* Heartwave Design Tokens */
+/* Heartwave Dynamic Design Tokens & Theme Engine */
+
+/* Default / Shared Typography & Transitions */
 :root {
-  /* Surfaces & Backgrounds */
-  --hw-bg-primary: #141211;
-  --hw-bg-secondary: #1D1918;
-  --hw-surface-elevated: #26201F;
-  --hw-surface-subtle: #302725;
-  --hw-surface-active: #382D2B;
-  --hw-surface-hover: #2B2322;
-
-  /* Accents & Brand Palette */
-  --hw-accent-primary: #B85C70;
-  --hw-accent-primary-hover: #C96B80;
-  --hw-accent-burgundy: #672F40;
-  --hw-accent-rose: #D79AA6;
-  --hw-accent-rose-soft: rgba(215, 154, 166, 0.15);
-  --hw-accent-champagne: #D6BD91;
-  --hw-accent-champagne-soft: rgba(214, 189, 145, 0.12);
-
-  /* Typography Colors */
-  --hw-text-primary: #F5EFE9;
-  --hw-text-secondary: #B8AAA4;
-  --hw-text-muted: #857873;
-  --hw-text-highlight: #FFFFFF;
-
-  /* Borders & Dividers */
-  --hw-border-subtle: #3A302D;
-  --hw-border-medium: #4D403D;
-  --hw-border-focus: #B85C70;
-  --hw-border-active: #672F40;
-
-  /* Status Colors */
-  --hw-status-idle: #857873;
-  --hw-status-active: #4EAA79;
-  --hw-status-warning: #D6BD91;
-  --hw-status-error: #D05D5D;
-
   /* Radii */
   --hw-radius-xs: 4px;
   --hw-radius-sm: 6px;
@@ -44,16 +11,175 @@
   --hw-radius-full: 9999px;
 
   /* Typography Stacks */
-  --hw-font-sans: 'Segoe UI Variable Display', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Inter', Roboto, sans-serif;
-  --hw-font-serif: 'Georgia', 'Playfair Display', 'Cinzel', serif;
+  --hw-font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --hw-font-serif: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   /* Transitions */
   --hw-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --hw-transition-smooth: 240ms cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* Shadows */
+  /* Status Colors */
+  --hw-status-idle: #857873;
+  --hw-status-active: #4EAA79;
+  --hw-status-warning: #E5A83B;
+  --hw-status-error: #EF4444;
+
+  /* Default Theme: Romantic Velvet */
+  --hw-bg-primary: #141211;
+  --hw-bg-secondary: #1D1918;
+  --hw-surface-elevated: #26201F;
+  --hw-surface-subtle: #302725;
+  --hw-surface-active: #382D2B;
+  --hw-surface-hover: #2B2322;
+
+  --hw-accent-primary: #B85C70;
+  --hw-accent-primary-hover: #C96B80;
+  --hw-accent-burgundy: #672F40;
+  --hw-accent-rose: #D79AA6;
+  --hw-accent-rose-soft: rgba(215, 154, 166, 0.15);
+  --hw-accent-champagne: #D6BD91;
+  --hw-accent-champagne-soft: rgba(214, 189, 145, 0.12);
+
+  --hw-text-primary: #F5EFE9;
+  --hw-text-secondary: #B8AAA4;
+  --hw-text-muted: #857873;
+  --hw-text-highlight: #FFFFFF;
+
+  --hw-border-subtle: #3A302D;
+  --hw-border-medium: #4D403D;
+  --hw-border-focus: #B85C70;
+  --hw-border-active: #672F40;
+
   --hw-shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.3);
   --hw-shadow-md: 0 6px 18px rgba(0, 0, 0, 0.4);
   --hw-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
   --hw-shadow-accent: 0 4px 20px rgba(184, 92, 112, 0.22);
+}
+
+/* =========================================================================
+   Theme 1: Romantic Velvet (Couples / Warm Rose Burgundy)
+   ========================================================================= */
+[data-theme="romantic"] {
+  --hw-bg-primary: #141211;
+  --hw-bg-secondary: #1D1918;
+  --hw-surface-elevated: #26201F;
+  --hw-surface-subtle: #302725;
+  --hw-surface-active: #382D2B;
+  --hw-surface-hover: #2B2322;
+
+  --hw-accent-primary: #B85C70;
+  --hw-accent-primary-hover: #C96B80;
+  --hw-accent-burgundy: #672F40;
+  --hw-accent-rose: #D79AA6;
+  --hw-accent-rose-soft: rgba(215, 154, 166, 0.15);
+  --hw-accent-champagne: #D6BD91;
+  --hw-accent-champagne-soft: rgba(214, 189, 145, 0.12);
+
+  --hw-text-primary: #F5EFE9;
+  --hw-text-secondary: #B8AAA4;
+  --hw-text-muted: #857873;
+  --hw-text-highlight: #FFFFFF;
+
+  --hw-border-subtle: #3A302D;
+  --hw-border-medium: #4D403D;
+  --hw-border-focus: #B85C70;
+  --hw-border-active: #672F40;
+
+  --hw-shadow-accent: 0 4px 20px rgba(184, 92, 112, 0.22);
+}
+
+/* =========================================================================
+   Theme 2: Obsidian Studio (Pro Broadcaster / Slate Amber / OBS Style)
+   ========================================================================= */
+[data-theme="studio"] {
+  --hw-bg-primary: #0C0E12;
+  --hw-bg-secondary: #14171E;
+  --hw-surface-elevated: #1B202A;
+  --hw-surface-subtle: #232936;
+  --hw-surface-active: #2C3445;
+  --hw-surface-hover: #1F2532;
+
+  --hw-accent-primary: #D99B26;
+  --hw-accent-primary-hover: #EBB03B;
+  --hw-accent-burgundy: #223249;
+  --hw-accent-rose: #E5A83B;
+  --hw-accent-rose-soft: rgba(217, 155, 38, 0.16);
+  --hw-accent-champagne: #60A5FA;
+  --hw-accent-champagne-soft: rgba(96, 165, 250, 0.14);
+
+  --hw-text-primary: #F3F4F6;
+  --hw-text-secondary: #9CA3AF;
+  --hw-text-muted: #64748B;
+  --hw-text-highlight: #FFFFFF;
+
+  --hw-border-subtle: #252D3D;
+  --hw-border-medium: #374151;
+  --hw-border-focus: #D99B26;
+  --hw-border-active: #3B82F6;
+
+  --hw-shadow-accent: 0 4px 20px rgba(217, 155, 38, 0.22);
+}
+
+/* =========================================================================
+   Theme 3: Cyber Neon (Twitch / Esports Gamer / Electric Cyan & Violet)
+   ========================================================================= */
+[data-theme="cyber"] {
+  --hw-bg-primary: #07090E;
+  --hw-bg-secondary: #0D121C;
+  --hw-surface-elevated: #141B29;
+  --hw-surface-subtle: #1B2438;
+  --hw-surface-active: #23304A;
+  --hw-surface-hover: #182233;
+
+  --hw-accent-primary: #00E5FF;
+  --hw-accent-primary-hover: #33ECFF;
+  --hw-accent-burgundy: #7C3AED;
+  --hw-accent-rose: #00E5FF;
+  --hw-accent-rose-soft: rgba(0, 229, 255, 0.16);
+  --hw-accent-champagne: #C084FC;
+  --hw-accent-champagne-soft: rgba(192, 132, 252, 0.14);
+
+  --hw-text-primary: #F1F5F9;
+  --hw-text-secondary: #94A3B8;
+  --hw-text-muted: #64748B;
+  --hw-text-highlight: #FFFFFF;
+
+  --hw-border-subtle: #19263A;
+  --hw-border-medium: #273854;
+  --hw-border-focus: #00E5FF;
+  --hw-border-active: #7C3AED;
+
+  --hw-shadow-accent: 0 4px 20px rgba(0, 229, 255, 0.28);
+}
+
+/* =========================================================================
+   Theme 4: Midnight Mint (Clean Minimalist / Deep Emerald Stealth)
+   ========================================================================= */
+[data-theme="midnight"] {
+  --hw-bg-primary: #090E0F;
+  --hw-bg-secondary: #10181A;
+  --hw-surface-elevated: #162225;
+  --hw-surface-subtle: #1D2D31;
+  --hw-surface-active: #253A3F;
+  --hw-surface-hover: #19272B;
+
+  --hw-accent-primary: #10B981;
+  --hw-accent-primary-hover: #34D399;
+  --hw-accent-burgundy: #064E3B;
+  --hw-accent-rose: #34D399;
+  --hw-accent-rose-soft: rgba(52, 211, 153, 0.15);
+  --hw-accent-champagne: #2DD4BF;
+  --hw-accent-champagne-soft: rgba(45, 212, 191, 0.14);
+
+  --hw-text-primary: #ECFDF5;
+  --hw-text-secondary: #99F6E4;
+  --hw-text-muted: #64748B;
+  --hw-text-highlight: #FFFFFF;
+
+  --hw-border-subtle: #1B2F34;
+  --hw-border-medium: #254249;
+  --hw-border-focus: #10B981;
+  --hw-border-active: #059669;
+
+  --hw-shadow-accent: 0 4px 20px rgba(16, 185, 129, 0.22);
 }

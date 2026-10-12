@@ -66,6 +66,52 @@ export class VirtualCameraBridgeManager {
     this.isBroadcasting = false;
   }
 
+  private framesReceived: number = 0;
+  private framesDropped: number = 0;
+  private framesWritten: number = 0;
+  private lastLogTime: number = 0;
+
+  /**
+   * Write raw RGBA frame buffer with HWFR packet framing to bridge process stdin.
+   */
+  pushFrame(data: Buffer, width?: number, height?: number): void {
+    if (this.bridgeProcess && this.bridgeProcess.stdin && !this.bridgeProcess.stdin.destroyed) {
+      this.framesReceived++;
+      const now = Date.now();
+      if (now - this.lastLogTime >= 1000) {
+        console.log(`[Bridge Telemetry] Recv: ${this.framesReceived} fps, Written: ${this.framesWritten} fps, Dropped: ${this.framesDropped} fps, PipeBuffer: ${this.bridgeProcess.stdin.writableLength} bytes`);
+        this.framesReceived = 0;
+        this.framesDropped = 0;
+        this.framesWritten = 0;
+        this.lastLogTime = now;
+      }
+
+      try {
+        // Backpressure safeguard: if pipe buffer exceeds 2 frames, drop to keep latency at 0ms
+        if (this.bridgeProcess.stdin.writableLength > data.length * 2) {
+          this.framesDropped++;
+          return;
+        }
+
+        const w = width || 1280;
+        const h = height || 720;
+
+        // Write 12-byte framing header: HWFR (0x52465748), width, height
+        const header = Buffer.allocUnsafe(12);
+        header.writeUInt32LE(0x52465748, 0); // 'HWFR'
+        header.writeUInt32LE(w, 4);
+        header.writeUInt32LE(h, 8);
+
+        this.bridgeProcess.stdin.write(header);
+        this.bridgeProcess.stdin.write(data);
+        this.framesWritten++;
+      } catch (err) {
+        this.framesDropped++;
+        console.warn('[BridgeManager] Pipe write error:', err);
+      }
+    }
+  }
+
   getStatus(): { isBroadcasting: boolean } {
     return { isBroadcasting: this.isBroadcasting };
   }

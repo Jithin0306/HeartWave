@@ -16,6 +16,7 @@ DEFINE_GUID(CLSID_HeartWaveVirtualCam,
 #define HEARTWAVE_DEVICE_NAME L"Heartwave Virtual Camera"
 #define HEARTWAVE_PIN_NAME L"Capture"
 #define HEARTWAVE_MMF_NAME L"HeartWaveSharedVideo"
+#define HEARTWAVE_EVENT_NAME L"HeartWaveNewFrameEvent"
 
 #define HW_MAGIC 0x48574156 // 'HWAV'
 

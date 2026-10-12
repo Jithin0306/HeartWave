@@ -61,14 +61,16 @@ export class HandTracker {
    * Process a live video frame and return semantic gesture event.
    */
   processVideoFrame(
-    videoElement: HTMLVideoElement,
+    videoSource: HTMLVideoElement | HTMLCanvasElement,
     timestamp: number = performance.now()
   ): { gestureEvent: GestureEvent; smoothedHands: TrackedHand[] } | null {
     if (!this.isReady || !this.handLandmarker) return null;
-    if (videoElement.readyState < 2 || videoElement.videoWidth === 0) return null;
+    const isVideo = videoSource instanceof HTMLVideoElement;
+    if (isVideo && (videoSource.readyState < 2 || videoSource.videoWidth === 0)) return null;
+    if (!isVideo && (videoSource.width === 0 || videoSource.height === 0)) return null;
 
     try {
-      const results = this.handLandmarker.detectForVideo(videoElement, timestamp);
+      const results = this.handLandmarker.detectForVideo(videoSource, timestamp);
 
       // Extract tracked hands
       const rawHands: TrackedHand[] = [];

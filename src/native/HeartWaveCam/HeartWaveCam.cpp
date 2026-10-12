@@ -1,6 +1,7 @@
 #include "HeartWaveCam.h"
 #include <shlwapi.h>
 #include <strsafe.h>
+#include <mmsystem.h>
 
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "oleaut32.lib")
@@ -9,6 +10,7 @@
 #pragma comment(lib, "gdi32.lib")
 #pragma comment(lib, "strmiids.lib")
 #pragma comment(lib, "shlwapi.lib")
+#pragma comment(lib, "winmm.lib")
 
 static HINSTANCE g_hModule = NULL;
 static volatile LONG g_cServerLocks = 0;
@@ -89,6 +91,7 @@ private:
 
     HANDLE m_hThread;
     HANDLE m_hStopEvent;
+    HANDLE m_hNewFrameEvent;
     volatile bool m_bStreaming;
 
     HANDLE m_hMMF;
@@ -261,7 +264,7 @@ public:
 HeartWavePin::HeartWavePin(HeartWaveFilter* pFilter)
     : m_cRef(1), m_pFilter(pFilter), m_pConnectedPin(NULL),
       m_pAllocator(NULL), m_pMemInputPin(NULL), m_bConnected(false),
-      m_width(1920), m_height(1080), m_avgTimePerFrame(333333), // 30 FPS
+      m_width(1280), m_height(720), m_avgTimePerFrame(333333), // 30 FPS
       m_subType(MEDIASUBTYPE_NV12) {
     ZeroMemory(&m_currentMediaType, sizeof(m_currentMediaType));
     BuildMediaType(0, &m_currentMediaType);
@@ -304,16 +307,16 @@ HRESULT HeartWavePin::BuildMediaType(int index, AM_MEDIA_TYPE* pmt) {
     if (!pmt) return E_POINTER;
     ZeroMemory(pmt, sizeof(AM_MEDIA_TYPE));
 
-    int w = 1920;
-    int h = 1080;
+    int w = 1280;
+    int h = 720;
     GUID sub = MEDIASUBTYPE_NV12;
     WORD bpp = 12;
 
     switch (index) {
-        case 0: w = 1920; h = 1080; sub = MEDIASUBTYPE_NV12; bpp = 12; break;
-        case 1: w = 1280; h = 720;  sub = MEDIASUBTYPE_NV12; bpp = 12; break;
-        case 2: w = 1920; h = 1080; sub = MEDIASUBTYPE_RGB32; bpp = 32; break;
-        case 3: w = 1280; h = 720;  sub = MEDIASUBTYPE_RGB32; bpp = 32; break;
+        case 0: w = 1280; h = 720;  sub = MEDIASUBTYPE_NV12; bpp = 12; break;
+        case 1: w = 1920; h = 1080; sub = MEDIASUBTYPE_NV12; bpp = 12; break;
+        case 2: w = 1280; h = 720;  sub = MEDIASUBTYPE_RGB32; bpp = 32; break;
+        case 3: w = 1920; h = 1080; sub = MEDIASUBTYPE_RGB32; bpp = 32; break;
         default: return S_FALSE;
     }
 
@@ -580,8 +583,9 @@ STDMETHODIMP HeartWavePin::QuerySupported(REFGUID guidPropSet, DWORD dwPropID, D
 
 HeartWaveFilter::HeartWaveFilter()
     : m_cRef(1), m_state(State_Stopped), m_pGraph(NULL), m_pClock(NULL),
-      m_hThread(NULL), m_hStopEvent(NULL), m_bStreaming(false),
+      m_hThread(NULL), m_hStopEvent(NULL), m_hNewFrameEvent(NULL), m_bStreaming(false),
       m_hMMF(NULL), m_pSharedHeader(NULL), m_pSharedData(NULL) {
+    timeBeginPeriod(1);
     m_pPin = new HeartWavePin(this);
     m_hStopEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
     InterlockedIncrement(&g_cServerLocks);
@@ -590,7 +594,9 @@ HeartWaveFilter::HeartWaveFilter()
 HeartWaveFilter::~HeartWaveFilter() {
     Stop();
     if (m_hStopEvent) CloseHandle(m_hStopEvent);
+    if (m_hNewFrameEvent) CloseHandle(m_hNewFrameEvent);
     if (m_pPin) m_pPin->Release();
+    timeEndPeriod(1);
     InterlockedDecrement(&g_cServerLocks);
 }
 
@@ -634,6 +640,10 @@ STDMETHODIMP HeartWaveFilter::Stop() {
             WaitForSingleObject(m_hThread, 2000);
             CloseHandle(m_hThread);
             m_hThread = NULL;
+        }
+        if (m_hNewFrameEvent) {
+            CloseHandle(m_hNewFrameEvent);
+            m_hNewFrameEvent = NULL;
         }
         if (m_pPin->GetAllocator()) {
             m_pPin->GetAllocator()->Decommit();
@@ -766,6 +776,75 @@ void HeartWaveFilter::RenderDefaultFrame(uint8_t* pDst, int width, int height, G
     }
 }
 
+static void ScaleNV12(const uint8_t* pSrc, int srcW, int srcH, uint8_t* pDst, int dstW, int dstH) {
+    if (!pSrc || !pDst || srcW <= 0 || srcH <= 0 || dstW <= 0 || dstH <= 0) return;
+
+    // 1. Scale Y plane
+    const uint8_t* pSrcY = pSrc;
+    uint8_t* pDstY = pDst;
+    for (int y = 0; y < dstH; y++) {
+        int sy = (y * srcH) / dstH;
+        const uint8_t* pSrcRow = pSrcY + sy * srcW;
+        uint8_t* pDstRow = pDstY + y * dstW;
+        for (int x = 0; x < dstW; x++) {
+            int sx = (x * srcW) / dstW;
+            pDstRow[x] = pSrcRow[sx];
+        }
+    }
+
+    // 2. Scale UV plane (interleaved pairs)
+    const uint8_t* pSrcUV = pSrc + (srcW * srcH);
+    uint8_t* pDstUV = pDst + (dstW * dstH);
+    int srcHalfH = srcH / 2;
+    int srcHalfW = srcW / 2;
+    int dstHalfH = dstH / 2;
+    int dstHalfW = dstW / 2;
+
+    for (int y = 0; y < dstHalfH; y++) {
+        int sy = (y * srcHalfH) / dstHalfH;
+        const uint8_t* pSrcUVRow = pSrcUV + sy * srcW;
+        uint8_t* pDstUVRow = pDstUV + y * dstW;
+        for (int x = 0; x < dstHalfW; x++) {
+            int sx = (x * srcHalfW) / dstHalfW;
+            pDstUVRow[x * 2]     = pSrcUVRow[sx * 2];
+            pDstUVRow[x * 2 + 1] = pSrcUVRow[sx * 2 + 1];
+        }
+    }
+}
+
+static void NV12ToRGB32(const uint8_t* pSrc, int srcW, int srcH, uint8_t* pDst, int dstW, int dstH) {
+    if (!pSrc || !pDst || srcW <= 0 || srcH <= 0 || dstW <= 0 || dstH <= 0) return;
+    const uint8_t* pSrcY = pSrc;
+    const uint8_t* pSrcUV = pSrc + (srcW * srcH);
+    uint32_t* pDstPix = (uint32_t*)pDst;
+
+    for (int y = 0; y < dstH; y++) {
+        int sy = (y * srcH) / dstH;
+        int suv_y = sy / 2;
+        const uint8_t* pYRow = pSrcY + sy * srcW;
+        const uint8_t* pUVRow = pSrcUV + suv_y * srcW;
+        uint32_t* pDstRow = pDstPix + y * dstW;
+
+        for (int x = 0; x < dstW; x++) {
+            int sx = (x * srcW) / dstW;
+            int suv_x = (sx / 2) * 2;
+            int Y = (int)pYRow[sx] - 16;
+            int U = (int)pUVRow[suv_x] - 128;
+            int V = (int)pUVRow[suv_x + 1] - 128;
+
+            int R = (298 * Y + 409 * V + 128) >> 8;
+            int G = (298 * Y - 100 * U - 208 * V + 128) >> 8;
+            int B = (298 * Y + 516 * U + 128) >> 8;
+
+            if (R < 0) R = 0; else if (R > 255) R = 255;
+            if (G < 0) G = 0; else if (G > 255) G = 255;
+            if (B < 0) B = 0; else if (B > 255) B = 255;
+
+            pDstRow[x] = 0xFF000000 | ((uint32_t)R << 16) | ((uint32_t)G << 8) | (uint32_t)B;
+        }
+    }
+}
+
 void HeartWaveFilter::DoStream() {
     IMemAllocator* pAlloc = m_pPin->GetAllocator();
     IMemInputPin* pInputPin = m_pPin->GetMemInputPin();
@@ -779,9 +858,16 @@ void HeartWaveFilter::DoStream() {
 
     uint64_t frameIndex = 0;
     uint32_t lastReadIndex = 0;
+    ULONGLONG lastFreshTick = 0;
 
     while (m_bStreaming) {
-        DWORD dwWait = WaitForSingleObject(m_hStopEvent, 33);
+        if (!m_hNewFrameEvent) {
+            m_hNewFrameEvent = OpenEventW(SYNCHRONIZE, FALSE, HEARTWAVE_EVENT_NAME);
+        }
+
+        HANDLE hEvents[2] = { m_hStopEvent, m_hNewFrameEvent };
+        DWORD dwCount = (m_hNewFrameEvent != NULL) ? 2 : 1;
+        DWORD dwWait = WaitForMultipleObjects(dwCount, hEvents, FALSE, 33);
         if (dwWait == WAIT_OBJECT_0) break;
 
         // Try open or read MMF
@@ -791,6 +877,7 @@ void HeartWaveFilter::DoStream() {
                 m_pSharedHeader = (HeartWaveSharedHeader*)MapViewOfFile(m_hMMF, FILE_MAP_READ, 0, 0, 0);
                 if (m_pSharedHeader) {
                     m_pSharedData = ((uint8_t*)m_pSharedHeader) + sizeof(HeartWaveSharedHeader);
+                    lastFreshTick = GetTickCount64();
                 }
             }
         }
@@ -802,16 +889,52 @@ void HeartWaveFilter::DoStream() {
             pSample->GetPointer(&pData);
             if (pData) {
                 bool hasFrame = false;
+                ULONGLONG nowTicks = GetTickCount64();
+
                 if (m_pSharedHeader && m_pSharedHeader->magic == HW_MAGIC) {
-                    if (m_pSharedHeader->isPrivacyMuted == 1) {
+                    if (m_pSharedHeader->writeIndex != lastReadIndex) {
+                        lastReadIndex = m_pSharedHeader->writeIndex;
+                        lastFreshTick = nowTicks;
+                    }
+
+                    // Check staleness (if bridge was closed / stopped > 2 seconds ago)
+                    if (nowTicks - lastFreshTick > 2000) {
+                        // Bridge is offline or stopped. Unmap and close handle to allow clean re-attachment.
+                        if (m_pSharedHeader) {
+                            UnmapViewOfFile(m_pSharedHeader);
+                            m_pSharedHeader = NULL;
+                            m_pSharedData = NULL;
+                        }
+                        if (m_hMMF) {
+                            CloseHandle(m_hMMF);
+                            m_hMMF = NULL;
+                        }
+                        if (m_hNewFrameEvent) {
+                            CloseHandle(m_hNewFrameEvent);
+                            m_hNewFrameEvent = NULL;
+                        }
+                    } else if (m_pSharedHeader->isPrivacyMuted == 1) {
                         RenderDefaultFrame(pData, width, height, subType);
                         hasFrame = true;
                     } else if (m_pSharedData && m_pSharedHeader->frameSize > 0) {
-                        int copySize = min((int)m_pSharedHeader->frameSize, frameSize);
-                        memcpy(pData, m_pSharedData, copySize);
-                        hasFrame = true;
+                        int srcW = (int)m_pSharedHeader->width;
+                        int srcH = (int)m_pSharedHeader->height;
+                        if (srcW > 0 && srcH > 0) {
+                            if (subType == MEDIASUBTYPE_NV12) {
+                                if (srcW == width && srcH == height) {
+                                    memcpy(pData, m_pSharedData, width * height * 3 / 2);
+                                } else {
+                                    ScaleNV12(m_pSharedData, srcW, srcH, pData, width, height);
+                                }
+                                hasFrame = true;
+                            } else if (subType == MEDIASUBTYPE_RGB32) {
+                                NV12ToRGB32(m_pSharedData, srcW, srcH, pData, width, height);
+                                hasFrame = true;
+                            }
+                        }
                     }
                 }
+
                 if (!hasFrame) {
                     RenderDefaultFrame(pData, width, height, subType);
                 }

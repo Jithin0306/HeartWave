@@ -9,12 +9,52 @@ namespace HeartWave
     class Program
     {
         const string MMF_NAME = "HeartWaveSharedVideo";
-        const uint HW_MAGIC = 0x48574156; // 'HWAV'
+        const string EVENT_NAME = "HeartWaveNewFrameEvent";
+        const uint HW_MAGIC = 0x48574156;       // 'HWAV'
+        const uint HW_FRAME_MAGIC = 0x52465748; // 'HWFR'
+
+        unsafe static void RgbaToNv12(byte* pRgba, byte* pNv12, int width, int height)
+        {
+            int ySize = width * height;
+            byte* pY = pNv12;
+            byte* pUV = pNv12 + ySize;
+
+            System.Threading.Tasks.Parallel.For(0, height, y =>
+            {
+                byte* localY = pY + y * width;
+                byte* localUV = pUV + (y / 2) * width;
+                int rowStart = y * width * 4;
+                bool isEvenRow = (y & 1) == 0;
+
+                for (int x = 0; x < width; x++)
+                {
+                    int rgbaIdx = rowStart + (x << 2);
+                    byte r = pRgba[rgbaIdx];
+                    byte g = pRgba[rgbaIdx + 1];
+                    byte b = pRgba[rgbaIdx + 2];
+
+                    // Standard Rec. 601 RGB to YUV matrix
+                    localY[x] = (byte)(((66 * r + 129 * g + 25 * b + 128) >> 8) + 16);
+
+                    if (isEvenRow && (x & 1) == 0)
+                    {
+                        localUV[x] = (byte)(((-38 * r - 74 * g + 112 * b + 128) >> 8) + 128);
+                        localUV[x + 1] = (byte)(((112 * r - 94 * g - 18 * b + 128) >> 8) + 128);
+                    }
+                }
+            });
+        }
 
         static void Main(string[] args)
         {
-            uint width = 1920;
-            uint height = 1080;
+            try
+            {
+                System.Diagnostics.Process.GetCurrentProcess().PriorityClass = System.Diagnostics.ProcessPriorityClass.AboveNormal;
+            }
+            catch { }
+
+            uint width = 1280;
+            uint height = 720;
             uint fps = 30;
 
             if (args.Length >= 2)
@@ -27,36 +67,36 @@ namespace HeartWave
                 uint.TryParse(args[2], out fps);
             }
 
-            ulong interval = 10000000UL / (ulong)Math.Max(1, fps);
-            uint frameSize = width * height * 3 / 2; // NV12
+            uint nv12Size = width * height * 3 / 2;
             uint headerSize = 64;
-            long totalSize = headerSize + frameSize;
 
-            Console.WriteLine(string.Format("[HeartWaveBridge] Starting Heartwave Video Pipeline {0}x{1} @ {2}fps ({3} bytes)", width, height, fps, totalSize));
+            // Pre-allocate buffer large enough for 1080p if needed
+            uint maxNv12Size = Math.Max(nv12Size, 1920 * 1080 * 3 / 2);
+            long totalSize = headerSize + maxNv12Size;
+
+            Console.WriteLine(string.Format("[HeartWaveBridge] Initializing {0}x{1} @ {2}fps low-latency pipeline ({3} bytes buffer)", width, height, fps, totalSize));
 
             try
             {
+                using (var newFrameEvent = new EventWaitHandle(false, EventResetMode.AutoReset, EVENT_NAME))
                 using (var mmf = MemoryMappedFile.CreateOrOpen(MMF_NAME, totalSize, MemoryMappedFileAccess.ReadWrite))
                 using (var accessor = mmf.CreateViewAccessor(0, totalSize, MemoryMappedFileAccess.ReadWrite))
                 {
-                    // Initialize HeartWaveSharedHeader
-                    accessor.Write(0, HW_MAGIC);      // magic
-                    accessor.Write(4, (uint)1);       // version
+                    // 1. Initialize HeartWaveSharedHeader
+                    accessor.Write(0, HW_MAGIC);      // magic 'HWAV'
+                    accessor.Write(4, (uint)1);       // version 1
                     accessor.Write(8, width);         // width
                     accessor.Write(12, height);       // height
-                    accessor.Write(16, (uint)0);      // format = 0 (NV12)
+                    accessor.Write(16, (uint)0);      // format = NV12
                     accessor.Write(20, (uint)0);      // writeIndex
-                    accessor.Write(24, (ulong)0);     // timestamp
-                    accessor.Write(32, frameSize);    // frameSize
+                    accessor.Write(24, (ulong)DateTime.UtcNow.Ticks); // timestamp
+                    accessor.Write(32, nv12Size);     // frameSize
                     accessor.Write(36, (uint)0);      // isPrivacyMuted
 
-                    // Prepare an elegant luxury dark rose NV12 base frame
-                    byte[] nv12Buffer = new byte[frameSize];
+                    // Prepare luxury dark rose default NV12 frame
+                    byte[] nv12Buffer = new byte[maxNv12Size];
                     int ySize = (int)(width * height);
-                    for (int i = 0; i < ySize; i++)
-                    {
-                        nv12Buffer[i] = 26; // Luxury dark #141211
-                    }
+                    for (int i = 0; i < ySize; i++) nv12Buffer[i] = 26; // Luxury dark #141211
                     int cx = (int)width / 2;
                     int cy = (int)height / 2;
                     int rSq = (int)(height * height / 4);
@@ -73,21 +113,24 @@ namespace HeartWave
                             }
                         }
                     }
-                    for (int i = ySize; i < frameSize; i += 2)
+                    for (int i = ySize; i < nv12Size; i += 2)
                     {
-                        nv12Buffer[i] = 132;     // U (rose-gold tint)
+                        nv12Buffer[i] = 132;     // U
                         nv12Buffer[i + 1] = 126; // V
                     }
 
-                    // Write initial frame
-                    accessor.WriteArray(headerSize, nv12Buffer, 0, (int)frameSize);
+                    accessor.WriteArray(headerSize, nv12Buffer, 0, (int)nv12Size);
+                    Console.WriteLine("[HeartWaveBridge] Ready. Awaiting live frames on stdin...");
 
-                    Console.WriteLine("[HeartWaveBridge] Ready. Streaming frames to DirectShow Virtual Camera...");
-
-                    // Streaming thread reading from stdin if available
-                    Stream stdin = Console.OpenStandardInput();
-                    byte[] stdinBuffer = new byte[frameSize];
-                    bool useStdin = false;
+                    // High-throughput 4MB buffer for standard input
+                    Stream stdin = Console.OpenStandardInput(4 * 1024 * 1024);
+                    byte[] stdinBuffer = new byte[1920 * 1080 * 4];
+                    byte[] workNv12 = new byte[maxNv12Size];
+                    byte[] headerBuf = new byte[12];
+                    uint writeIdx = 0;
+                    object bufferLock = new object();
+                    int telemetryFrames = 0;
+                    long lastTelemetryTicks = DateTime.UtcNow.Ticks;
 
                     var streamThread = new Thread(() =>
                     {
@@ -95,42 +138,102 @@ namespace HeartWave
                         {
                             while (true)
                             {
-                                int read = 0;
-                                while (read < frameSize)
+                                int hRead = 0;
+                                while (hRead < 12)
                                 {
-                                    int n = stdin.Read(stdinBuffer, read, (int)frameSize - read);
-                                    if (n <= 0) break;
-                                    read += n;
+                                    int n = stdin.Read(headerBuf, hRead, 12 - hRead);
+                                    if (n <= 0) return;
+                                    hRead += n;
                                 }
-                                if (read == frameSize)
+
+                                uint magic = BitConverter.ToUInt32(headerBuf, 0);
+                                uint frameW, frameH;
+                                int payloadRead = 0;
+
+                                if (magic == HW_FRAME_MAGIC)
                                 {
-                                    useStdin = true;
-                                    lock (nv12Buffer)
+                                    frameW = BitConverter.ToUInt32(headerBuf, 4);
+                                    frameH = BitConverter.ToUInt32(headerBuf, 8);
+                                    payloadRead = 0;
+                                }
+                                else
+                                {
+                                    // Raw mode: the 12 bytes are the start of RGBA
+                                    frameW = width;
+                                    frameH = height;
+                                    Buffer.BlockCopy(headerBuf, 0, stdinBuffer, 0, 12);
+                                    payloadRead = 12;
+                                }
+
+                                if (frameW == 0 || frameH == 0 || frameW > 3840 || frameH > 2160)
+                                {
+                                    continue;
+                                }
+
+                                uint frameRgbaSize = frameW * frameH * 4;
+                                uint frameNv12Size = frameW * frameH * 3 / 2;
+
+                                if (stdinBuffer.Length < frameRgbaSize)
+                                {
+                                    stdinBuffer = new byte[frameRgbaSize];
+                                }
+                                if (workNv12.Length < frameNv12Size)
+                                {
+                                    workNv12 = new byte[frameNv12Size];
+                                }
+
+                                while (payloadRead < frameRgbaSize)
+                                {
+                                    int n = stdin.Read(stdinBuffer, payloadRead, (int)frameRgbaSize - payloadRead);
+                                    if (n <= 0) return;
+                                    payloadRead += n;
+                                }
+
+                                unsafe
+                                {
+                                    fixed (byte* pRgba = stdinBuffer, pNv = workNv12)
                                     {
-                                        Buffer.BlockCopy(stdinBuffer, 0, nv12Buffer, 0, (int)frameSize);
+                                        RgbaToNv12(pRgba, pNv, (int)frameW, (int)frameH);
                                     }
+                                }
+
+                                // Write directly to MMF immediately - 0ms latency event-driven update!
+                                long timestamp = DateTime.UtcNow.Ticks;
+                                lock (bufferLock)
+                                {
+                                    accessor.WriteArray(headerSize, workNv12, 0, (int)frameNv12Size);
+                                    accessor.Write(8, frameW);
+                                    accessor.Write(12, frameH);
+                                    accessor.Write(32, frameNv12Size);
+                                    writeIdx++;
+                                    accessor.Write(20, writeIdx);
+                                    accessor.Write(24, (ulong)timestamp);
+                                }
+
+                                // Signal DirectShow filter that a fresh frame is ready!
+                                newFrameEvent.Set();
+
+                                telemetryFrames++;
+                                long nowTicks = DateTime.UtcNow.Ticks;
+                                if (nowTicks - lastTelemetryTicks >= 10000000)
+                                {
+                                    Console.WriteLine(string.Format("[Bridge Native] Pipe Read & Written: {0} fps, Total Index: {1}", telemetryFrames, writeIdx));
+                                    telemetryFrames = 0;
+                                    lastTelemetryTicks = nowTicks;
                                 }
                             }
                         }
                         catch { }
                     })
-                    { IsBackground = true };
+                    { IsBackground = true, Priority = ThreadPriority.AboveNormal };
                     streamThread.Start();
 
-                    uint writeIdx = 0;
-                    while (true)
+                    // Heartbeat loop to keep timestamp fresh even if paused
+                    while (streamThread.IsAlive)
                     {
-                        long timestamp = DateTime.UtcNow.Ticks;
-                        lock (nv12Buffer)
-                        {
-                            accessor.WriteArray(headerSize, nv12Buffer, 0, (int)frameSize);
-                        }
-
-                        writeIdx++;
-                        accessor.Write(20, writeIdx);
-                        accessor.Write(24, (ulong)timestamp);
-
-                        Thread.Sleep(33); // ~30 FPS
+                        long ts = DateTime.UtcNow.Ticks;
+                        accessor.Write(24, (ulong)ts);
+                        Thread.Sleep(500);
                     }
                 }
             }

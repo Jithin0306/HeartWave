@@ -1,13 +1,39 @@
-import React, { useState } from 'react';
-import { X, Camera, Hand, Layers, Shield, CheckCircle2, AlertCircle } from 'lucide-react';
-import { useAppStore, RESOLUTION_PRESETS } from '../../store/appStore';
+import React, { useState, useEffect } from 'react';
+import {
+  X,
+  Camera,
+  Hand,
+  Layers,
+  Shield,
+  CheckCircle2,
+  Palette,
+  Sparkles,
+  Check,
+  Volume2,
+  VolumeX,
+  Keyboard,
+  RefreshCw,
+  Download,
+  ArrowUpCircle,
+  AlertCircle
+} from 'lucide-react';
+import { useAppStore, RESOLUTION_PRESETS, THEMES, FONTS } from '../../store/appStore';
+import { soundEngine } from '../../services/soundEngine';
 
-type SettingsTab = 'camera' | 'gesture' | 'virtualCam' | 'privacy';
+type SettingsTab = 'appearance' | 'camera' | 'gesture' | 'virtualCam' | 'privacy' | 'updates';
 
 export const SettingsModal: React.FC = () => {
   const {
     isSettingsOpen,
     setIsSettingsOpen,
+    currentTheme,
+    setTheme,
+    currentFont,
+    setFont,
+    isSoundEnabled,
+    setSoundEnabled,
+    soundVolume,
+    setSoundVolume,
     availableDevices,
     selectedDeviceId,
     selectDevice,
@@ -15,7 +41,6 @@ export const SettingsModal: React.FC = () => {
     selectResolution,
     isMirrored,
     toggleMirror,
-    virtualCameraStatus,
     showSkeletonDiagnostics,
     setShowSkeletonDiagnostics,
     gestureHoldDuration,
@@ -24,7 +49,56 @@ export const SettingsModal: React.FC = () => {
     setGestureConfidence,
   } = useAppStore();
 
-  const [activeTab, setActiveTab] = useState<SettingsTab>('camera');
+  const [activeTab, setActiveTab] = useState<SettingsTab>('appearance');
+  const [updateStatus, setUpdateStatus] = useState<{
+    state: 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error';
+    version?: string;
+    percent?: number;
+    message?: string;
+  }>({ state: 'idle' });
+  const [isCheckingManual, setIsCheckingManual] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (window.heartwaveApi?.getUpdateStatus) {
+      window.heartwaveApi.getUpdateStatus().then((status) => {
+        if (status) setUpdateStatus(status);
+      });
+    }
+    if (window.heartwaveApi?.onUpdateStatus) {
+      const unsub = window.heartwaveApi.onUpdateStatus((status) => {
+        setUpdateStatus(status);
+        setIsCheckingManual(false);
+      });
+      return unsub;
+    }
+  }, []);
+
+  const handleCheckUpdates = async () => {
+    setIsCheckingManual(true);
+    setUpdateStatus({ state: 'checking' });
+    if (window.heartwaveApi?.checkForUpdates) {
+      try {
+        const res = await window.heartwaveApi.checkForUpdates();
+        if (res) setUpdateStatus(res);
+      } catch (err: any) {
+        setUpdateStatus({ state: 'error', message: err?.message || 'Failed to check updates' });
+      } finally {
+        setIsCheckingManual(false);
+      }
+    } else {
+      setTimeout(() => {
+        setUpdateStatus({
+          state: 'not-available',
+          message: 'Development environment (packaged build required for auto-updates)',
+        });
+        setIsCheckingManual(false);
+      }, 1000);
+    }
+  };
+
+  const handleInstallUpdate = () => {
+    window.heartwaveApi?.installUpdate?.();
+  };
 
   if (!isSettingsOpen) return null;
 
@@ -81,7 +155,7 @@ export const SettingsModal: React.FC = () => {
                 color: 'var(--hw-accent-rose)',
               }}
             >
-              Phase 1 Preview
+              v1.0.0 • Production
             </span>
           </div>
 
@@ -121,10 +195,12 @@ export const SettingsModal: React.FC = () => {
             }}
           >
             {[
+              { id: 'appearance' as SettingsTab, label: 'Appearance & Themes', icon: Palette },
               { id: 'camera' as SettingsTab, label: 'Physical Camera', icon: Camera },
               { id: 'gesture' as SettingsTab, label: 'Gesture Tracking', icon: Hand },
               { id: 'virtualCam' as SettingsTab, label: 'Virtual Camera', icon: Layers },
               { id: 'privacy' as SettingsTab, label: 'Privacy & Security', icon: Shield },
+              { id: 'updates' as SettingsTab, label: 'Software Updates', icon: RefreshCw },
             ].map((tab) => {
               const isSelected = activeTab === tab.id;
               const Icon = tab.icon;
@@ -142,7 +218,7 @@ export const SettingsModal: React.FC = () => {
                     fontWeight: isSelected ? 600 : 400,
                     backgroundColor: isSelected ? 'var(--hw-surface-elevated)' : 'transparent',
                     color: isSelected ? 'var(--hw-text-primary)' : 'var(--hw-text-secondary)',
-                    border: isSelected ? '1px solid var(--hw-accent-burgundy)' : '1px solid transparent',
+                    border: isSelected ? '1px solid var(--hw-border-focus)' : '1px solid transparent',
                     textAlign: 'left',
                     transition: 'all var(--hw-transition-fast)',
                   }}
@@ -156,6 +232,259 @@ export const SettingsModal: React.FC = () => {
 
           {/* Content Pane */}
           <div style={{ flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            {activeTab === 'appearance' && (
+              <>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <h4 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--hw-text-primary)' }}>
+                      Workspace Aesthetic & Themes
+                    </h4>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        color: 'var(--hw-text-muted)',
+                      }}
+                    >
+                      Instant Zero-Lag Switch
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '11px', color: 'var(--hw-text-muted)', marginBottom: '14px' }}>
+                    Choose a tailored visual theme for your stream, gaming session, or professional workspace. Video and camera streams are uninterrupted during switching.
+                  </p>
+
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(2, 1fr)',
+                      gap: '12px',
+                    }}
+                  >
+                    {THEMES.map((theme) => {
+                      const isSelected = currentTheme === theme.id;
+                      return (
+                        <div
+                          key={theme.id}
+                          onClick={() => setTheme(theme.id)}
+                          style={{
+                            padding: '14px',
+                            borderRadius: 'var(--hw-radius-md)',
+                            backgroundColor: isSelected ? 'var(--hw-surface-elevated)' : 'var(--hw-bg-primary)',
+                            border: isSelected
+                              ? '1.5px solid var(--hw-accent-primary)'
+                              : '1px solid var(--hw-border-subtle)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '10px',
+                            transition: 'all var(--hw-transition-fast)',
+                            boxShadow: isSelected ? 'var(--hw-shadow-accent)' : 'none',
+                            position: 'relative',
+                            overflow: 'hidden',
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.borderColor = 'var(--hw-border-medium)';
+                              e.currentTarget.style.backgroundColor = 'var(--hw-surface-subtle)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.borderColor = 'var(--hw-border-subtle)';
+                              e.currentTarget.style.backgroundColor = 'var(--hw-bg-primary)';
+                            }
+                          }}
+                        >
+                          {/* Top Row: Palette Swatches & Badges */}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span
+                                style={{
+                                  width: '14px',
+                                  height: '14px',
+                                  borderRadius: '50%',
+                                  backgroundColor: theme.previewColor,
+                                  boxShadow: `0 0 8px ${theme.previewColor}66`,
+                                  display: 'inline-block',
+                                }}
+                              />
+                              <span
+                                style={{
+                                  width: '10px',
+                                  height: '10px',
+                                  borderRadius: '50%',
+                                  backgroundColor: theme.accentColor,
+                                  display: 'inline-block',
+                                }}
+                              />
+                              <span
+                                style={{
+                                  width: '8px',
+                                  height: '8px',
+                                  borderRadius: '50%',
+                                  backgroundColor: theme.bgPreview,
+                                  border: '1px solid rgba(255,255,255,0.2)',
+                                  display: 'inline-block',
+                                }}
+                              />
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              {theme.badge && (
+                                <span
+                                  style={{
+                                    fontSize: '10px',
+                                    fontWeight: 600,
+                                    padding: '2px 6px',
+                                    borderRadius: 'var(--hw-radius-xs)',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                    color: 'var(--hw-text-secondary)',
+                                  }}
+                                >
+                                  {theme.badge}
+                                </span>
+                              )}
+                              {isSelected && (
+                                <span
+                                  style={{
+                                    fontSize: '10px',
+                                    fontWeight: 700,
+                                    padding: '2px 8px',
+                                    borderRadius: 'var(--hw-radius-full)',
+                                    backgroundColor: 'var(--hw-accent-primary)',
+                                    color: '#FFFFFF',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                  }}
+                                >
+                                  <Check size={10} strokeWidth={3} />
+                                  Active
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Theme Title & Tagline */}
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--hw-text-primary)', marginBottom: '2px' }}>
+                              {theme.name}
+                            </div>
+                            <div style={{ fontSize: '10px', color: 'var(--hw-accent-rose)', fontWeight: 500 }}>
+                              {theme.tagline}
+                            </div>
+                          </div>
+
+                          {/* Description */}
+                          <div style={{ fontSize: '11px', color: 'var(--hw-text-muted)', lineHeight: 1.4 }}>
+                            {theme.description}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Typography Font Selector */}
+                <div style={{ borderTop: '1px solid var(--hw-border-subtle)', paddingTop: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <h4 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--hw-text-primary)' }}>
+                      Interface Typography & Font
+                    </h4>
+                    <span style={{ fontSize: '11px', color: 'var(--hw-text-muted)' }}>
+                      App-Wide Typography
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '11px', color: 'var(--hw-text-muted)', marginBottom: '12px' }}>
+                    Applies cleanly across all menus, buttons, sliders, inspector panels, and HUD telemetry without altering the brand title.
+                  </p>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                    {FONTS.map((font) => {
+                      const isSelected = currentFont === font.id;
+                      return (
+                        <div
+                          key={font.id}
+                          onClick={() => setFont(font.id)}
+                          style={{
+                            padding: '10px 12px',
+                            borderRadius: 'var(--hw-radius-sm)',
+                            backgroundColor: isSelected ? 'var(--hw-surface-elevated)' : 'var(--hw-bg-primary)',
+                            border: isSelected ? '1.5px solid var(--hw-accent-primary)' : '1px solid var(--hw-border-subtle)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '4px',
+                            transition: 'all var(--hw-transition-fast)',
+                            boxShadow: isSelected ? 'var(--hw-shadow-accent)' : 'none',
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isSelected) e.currentTarget.style.borderColor = 'var(--hw-border-medium)';
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected) e.currentTarget.style.borderColor = 'var(--hw-border-subtle)';
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontFamily: font.family, fontSize: '13px', fontWeight: 700, color: 'var(--hw-text-primary)' }}>
+                              {font.name}
+                            </span>
+                            {isSelected && (
+                              <span style={{ fontSize: '9px', fontWeight: 700, padding: '2px 6px', borderRadius: 'var(--hw-radius-full)', backgroundColor: 'var(--hw-accent-primary)', color: '#fff', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                <Check size={9} strokeWidth={3} />
+                                Active
+                              </span>
+                            )}
+                          </div>
+                          <span style={{ fontSize: '10px', color: 'var(--hw-accent-rose)', fontWeight: 500 }}>
+                            {font.category}
+                          </span>
+                          <span style={{ fontSize: '10px', color: 'var(--hw-text-muted)', lineHeight: 1.3 }}>
+                            {font.description}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Live Preview Accent Preview bar */}
+                <div
+                  style={{
+                    borderTop: '1px solid var(--hw-border-subtle)',
+                    paddingTop: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div>
+                    <h5 style={{ fontSize: '12px', fontWeight: 600, color: 'var(--hw-text-primary)', marginBottom: '2px' }}>
+                      Current Active Theme: {THEMES.find((t) => t.id === currentTheme)?.name}
+                    </h5>
+                    <p style={{ fontSize: '11px', color: 'var(--hw-text-muted)' }}>
+                      Color tokens and UI styling update synchronously across all panels and HUD overlays.
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: 'var(--hw-radius-sm)',
+                      backgroundColor: 'var(--hw-surface-elevated)',
+                      border: '1px solid var(--hw-border-subtle)',
+                      fontSize: '11px',
+                      color: 'var(--hw-text-secondary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <Sparkles size={12} color="var(--hw-accent-rose)" />
+                    Hardware-Accelerated
+                  </div>
+                </div>
+              </>
+            )}
+
             {activeTab === 'camera' && (
               <>
                 <div>
@@ -325,6 +654,115 @@ export const SettingsModal: React.FC = () => {
                     </button>
                   </div>
                 </div>
+
+                {/* Phase 7: Procedural Audio Feedback Settings */}
+                <div style={{ borderTop: '1px solid var(--hw-border-subtle)', paddingTop: '14px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <div>
+                      <h4 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--hw-text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {isSoundEnabled ? <Volume2 size={14} color="var(--hw-accent-rose)" /> : <VolumeX size={14} color="var(--hw-text-muted)" />}
+                        Gesture Sound Feedback
+                      </h4>
+                      <p style={{ fontSize: '11px', color: 'var(--hw-text-muted)' }}>
+                        Plays procedural harmonic chimes when gestures successfully trigger effects.
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <button
+                        onClick={() => soundEngine.playHeartChime()}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: 'var(--hw-radius-sm)',
+                          backgroundColor: 'var(--hw-surface-elevated)',
+                          border: '1px solid var(--hw-border-subtle)',
+                          fontSize: '10px',
+                          color: 'var(--hw-text-secondary)',
+                        }}
+                      >
+                        Test Sound
+                      </button>
+                      <button
+                        onClick={() => setSoundEnabled(!isSoundEnabled)}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: 'var(--hw-radius-sm)',
+                          backgroundColor: isSoundEnabled ? 'var(--hw-accent-primary)' : 'var(--hw-surface-elevated)',
+                          color: isSoundEnabled ? '#FFFFFF' : 'var(--hw-text-secondary)',
+                          border: '1px solid var(--hw-border-subtle)',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {isSoundEnabled ? 'Enabled' : 'Muted'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {isSoundEnabled && (
+                    <div style={{ marginTop: '10px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--hw-text-muted)' }}>Chime Volume</span>
+                        <span style={{ fontSize: '11px', color: 'var(--hw-accent-rose)', fontWeight: 600 }}>{soundVolume}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="5"
+                        max="100"
+                        value={soundVolume}
+                        onChange={(e) => setSoundVolume(Number(e.target.value))}
+                        style={{ width: '100%', accentColor: 'var(--hw-accent-primary)' }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Phase 7: Global Windows Hotkeys Reference */}
+                <div style={{ borderTop: '1px solid var(--hw-border-subtle)', paddingTop: '14px' }}>
+                  <h4 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--hw-text-primary)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Keyboard size={14} color="var(--hw-accent-rose)" />
+                    Global Windows Shortcuts
+                  </h4>
+                  <p style={{ fontSize: '11px', color: 'var(--hw-text-muted)', marginBottom: '10px' }}>
+                    Control HeartWave from any window while gaming or streaming in OBS:
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
+                    {[
+                      { key: 'Ctrl + Shift + P', label: 'Privacy Shutter' },
+                      { key: 'Ctrl + Shift + B', label: 'Bypass Effects' },
+                      { key: 'Ctrl + Shift + V', label: 'Virtual Camera' },
+                      { key: 'Ctrl + Shift + M', label: 'Mirror Horizontal' },
+                    ].map((hk) => (
+                      <div
+                        key={hk.key}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: 'var(--hw-radius-sm)',
+                          backgroundColor: 'var(--hw-surface-elevated)',
+                          border: '1px solid var(--hw-border-subtle)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          fontSize: '11px',
+                        }}
+                      >
+                        <span style={{ color: 'var(--hw-text-secondary)' }}>{hk.label}</span>
+                        <kbd
+                          style={{
+                            fontFamily: 'monospace',
+                            fontSize: '10px',
+                            backgroundColor: 'var(--hw-bg-primary)',
+                            padding: '2px 6px',
+                            borderRadius: 'var(--hw-radius-xs)',
+                            border: '1px solid var(--hw-border-subtle)',
+                            color: 'var(--hw-accent-rose)',
+                          }}
+                        >
+                          {hk.key}
+                        </kbd>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </>
             )}
 
@@ -334,19 +772,19 @@ export const SettingsModal: React.FC = () => {
                   style={{
                     padding: '12px',
                     borderRadius: 'var(--hw-radius-md)',
-                    backgroundColor: 'rgba(214, 189, 145, 0.1)',
-                    border: '1px solid var(--hw-accent-champagne)',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    border: '1px solid var(--hw-accent-primary)',
                     display: 'flex',
                     gap: '10px',
                   }}
                 >
-                  <AlertCircle size={18} color="var(--hw-accent-champagne)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <CheckCircle2 size={18} color="var(--hw-accent-primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
                   <div>
-                    <h5 style={{ fontSize: '12px', fontWeight: 600, color: 'var(--hw-accent-champagne)', marginBottom: '2px' }}>
-                      Native Windows Media Foundation Driver (Status: {virtualCameraStatus.toUpperCase()})
+                    <h5 style={{ fontSize: '12px', fontWeight: 600, color: 'var(--hw-accent-primary)', marginBottom: '2px' }}>
+                      Standalone DirectShow Virtual Camera & System Tray Active
                     </h5>
                     <p style={{ fontSize: '11px', color: 'var(--hw-text-secondary)', lineHeight: 1.4 }}>
-                      The virtual camera device will be registered as a native Windows video capture source in Phase Six using C++ and <code>MFCreateVirtualCamera</code>.
+                      HeartWave broadcasts a high-speed shared memory video pipeline directly to Windows capture apps (OBS Studio, Discord, Chrome). When minimized, HeartWave runs in the background System Tray without dropping frames.
                     </p>
                   </div>
                 </div>
@@ -408,6 +846,252 @@ export const SettingsModal: React.FC = () => {
                     <li>No biometric or hand landmark data is ever stored on disk or transmitted.</li>
                     <li>No user accounts, subscriptions, or telemetry trackers are required.</li>
                     <li>Camera resources are fully released the instant capture is stopped or Heartwave exits.</li>
+                  </ul>
+                </div>
+              </>
+            )}
+
+            {activeTab === 'updates' && (
+              <>
+                {/* Software Version & Status Card */}
+                <div
+                  style={{
+                    padding: '16px',
+                    borderRadius: 'var(--hw-radius-md)',
+                    backgroundColor: 'var(--hw-surface-elevated)',
+                    border: '1px solid var(--hw-border-subtle)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div
+                        style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '8px',
+                          backgroundColor: 'var(--hw-bg-primary)',
+                          border: '1px solid var(--hw-border-subtle)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <RefreshCw size={18} color="var(--hw-accent-rose)" />
+                      </div>
+                      <div>
+                        <h4 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--hw-text-primary)' }}>
+                          HeartWave Virtual Camera
+                        </h4>
+                        <p style={{ fontSize: '11px', color: 'var(--hw-text-muted)' }}>
+                          Installed: <strong style={{ color: 'var(--hw-text-primary)' }}>v1.0.0</strong> • Windows 64-bit
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleCheckUpdates}
+                      disabled={isCheckingManual || updateStatus.state === 'downloading'}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '8px 14px',
+                        borderRadius: 'var(--hw-radius-sm)',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        backgroundColor: isCheckingManual ? 'var(--hw-surface-subtle)' : 'var(--hw-accent-rose)',
+                        color: isCheckingManual ? 'var(--hw-text-muted)' : '#ffffff',
+                        border: 'none',
+                        cursor: isCheckingManual ? 'not-allowed' : 'pointer',
+                        transition: 'all var(--hw-transition-fast)',
+                      }}
+                    >
+                      <RefreshCw
+                        size={12}
+                        style={{
+                          animation: isCheckingManual ? 'spin 1s linear infinite' : 'none',
+                        }}
+                      />
+                      {isCheckingManual ? 'Checking...' : 'Check for Updates'}
+                    </button>
+                  </div>
+
+                  {/* Status Indicator Box */}
+                  {updateStatus.state === 'downloaded' && (
+                    <div
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: 'var(--hw-radius-sm)',
+                        backgroundColor: 'rgba(52, 199, 89, 0.12)',
+                        border: '1px solid rgba(52, 199, 89, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <CheckCircle2 size={16} color="#34c759" />
+                        <div>
+                          <p style={{ fontSize: '12px', fontWeight: 600, color: '#34c759' }}>
+                            Update Ready! (v{updateStatus.version})
+                          </p>
+                          <p style={{ fontSize: '11px', color: 'var(--hw-text-secondary)' }}>
+                            Downloaded and verified. Restart to apply update immediately.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleInstallUpdate}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 12px',
+                          borderRadius: 'var(--hw-radius-sm)',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          backgroundColor: '#34c759',
+                          color: '#ffffff',
+                          border: 'none',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <Download size={12} /> Restart & Install
+                      </button>
+                    </div>
+                  )}
+
+                  {updateStatus.state === 'downloading' && (
+                    <div
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: 'var(--hw-radius-sm)',
+                        backgroundColor: 'var(--hw-bg-primary)',
+                        border: '1px solid var(--hw-border-focus)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                        <span style={{ color: 'var(--hw-text-primary)', fontWeight: 600 }}>
+                          Downloading Update v{updateStatus.version || ''}...
+                        </span>
+                        <span style={{ color: 'var(--hw-accent-rose)' }}>{updateStatus.percent || 0}%</span>
+                      </div>
+                      <div
+                        style={{
+                          width: '100%',
+                          height: '6px',
+                          backgroundColor: 'var(--hw-surface-subtle)',
+                          borderRadius: '3px',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: `${updateStatus.percent || 0}%`,
+                            height: '100%',
+                            backgroundColor: 'var(--hw-accent-rose)',
+                            transition: 'width 0.3s ease',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {updateStatus.state === 'available' && (
+                    <div
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: 'var(--hw-radius-sm)',
+                        backgroundColor: 'var(--hw-surface-subtle)',
+                        border: '1px solid var(--hw-border-subtle)',
+                        fontSize: '11px',
+                        color: 'var(--hw-accent-rose)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <ArrowUpCircle size={14} />
+                      <span>New version found (v{updateStatus.version}). Starting background download...</span>
+                    </div>
+                  )}
+
+                  {updateStatus.state === 'not-available' && (
+                    <div
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: 'var(--hw-radius-sm)',
+                        backgroundColor: 'rgba(52, 199, 89, 0.08)',
+                        border: '1px solid rgba(52, 199, 89, 0.25)',
+                        fontSize: '11px',
+                        color: 'var(--hw-text-primary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <CheckCircle2 size={14} color="#34c759" />
+                      <span>{updateStatus.message || 'You have the latest version installed.'}</span>
+                    </div>
+                  )}
+
+                  {updateStatus.state === 'error' && (
+                    <div
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: 'var(--hw-radius-sm)',
+                        backgroundColor: 'rgba(255, 69, 58, 0.08)',
+                        border: '1px solid rgba(255, 69, 58, 0.25)',
+                        fontSize: '11px',
+                        color: 'var(--hw-text-secondary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <AlertCircle size={14} color="var(--hw-accent-rose)" />
+                      <span>{updateStatus.message || 'Unable to reach update server.'}</span>
+                    </div>
+                  )}
+
+                  {updateStatus.state === 'idle' && (
+                    <div
+                      style={{
+                        fontSize: '11px',
+                        color: 'var(--hw-text-muted)',
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      HeartWave automatically checks for updates in the background on startup. When an update is ready, you will be notified to restart.
+                    </div>
+                  )}
+                </div>
+
+                {/* Over-The-Air Architecture Overview */}
+                <div
+                  style={{
+                    padding: '14px',
+                    borderRadius: 'var(--hw-radius-md)',
+                    backgroundColor: 'var(--hw-bg-primary)',
+                    border: '1px solid var(--hw-border-subtle)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                  }}
+                >
+                  <h5 style={{ fontSize: '12px', fontWeight: 600, color: 'var(--hw-text-primary)' }}>
+                    Automatic Release Delivery
+                  </h5>
+                  <ul style={{ fontSize: '11px', color: 'var(--hw-text-muted)', lineHeight: 1.8, paddingLeft: '18px' }}>
+                    <li>Updates are securely published via GitHub Releases with SHA-512 verification.</li>
+                    <li>Zero-data loss: all theme preferences, device selections, and custom hotkeys remain preserved.</li>
+                    <li>Differential delta downloads only fetch updated components to save bandwidth.</li>
                   </ul>
                 </div>
               </>

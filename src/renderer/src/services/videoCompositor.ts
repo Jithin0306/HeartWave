@@ -1,10 +1,14 @@
 import { CompositorMetrics } from '../types/compositor';
+import logoFullUrl from '../assets/logo-full.jpg';
+import logoIconUrl from '../assets/logo-icon.png';
 
 export class VideoCompositor {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D | null;
   private width: number = 1280;
   private height: number = 720;
+  private logoFullImg: HTMLImageElement | null = null;
+  private logoIconImg: HTMLImageElement | null = null;
 
   // Performance telemetry
   private frameCount: number = 0;
@@ -23,7 +27,17 @@ export class VideoCompositor {
     this.ctx = this.canvas.getContext('2d', {
       alpha: false, // Opaque buffer for faster GPU blitting
       desynchronized: true, // Low-latency pipeline hint
+      willReadFrequently: true, // Eliminates synchronous GPU readback stalls
     });
+    try {
+      this.logoFullImg = new Image();
+      this.logoFullImg.src = logoFullUrl;
+      this.logoIconImg = new Image();
+      this.logoIconImg.src = logoIconUrl;
+    } catch {}
+    try {
+      this.outputStream = this.canvas.captureStream(30);
+    } catch {}
   }
 
   /**
@@ -42,7 +56,7 @@ export class VideoCompositor {
    * Render composite video frame with physical camera, effects overlay, or privacy slate.
    */
   compositeFrame(
-    video: HTMLVideoElement,
+    video: CanvasImageSource,
     effectsCanvas: HTMLCanvasElement | null,
     isMirrored: boolean,
     bypassEffects: boolean,
@@ -122,37 +136,49 @@ export class VideoCompositor {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
 
-    // Monogram Crest Box
-    const boxSize = 80;
     const cx = w / 2;
-    const cy = h / 2 - 20;
+    const cy = h / 2 - 25;
 
     ctx.save();
-    ctx.strokeStyle = 'rgba(214, 189, 145, 0.4)';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(cx - boxSize / 2, cy - boxSize / 2, boxSize, boxSize);
 
-    // Monogram ✦
-    ctx.fillStyle = '#D6BD91'; // Champagne
-    ctx.font = '600 24px serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('HW', cx, cy - 2);
+    // Render Heartwave 3D Emblem if available
+    const iconSize = 96;
+    if (this.logoIconImg && this.logoIconImg.complete && this.logoIconImg.naturalWidth > 0) {
+      // Draw rounded crest border
+      ctx.strokeStyle = 'rgba(214, 189, 145, 0.35)';
+      ctx.lineWidth = 1.5;
+      const pad = 6;
+      ctx.strokeRect(cx - iconSize / 2 - pad, cy - iconSize / 2 - pad, iconSize + pad * 2, iconSize + pad * 2);
+      ctx.drawImage(this.logoIconImg, cx - iconSize / 2, cy - iconSize / 2, iconSize, iconSize);
+    } else {
+      // Fallback Monogram Crest Box
+      const boxSize = 80;
+      ctx.strokeStyle = 'rgba(214, 189, 145, 0.4)';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(cx - boxSize / 2, cy - boxSize / 2, boxSize, boxSize);
 
-    // Tiny 4-point gold star above monogram
-    ctx.fillStyle = 'rgba(214, 189, 145, 0.8)';
-    ctx.font = '14px sans-serif';
-    ctx.fillText('✦', cx, cy - boxSize / 2 - 12);
+      ctx.fillStyle = '#D6BD91';
+      ctx.font = '600 24px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('HW', cx, cy - 2);
+    }
 
     // Editorial Typography
-    ctx.font = '600 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.font = '600 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.letterSpacing = '0.12em';
     ctx.fillStyle = '#F5EFE9';
-    ctx.fillText('CAMERA MUTED', cx, cy + boxSize / 2 + 30);
+    ctx.fillText('CAMERA MUTED', cx, cy + iconSize / 2 + 28);
 
     ctx.font = '400 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.letterSpacing = '0.04em';
+    ctx.fillStyle = '#D6BD91';
+    ctx.fillText('Heartwave • Make every gesture mean something', cx, cy + iconSize / 2 + 48);
+
+    ctx.font = '400 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = '#857873';
-    ctx.fillText('Heartwave privacy shutter is active', cx, cy + boxSize / 2 + 50);
+    ctx.fillText('Privacy shutter is active', cx, cy + iconSize / 2 + 66);
 
     ctx.restore();
   }
@@ -180,6 +206,14 @@ export class VideoCompositor {
    */
   getCanvas(): HTMLCanvasElement {
     return this.canvas;
+  }
+
+  getWidth(): number {
+    return this.width;
+  }
+
+  getHeight(): number {
+    return this.height;
   }
 }
 

@@ -8,6 +8,7 @@ import {
   Settings,
   Camera,
   Layers,
+  Palette,
   LucideIcon,
 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
@@ -188,10 +189,36 @@ export const NavigationSidebar: React.FC = () => {
         </div>
       </div>
 
+      {/* Themes & Appearance Launcher Button */}
+      <button
+        onClick={() => setIsSettingsOpen(true)}
+        title="Themes & Appearance"
+        style={{
+          width: '44px',
+          height: '44px',
+          borderRadius: 'var(--hw-radius-md)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--hw-accent-rose)',
+          transition: 'all var(--hw-transition-fast)',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'var(--hw-surface-hover)';
+          e.currentTarget.style.color = 'var(--hw-text-primary)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'transparent';
+          e.currentTarget.style.color = 'var(--hw-accent-rose)';
+        }}
+      >
+        <Palette size={18} strokeWidth={1.8} />
+      </button>
+
       {/* Settings Action Button */}
       <button
         onClick={() => setIsSettingsOpen(true)}
-        title="Settings & Privacy"
+        title="Settings & Preferences"
         style={{
           width: '44px',
           height: '44px',
