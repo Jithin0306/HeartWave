@@ -147,23 +147,6 @@ export const TitleBar: React.FC = () => {
           />
         </div>
 
-        {/* Phase Badge */}
-        <div
-          style={{
-            padding: '2px 8px',
-            borderRadius: 'var(--hw-radius-full)',
-            backgroundColor: 'var(--hw-surface-elevated)',
-            border: '1px solid var(--hw-border-subtle)',
-            fontSize: '10px',
-            fontWeight: 500,
-            letterSpacing: '0.04em',
-            color: 'var(--hw-accent-rose)',
-            marginLeft: '4px',
-          }}
-        >
-          PHASE 7: PRODUCTION RELEASE
-        </div>
-
         {/* Dynamic Tagline based on active theme */}
         <span
           style={{
@@ -172,7 +155,7 @@ export const TitleBar: React.FC = () => {
             letterSpacing: '0.04em',
             fontFamily: 'var(--hw-font-sans)',
             fontStyle: 'italic',
-            marginLeft: '6px',
+            marginLeft: '8px',
           }}
         >
           "{activeThemeConfig.tagline}"
@@ -362,7 +345,7 @@ export const TitleBar: React.FC = () => {
               backgroundColor: virtualCameraStatus === 'offline' ? 'var(--hw-status-idle)' : 'var(--hw-accent-champagne)',
             }}
           />
-          Virtual Camera: {virtualCameraStatus === 'offline' ? 'Offline' : 'Phase 6 Integration'}
+          Virtual Camera: {virtualCameraStatus === 'offline' ? 'Offline' : 'Active'}
         </div>
 
         {/* Window action buttons (no-drag) */}

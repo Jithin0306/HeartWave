@@ -165,7 +165,7 @@ export const NavigationSidebar: React.FC = () => {
 
         {/* Virtual Camera driver indicator */}
         <div
-          title={`Virtual Camera: ${virtualCameraStatus.toUpperCase()} (Phase 6 Driver)`}
+          title={`Virtual Camera: ${virtualCameraStatus.toUpperCase()}`}
           style={{
             position: 'relative',
             display: 'flex',

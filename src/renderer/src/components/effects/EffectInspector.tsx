@@ -139,7 +139,7 @@ export const EffectInspector: React.FC = () => {
         }}
       >
         <ShieldCheck size={13} color="var(--hw-status-active)" />
-        <span>Phase 4 Engine Active. Trigger hands-free via gesture or test above.</span>
+        <span>Engine Active • Trigger hands-free via gesture or test above.</span>
       </div>
     </div>
   );

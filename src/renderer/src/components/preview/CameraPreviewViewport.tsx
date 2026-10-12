@@ -1210,7 +1210,7 @@ export const CameraPreviewViewport: React.FC = () => {
             }}
           >
             <Layers size={13} strokeWidth={1.8} />
-            Virtual Camera: {virtualCameraStatus === 'offline' ? 'Off' : 'Driver Standby (Phase 6)'}
+            Virtual Camera: {virtualCameraStatus === 'offline' ? 'Off' : 'Driver Standby'}
           </button>
         </div>
       </div>
