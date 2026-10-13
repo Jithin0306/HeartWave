@@ -1,14 +1,14 @@
 import React from 'react';
-import { Search } from 'lucide-react';
+import { Search, Users, Heart, Star, Sparkles } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { EffectCard } from './EffectCard';
 import { EffectInspector } from './EffectInspector';
 import { EffectCategory } from '../../types/effect';
 
 const CATEGORIES: { id: EffectCategory; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'romantic', label: 'Romantic' },
-  { id: 'couples', label: 'Couples' },
+  { id: 'all', label: 'All Effects' },
+  { id: 'couples', label: 'Couples & Duo' },
+  { id: 'romantic', label: 'Romantic FX' },
   { id: 'favorites', label: 'Favorites' },
 ];
 
@@ -22,7 +22,16 @@ export const EffectsLibrary: React.FC = () => {
     setSearchQuery,
     categoryFilter,
     setCategoryFilter,
+    setActiveNav,
   } = useAppStore();
+
+  const handleCategorySelect = (catId: EffectCategory) => {
+    setCategoryFilter(catId);
+    if (catId === 'all') setActiveNav('home');
+    else if (catId === 'couples') setActiveNav('couples');
+    else if (catId === 'romantic') setActiveNav('romantic');
+    else if (catId === 'favorites') setActiveNav('favorites');
+  };
 
   const filteredEffects = effects.filter((effect) => {
     // Category match
@@ -41,6 +50,19 @@ export const EffectsLibrary: React.FC = () => {
     }
     return true;
   });
+
+  const getHeaderTitle = () => {
+    switch (categoryFilter) {
+      case 'couples':
+        return 'Couples & Duo Mode';
+      case 'romantic':
+        return 'Romantic Visual Studio';
+      case 'favorites':
+        return 'Starred Favorites';
+      default:
+        return 'Effects Studio';
+    }
+  };
 
   return (
     <aside
@@ -65,16 +87,22 @@ export const EffectsLibrary: React.FC = () => {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2
-            style={{
-              fontSize: '15px',
-              fontWeight: 600,
-              color: 'var(--hw-text-primary)',
-              letterSpacing: '-0.01em',
-            }}
-          >
-            Effects Library
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {categoryFilter === 'couples' && <Users size={16} color="var(--hw-accent-rose)" />}
+            {categoryFilter === 'romantic' && <Heart size={16} color="var(--hw-accent-champagne)" />}
+            {categoryFilter === 'favorites' && <Star size={16} color="#e5a83b" />}
+            {categoryFilter === 'all' && <Sparkles size={16} color="var(--hw-accent-rose)" />}
+            <h2
+              style={{
+                fontSize: '15px',
+                fontWeight: 600,
+                color: 'var(--hw-text-primary)',
+                letterSpacing: '-0.01em',
+              }}
+            >
+              {getHeaderTitle()}
+            </h2>
+          </div>
           <span
             style={{
               fontSize: '11px',
@@ -121,7 +149,7 @@ export const EffectsLibrary: React.FC = () => {
             return (
               <button
                 key={cat.id}
-                onClick={() => setCategoryFilter(cat.id)}
+                onClick={() => handleCategorySelect(cat.id)}
                 style={{
                   padding: '4px 10px',
                   borderRadius: 'var(--hw-radius-full)',
@@ -132,6 +160,7 @@ export const EffectsLibrary: React.FC = () => {
                   border: `1px solid ${isSelected ? 'var(--hw-accent-primary)' : 'var(--hw-border-subtle)'}`,
                   transition: 'all var(--hw-transition-fast)',
                   whiteSpace: 'nowrap',
+                  cursor: 'pointer',
                 }}
               >
                 {cat.label}
@@ -139,6 +168,79 @@ export const EffectsLibrary: React.FC = () => {
             );
           })}
         </div>
+
+        {/* Contextual Mode Guidance Banners */}
+        {categoryFilter === 'couples' && (
+          <div
+            style={{
+              padding: '10px 12px',
+              borderRadius: 'var(--hw-radius-md)',
+              backgroundColor: 'rgba(232, 44, 85, 0.08)',
+              border: '1px solid rgba(232, 44, 85, 0.25)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Users size={13} color="var(--hw-accent-rose)" />
+              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--hw-accent-rose)' }}>
+                Couples & Duo Tracking
+              </span>
+            </div>
+            <p style={{ fontSize: '10px', color: 'var(--hw-text-secondary)', lineHeight: 1.4, margin: 0 }}>
+              Optimized for dual-hand detection and joint webcam poses. Form two-hand hearts or dual palms together with your partner.
+            </p>
+          </div>
+        )}
+
+        {categoryFilter === 'romantic' && (
+          <div
+            style={{
+              padding: '10px 12px',
+              borderRadius: 'var(--hw-radius-md)',
+              backgroundColor: 'rgba(214, 189, 145, 0.08)',
+              border: '1px solid rgba(214, 189, 145, 0.25)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Heart size={13} color="var(--hw-accent-champagne)" />
+              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--hw-accent-champagne)' }}>
+                Romantic Particle Atmosphere
+              </span>
+            </div>
+            <p style={{ fontSize: '10px', color: 'var(--hw-text-secondary)', lineHeight: 1.4, margin: 0 }}>
+              Sculptural 3D roses, drifting petal flutter, and golden finger shimmers calibrated for emotional warmth.
+            </p>
+          </div>
+        )}
+
+        {categoryFilter === 'favorites' && (
+          <div
+            style={{
+              padding: '10px 12px',
+              borderRadius: 'var(--hw-radius-md)',
+              backgroundColor: 'rgba(229, 168, 59, 0.08)',
+              border: '1px solid rgba(229, 168, 59, 0.25)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Star size={13} color="#e5a83b" />
+              <span style={{ fontSize: '11px', fontWeight: 600, color: '#e5a83b' }}>
+                Your Starred Collection
+              </span>
+            </div>
+            <p style={{ fontSize: '10px', color: 'var(--hw-text-secondary)', lineHeight: 1.4, margin: 0 }}>
+              Pinned effects for fast one-click activation without searching.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Scrollable Effect Cards Grid */}
@@ -170,13 +272,23 @@ export const EffectsLibrary: React.FC = () => {
           <div
             style={{
               gridColumn: '1 / -1',
-              padding: '32px 16px',
+              padding: '36px 16px',
               textAlign: 'center',
-              color: 'var(--hw-text-muted)',
-              fontSize: '12px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '8px',
             }}
           >
-            No effects match your filter.
+            <Star size={24} color="var(--hw-text-muted)" />
+            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--hw-text-secondary)' }}>
+              {categoryFilter === 'favorites' ? 'No Starred Effects Yet' : 'No effects match your filter'}
+            </span>
+            <p style={{ fontSize: '11px', color: 'var(--hw-text-muted)', maxWidth: '240px', lineHeight: 1.4, margin: 0 }}>
+              {categoryFilter === 'favorites'
+                ? 'Click the star icon on any effect card to pin it here for instant access.'
+                : 'Try adjusting your search query or switching categories.'}
+            </p>
           </div>
         )}
       </div>

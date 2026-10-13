@@ -21,15 +21,36 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'home', label: 'Home', icon: Home },
-  { id: 'couples', label: 'Couples', icon: Users },
-  { id: 'romantic', label: 'Romantic', icon: Heart },
-  { id: 'streamer', label: 'Streamer', icon: Radio, badge: 'Soon' },
-  { id: 'favorites', label: 'Favorites', icon: Star },
+  { id: 'home', label: 'Home Studio', icon: Home },
+  { id: 'couples', label: 'Couples & Duo Mode', icon: Users },
+  { id: 'romantic', label: 'Romantic Effects', icon: Heart },
+  { id: 'streamer', label: 'Streamer Broadcast Hub', icon: Radio },
+  { id: 'favorites', label: 'Starred Favorites', icon: Star },
 ];
 
 export const NavigationSidebar: React.FC = () => {
-  const { activeNav, setActiveNav, setIsSettingsOpen, cameraStatus, virtualCameraStatus } = useAppStore();
+  const {
+    activeNav,
+    setActiveNav,
+    setCategoryFilter,
+    setIsSettingsOpen,
+    cameraStatus,
+    virtualCameraStatus,
+    virtualOutputStatus,
+  } = useAppStore();
+
+  const handleNavClick = (id: string) => {
+    setActiveNav(id);
+    if (id === 'home') {
+      setCategoryFilter('all');
+    } else if (id === 'couples') {
+      setCategoryFilter('couples');
+    } else if (id === 'romantic') {
+      setCategoryFilter('romantic');
+    } else if (id === 'favorites') {
+      setCategoryFilter('favorites');
+    }
+  };
 
   return (
     <aside
@@ -55,7 +76,7 @@ export const NavigationSidebar: React.FC = () => {
           return (
             <button
               key={item.id}
-              onClick={() => setActiveNav(item.id)}
+              onClick={() => handleNavClick(item.id)}
               title={item.label}
               style={{
                 position: 'relative',
@@ -101,23 +122,20 @@ export const NavigationSidebar: React.FC = () => {
 
               <Icon size={18} strokeWidth={isActive ? 2.2 : 1.8} />
 
-              {/* Badge for "Soon" */}
-              {item.badge && (
+              {/* Broadcast Live Indicator */}
+              {item.id === 'streamer' && virtualOutputStatus === 'broadcasting' && (
                 <span
                   style={{
                     position: 'absolute',
-                    top: '4px',
-                    right: '4px',
-                    fontSize: '8px',
-                    backgroundColor: 'var(--hw-accent-burgundy)',
-                    color: 'var(--hw-accent-rose)',
-                    padding: '1px 3px',
-                    borderRadius: 'var(--hw-radius-xs)',
-                    fontWeight: 600,
+                    top: '6px',
+                    right: '6px',
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    backgroundColor: '#34c759',
+                    boxShadow: '0 0 6px #34c759',
                   }}
-                >
-                  {item.badge}
-                </span>
+                />
               )}
             </button>
           );

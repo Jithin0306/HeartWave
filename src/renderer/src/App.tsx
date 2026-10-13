@@ -3,11 +3,12 @@ import { TitleBar } from './components/titlebar/TitleBar';
 import { NavigationSidebar } from './components/navigation/NavigationSidebar';
 import { CameraPreviewViewport } from './components/preview/CameraPreviewViewport';
 import { EffectsLibrary } from './components/effects/EffectsLibrary';
+import { StreamerHub } from './components/streamer/StreamerHub';
 import { SettingsModal } from './components/settings/SettingsModal';
 import { useAppStore } from './store/appStore';
 
 export const App: React.FC = () => {
-  const { togglePrivacyShutter, toggleBypass, toggleVirtualOutput, toggleMirror } = useAppStore();
+  const { activeNav, togglePrivacyShutter, toggleBypass, toggleVirtualOutput, toggleMirror } = useAppStore();
 
   useEffect(() => {
     if (!window.heartwaveApi) return;
@@ -52,8 +53,8 @@ export const App: React.FC = () => {
         {/* Central Camera Viewport */}
         <CameraPreviewViewport />
 
-        {/* Right Curated Effects Library */}
-        <EffectsLibrary />
+        {/* Right Panel: Curated Effects Library or Dedicated Streamer Hub */}
+        {activeNav === 'streamer' ? <StreamerHub /> : <EffectsLibrary />}
       </main>
 
       {/* Settings & Privacy Modal */}

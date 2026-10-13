@@ -18,7 +18,7 @@ export const INITIAL_EFFECTS: EffectItem[] = [
   {
     id: 'big-heart',
     name: 'Twin Hands Heart',
-    category: 'romantic',
+    category: 'couples',
     gestureName: 'Two-Hand Heart Pose',
     gestureDescription: 'Join index fingertips and thumbs of both hands to form a heart',
     description: 'A majestic, deep crimson and burgundy heart rests steadily between both hands with an authentic heartbeat pulse.',

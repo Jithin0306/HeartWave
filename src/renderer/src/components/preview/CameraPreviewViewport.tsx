@@ -9,6 +9,10 @@ import {
   VideoOff,
   Hand,
   Sparkles,
+  Radio,
+  Users,
+  Heart,
+  Star,
 } from 'lucide-react';
 import { useAppStore, RESOLUTION_PRESETS, THEMES } from '../../store/appStore';
 import { cameraManager } from '../../services/cameraManager';
@@ -69,6 +73,8 @@ export const CameraPreviewViewport: React.FC = () => {
     selectedEffectId,
     isPrivacyShutterActive,
     setCompositorMetrics,
+    activeNav,
+    virtualOutputStatus,
   } = useAppStore();
 
   // Initialize hardware enumeration and device change listeners
@@ -467,6 +473,54 @@ export const CameraPreviewViewport: React.FC = () => {
               {isTrackerWarming ? 'Loading Model...' : isTrackingActive ? 'MediaPipe Tracking On' : 'Tracking Off'}
             </div>
           )}
+
+          {/* Active Mode Studio Chip */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              padding: '2px 8px',
+              borderRadius: 'var(--hw-radius-full)',
+              backgroundColor: 'var(--hw-surface-elevated)',
+              border: '1px solid var(--hw-border-subtle)',
+              fontSize: '10px',
+              color: 'var(--hw-text-secondary)',
+            }}
+          >
+            {activeNav === 'couples' && (
+              <>
+                <Users size={11} color="var(--hw-accent-rose)" />
+                <span style={{ color: 'var(--hw-accent-rose)', fontWeight: 600 }}>Couples Mode</span>
+              </>
+            )}
+            {activeNav === 'romantic' && (
+              <>
+                <Heart size={11} color="var(--hw-accent-champagne)" />
+                <span style={{ color: 'var(--hw-accent-champagne)', fontWeight: 600 }}>Romantic FX</span>
+              </>
+            )}
+            {activeNav === 'streamer' && (
+              <>
+                <Radio size={11} color={virtualOutputStatus === 'broadcasting' ? '#34c759' : 'var(--hw-accent-rose)'} />
+                <span style={{ color: virtualOutputStatus === 'broadcasting' ? '#34c759' : 'var(--hw-accent-rose)', fontWeight: 600 }}>
+                  {virtualOutputStatus === 'broadcasting' ? 'On-Air Stream' : 'Broadcast Hub'}
+                </span>
+              </>
+            )}
+            {activeNav === 'favorites' && (
+              <>
+                <Star size={11} color="#e5a83b" />
+                <span style={{ color: '#e5a83b', fontWeight: 600 }}>Favorites</span>
+              </>
+            )}
+            {(!activeNav || activeNav === 'home') && (
+              <>
+                <Sparkles size={11} color="var(--hw-accent-primary)" />
+                <span>Home Studio</span>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Real Device Dropdown */}
@@ -579,6 +633,57 @@ export const CameraPreviewViewport: React.FC = () => {
             display: cameraStatus === 'active' && showSkeletonDiagnostics ? 'block' : 'none',
           }}
         />
+
+        {/* Active Mode Viewport HUD Banners */}
+        {cameraStatus === 'active' && !isPrivacyShutterActive && activeNav === 'couples' && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '12px',
+              left: '12px',
+              zIndex: 20,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: 'rgba(20, 18, 17, 0.78)',
+              backdropFilter: 'blur(8px)',
+              padding: '4px 10px',
+              borderRadius: 'var(--hw-radius-full)',
+              border: '1px solid rgba(232, 44, 85, 0.4)',
+              fontSize: '11px',
+              color: 'var(--hw-accent-rose)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.4)',
+            }}
+          >
+            <Users size={12} />
+            <span>Couples Mode: Dual-Hand Detection Active</span>
+          </div>
+        )}
+
+        {cameraStatus === 'active' && !isPrivacyShutterActive && activeNav === 'streamer' && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '12px',
+              left: '12px',
+              zIndex: 20,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: 'rgba(20, 18, 17, 0.78)',
+              backdropFilter: 'blur(8px)',
+              padding: '4px 10px',
+              borderRadius: 'var(--hw-radius-full)',
+              border: `1px solid ${virtualOutputStatus === 'broadcasting' ? 'rgba(52, 199, 89, 0.45)' : 'rgba(232, 44, 85, 0.4)'}`,
+              fontSize: '11px',
+              color: virtualOutputStatus === 'broadcasting' ? '#34c759' : 'var(--hw-accent-rose)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.4)',
+            }}
+          >
+            <Radio size={12} />
+            <span>{virtualOutputStatus === 'broadcasting' ? 'ON AIR: DirectShow Virtual Camera Broadcasting' : 'Streamer Hub: DirectShow Output Ready'}</span>
+          </div>
+        )}
 
         {/* Privacy Shutter Active Viewport Overlay */}
         {cameraStatus === 'active' && isPrivacyShutterActive && (
