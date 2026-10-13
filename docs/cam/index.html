@@ -82,7 +82,7 @@
       gap: 6px;
       padding: 6px 12px;
       border-radius: 999px;
-      background: rgba(20, 18, 17, 0.82);
+      background: rgba(20, 18, 17, 0.85);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border: 1px solid rgba(255, 255, 255, 0.15);
@@ -215,25 +215,26 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 32px;
+      padding: 24px;
       text-align: center;
       z-index: 50;
+      overflow-y: auto;
     }
     .logo-glow {
-      width: 76px;
-      height: 76px;
-      border-radius: 22px;
+      width: 72px;
+      height: 72px;
+      border-radius: 20px;
       background: rgba(232, 44, 85, 0.15);
       border: 1px solid rgba(232, 44, 85, 0.4);
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       box-shadow: 0 0 32px rgba(232, 44, 85, 0.3);
     }
     .start-btn {
-      margin-top: 28px;
-      padding: 16px 36px;
+      margin-top: 20px;
+      padding: 15px 36px;
       background: var(--hw-accent);
       color: #FFF;
       border: none;
@@ -251,7 +252,7 @@
       transform: scale(0.96);
     }
     .notice-box {
-      margin-top: 20px;
+      margin-top: 16px;
       padding: 12px 16px;
       border-radius: 12px;
       background: var(--hw-surface);
@@ -260,27 +261,58 @@
       color: var(--hw-muted);
       line-height: 1.5;
       max-width: 320px;
+      width: 100%;
+    }
+    .room-input-box {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      padding: 8px 12px;
+      width: 100%;
+      max-width: 320px;
+    }
+    .room-input-box input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #FFF;
+      font-family: monospace;
+      font-size: 13px;
+      font-weight: 700;
+      flex: 1;
+      text-align: center;
+      letter-spacing: 1px;
     }
   </style>
 </head>
 <body>
 
-  <!-- Start Permission Screen -->
+  <!-- Start Screen -->
   <div id="startScreen">
     <div class="logo-glow">
-      <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#E82C55" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#E82C55" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
         <circle cx="12" cy="13" r="3"></circle>
       </svg>
     </div>
-    <h1 style="font-size: 22px; font-weight: 700; margin-bottom: 6px;">HeartWave Mobile Cam</h1>
-    <p style="font-size: 13px; color: var(--hw-muted); line-height: 1.5; max-width: 290px;" id="startSubtitle">
-      High-definition phone webcam with hardware H.264 acceleration.
+    <h1 style="font-size: 21px; font-weight: 700; margin-bottom: 6px;">HeartWave Mobile Cam</h1>
+    <p style="font-size: 12px; color: var(--hw-muted); line-height: 1.4; max-width: 290px;">
+      Use your phone as a high-definition webcam directly in HeartWave desktop.
     </p>
+
+    <!-- Room Code Input Display -->
+    <div class="room-input-box">
+      <span style="font-size: 10px; color: var(--hw-muted); text-transform: uppercase; font-weight: 700;">Room:</span>
+      <input type="text" id="roomInput" placeholder="hw-cam-xxxxxx" spellcheck="false" autocomplete="off" />
+    </div>
 
     <div class="notice-box" id="modeNoticeBox">
       <strong id="modeTitle" style="color: #FFF; display: block; margin-bottom: 2px;">📶 Local Wi-Fi Mode</strong>
-      <span id="modeDesc">Fast wireless streaming on your local home network.</span>
+      <span id="modeDesc">Point camera at desktop screen & tap below to stream.</span>
     </div>
 
     <button class="start-btn" id="btnStart">
@@ -342,8 +374,8 @@
         <span>Dim</span>
       </button>
 
-      <!-- Retry / Reconnect button (visible if disconnected) -->
-      <button class="btn-circle" id="btnRetry" title="Reconnect" style="display: none; border-color: var(--hw-accent); background: rgba(232, 44, 85, 0.4);">
+      <!-- Retry / Reconnect button -->
+      <button class="btn-circle" id="btnRetry" title="Reconnect" style="border-color: var(--hw-accent); background: rgba(232, 44, 85, 0.4);">
         <svg viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
         <span>Retry</span>
       </button>
@@ -361,7 +393,7 @@
   </div>
 
   <script>
-    // High-speed ICE Gathering: Google, Twilio, and Cloudflare STUN
+    // Responsive STUN Configuration (Google, Twilio, Cloudflare)
     const PEER_ICE_CONFIG = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -378,7 +410,7 @@
     let localStream = null;
     let peer = null;
     let currentCall = null;
-    let facingMode = 'environment'; // default to high-res rear lens
+    let facingMode = 'environment';
     let is1080p = true;
     let isTorchOn = false;
     let desktopRoomId = '';
@@ -386,27 +418,7 @@
     let streamStartTime = null;
     let timerInterval = null;
     let isCallInProgress = false;
-    let retryTimeout = null;
-
-    // Clean URL Parameter Parsing
-    function parseUrlConfig() {
-      const searchParams = new URLSearchParams(window.location.search);
-      const hashClean = window.location.hash.replace(/^#/, '');
-      const hashParams = new URLSearchParams(hashClean);
-
-      connectionMode = searchParams.get('mode') || hashParams.get('mode') || 'wifi';
-      desktopRoomId = searchParams.get('room') || hashParams.get('room');
-      
-      // If room wasn't found in key-value format, check if hash itself is the room ID
-      if (!desktopRoomId && hashClean.startsWith('hw-cam-')) {
-        desktopRoomId = hashClean;
-      }
-      if (!desktopRoomId) {
-        desktopRoomId = 'hw-cam-default';
-      }
-    }
-
-    parseUrlConfig();
+    let retryTimer = null;
 
     // DOM Elements
     const videoPreview = document.getElementById('videoPreview');
@@ -428,47 +440,91 @@
     const btnRetry = document.getElementById('btnRetry');
     const saverOverlay = document.getElementById('saverOverlay');
     const btnWake = document.getElementById('btnWake');
+    const roomInput = document.getElementById('roomInput');
 
-    // Setup initial mode UI
-    if (connectionMode === 'usb') {
-      modePill.classList.add('usb');
-      modePillIcon.innerText = '🔌';
-      modePillText.innerText = 'USB Wire';
-      modeTitle.innerText = '🔌 High-Speed Wired USB Mode';
-      modeDesc.innerText = 'Connected via USB tethering for zero-latency, 60fps streaming.';
-    } else {
-      modePillIcon.innerText = '📶';
-      modePillText.innerText = 'Wi-Fi';
-      modeTitle.innerText = '📶 Fast Wireless Wi-Fi Mode';
-      modeDesc.innerText = 'Zero downloads needed. Connects directly over your local network.';
+    // Robust Parameter Parsing Supporting Queries and Hash Fragments
+    function parseUrlConfig() {
+      const searchParams = new URLSearchParams(window.location.search);
+      const hashClean = window.location.hash.replace(/^#/, '');
+      const hashParams = new URLSearchParams(hashClean);
+
+      connectionMode = searchParams.get('mode') || hashParams.get('mode') || 'wifi';
+      let r = searchParams.get('room') || hashParams.get('room');
+      
+      if (!r && hashClean.startsWith('hw-cam-')) {
+        r = hashClean;
+      }
+      if (!r && roomInput.value.trim()) {
+        r = roomInput.value.trim();
+      }
+
+      desktopRoomId = r || 'hw-cam-main';
+      roomInput.value = desktopRoomId;
+
+      // Update Mode UI
+      if (connectionMode === 'usb') {
+        modePill.classList.add('usb');
+        modePillIcon.innerText = '🔌';
+        modePillText.innerText = 'USB Wire';
+        modeTitle.innerText = '🔌 High-Speed Wired USB Mode';
+        modeDesc.innerText = 'Connected via USB tethering for zero-latency, 60fps streaming.';
+      } else {
+        modePill.classList.remove('usb');
+        modePillIcon.innerText = '📶';
+        modePillText.innerText = 'Wi-Fi';
+        modeTitle.innerText = '📶 Fast Wireless Wi-Fi Mode';
+        modeDesc.innerText = 'Make sure phone & PC are on the same Wi-Fi network.';
+      }
     }
 
-    // Start mobile camera
+    parseUrlConfig();
+    window.addEventListener('hashchange', parseUrlConfig);
+    window.addEventListener('popstate', parseUrlConfig);
+    roomInput.addEventListener('change', () => {
+      desktopRoomId = roomInput.value.trim();
+    });
+
+    // Camera Access with Automatic Fallback
     async function startCamera() {
       if (localStream) {
         localStream.getTracks().forEach(t => t.stop());
+        localStream = null;
       }
 
-      const constraints = {
+      const optimalConstraints = {
         video: {
           facingMode: { ideal: facingMode },
           width: { ideal: is1080p ? 1920 : 1280 },
           height: { ideal: is1080p ? 1080 : 720 },
-          frameRate: { ideal: 60, max: 60 }
+          frameRate: { ideal: 30 }
         },
         audio: false
       };
 
       try {
-        localStream = await navigator.mediaDevices.getUserMedia(constraints);
-        videoPreview.srcObject = localStream;
-        videoPreview.className = facingMode === 'user' ? 'mirrored' : '';
+        localStream = await navigator.mediaDevices.getUserMedia(optimalConstraints);
+      } catch (e) {
+        console.warn('Optimal camera constraints failed, attempting fallback...', e);
+        try {
+          localStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: facingMode } },
+            audio: false
+          });
+        } catch (err2) {
+          console.error('All camera attempts failed:', err2);
+          alert('Camera permission denied or camera unavailable. Please check browser permissions.');
+          return false;
+        }
+      }
 
-        const track = localStream.getVideoTracks()[0];
+      videoPreview.srcObject = localStream;
+      videoPreview.className = facingMode === 'user' ? 'mirrored' : '';
+
+      const track = localStream.getVideoTracks()[0];
+      if (track) {
         const settings = track.getSettings();
         resBadge.innerText = `${settings.height || (is1080p ? 1080 : 720)}p`;
 
-        // If active peer call exists, replace track dynamically
         if (currentCall && currentCall.peerConnection) {
           const senders = currentCall.peerConnection.getSenders();
           const videoSender = senders.find(s => s.track && s.track.kind === 'video');
@@ -476,10 +532,8 @@
             videoSender.replaceTrack(track);
           }
         }
-      } catch (err) {
-        console.error('Camera access failed:', err);
-        alert('Please allow camera permissions to use your phone as a webcam.');
       }
+      return true;
     }
 
     // Initialize PeerJS
@@ -496,20 +550,24 @@
       });
 
       peer.on('open', (id) => {
-        console.log('[MobileCam] Peer opened with ID:', id);
+        console.log('[MobileCam] Mobile Peer opened with ID:', id);
         connectToDesktop();
       });
 
       peer.on('error', (err) => {
-        console.warn('[MobileCam] Peer error:', err);
-        if (err.type !== 'network') {
+        console.warn('[MobileCam] Peer error:', err.type, err.message);
+        isCallInProgress = false;
+        if (err.type === 'peer-unavailable') {
+          setStatus('Waiting for PC to open room...', 'connecting');
+          scheduleRetry(2500);
+        } else if (err.type !== 'network') {
           setStatus('Reconnecting...', 'connecting');
           scheduleRetry(3000);
         }
       });
 
       peer.on('disconnected', () => {
-        console.log('[MobileCam] Disconnected from signaling, reconnecting...');
+        console.log('[MobileCam] Signaling disconnected, reconnecting...');
         if (peer && !peer.destroyed) {
           peer.reconnect();
         }
@@ -541,8 +599,8 @@
     }
 
     function scheduleRetry(delayMs) {
-      if (retryTimeout) clearTimeout(retryTimeout);
-      retryTimeout = setTimeout(() => {
+      if (retryTimer) clearTimeout(retryTimer);
+      retryTimer = setTimeout(() => {
         connectToDesktop();
       }, delayMs);
     }
@@ -550,9 +608,13 @@
     // Connect to Desktop Room
     function connectToDesktop() {
       if (!peer || !peer.open || !localStream) return;
-      if (!desktopRoomId) return;
+      parseUrlConfig(); // re-verify latest room code
 
-      // Avoid interrupting an ongoing call in 'connecting' phase
+      if (!desktopRoomId) {
+        setStatus('No room specified', 'error');
+        return;
+      }
+
       if (isCallInProgress && currentCall && currentCall.peerConnection) {
         const cs = currentCall.peerConnection.connectionState;
         if (cs === 'connecting' || cs === 'connected') {
@@ -577,7 +639,7 @@
         const pc = currentCall.peerConnection;
         if (pc) {
           pc.onconnectionstatechange = () => {
-            console.log('[MobileCam] Connection state change:', pc.connectionState);
+            console.log('[MobileCam] Connection state:', pc.connectionState);
             if (pc.connectionState === 'connected') {
               isCallInProgress = false;
               setStatus(connectionMode === 'usb' ? 'Live on PC (USB)' : 'Live on PC', 'live');
@@ -615,22 +677,26 @@
           console.warn('[MobileCam] Call error:', err);
           isCallInProgress = false;
           stopTimer();
-          setStatus('Connection issue', 'error');
-          scheduleRetry(4000);
+          setStatus('Retrying...', 'connecting');
+          scheduleRetry(3000);
         });
       } catch (e) {
         console.error('[MobileCam] Call creation failed:', e);
         isCallInProgress = false;
-        setStatus('Retry needed', 'error');
-        scheduleRetry(4000);
+        setStatus('Retrying...', 'connecting');
+        scheduleRetry(3000);
       }
     }
 
     // Controls Listeners
     document.getElementById('btnStart').addEventListener('click', async () => {
       startScreen.style.display = 'none';
-      await startCamera();
-      initPeer();
+      const ok = await startCamera();
+      if (ok) {
+        initPeer();
+      } else {
+        startScreen.style.display = 'flex';
+      }
     });
 
     btnFlip.addEventListener('click', async () => {
@@ -667,6 +733,7 @@
     });
 
     btnRetry.addEventListener('click', () => {
+      isCallInProgress = false;
       connectToDesktop();
     });
   </script>

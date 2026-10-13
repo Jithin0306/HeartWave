@@ -53,19 +53,41 @@ class MobileCamService {
   private listeners = new Set<MobileCamListener>();
 
   constructor() {
-    this.generateRoomId();
+    this.initRoomId();
   }
 
-  private generateRoomId() {
-    // Generate clean alphanumeric 6-character room token
+  private initRoomId() {
+    // Check localStorage for existing persistent room ID
+    let saved = '';
+    try {
+      saved = localStorage.getItem('hw_mobile_room_id') || '';
+    } catch {}
+
+    if (saved && saved.startsWith('hw-cam-')) {
+      this.roomId = saved;
+    } else {
+      this.generateNewRoomId();
+    }
+    this.updatePortalUrls();
+  }
+
+  public generateNewRoomId() {
     const chars = '23456789abcdefghjkmnpqrstuvwxyz';
     let code = '';
     for (let i = 0; i < 6; i++) {
       code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     this.roomId = `hw-cam-${code}`;
-    this.wifiPortalUrl = `https://jithin0306.github.io/HeartWave/cam/?mode=wifi#room=${this.roomId}`;
-    this.usbPortalUrl = `https://jithin0306.github.io/HeartWave/cam/?mode=usb#room=${this.roomId}`;
+    try {
+      localStorage.setItem('hw_mobile_room_id', this.roomId);
+    } catch {}
+    this.updatePortalUrls();
+  }
+
+  private updatePortalUrls() {
+    // Use query parameter ?room= to prevent QR scanners from stripping hash fragments
+    this.wifiPortalUrl = `https://jithin0306.github.io/HeartWave/cam/?room=${this.roomId}&mode=wifi`;
+    this.usbPortalUrl = `https://jithin0306.github.io/HeartWave/cam/?room=${this.roomId}&mode=usb`;
   }
 
   public setMode(mode: MobileConnectionMode) {
@@ -123,16 +145,16 @@ class MobileCamService {
     }
 
     if (!this.roomId) {
-      this.generateRoomId();
+      this.initRoomId();
     }
     this.state = 'waiting';
     this.errorMessage = '';
     this.notify();
 
-    // Generate high-resolution QR Codes for both Wi-Fi and USB
+    // Generate high-resolution QR Codes with query parameters
     try {
       const qrOpts: QRCode.QRCodeToDataURLOptions = {
-        width: 340,
+        width: 360,
         margin: 1,
         color: {
           dark: '#141211',
@@ -153,7 +175,15 @@ class MobileCamService {
       console.error('Failed to generate QR Codes:', err);
     }
 
-    // Initialize Desktop Peer with comprehensive STUN + TURN relays
+    // Clean up previous dead peer if any
+    if (this.peer) {
+      try {
+        this.peer.destroy();
+      } catch {}
+      this.peer = null;
+    }
+
+    // Initialize Desktop Peer
     try {
       this.peer = new Peer(this.roomId, {
         debug: 1,
@@ -172,7 +202,6 @@ class MobileCamService {
       this.peer.on('call', (call: MediaConnection) => {
         console.log('[MobileCam] Incoming call from mobile device:', call.metadata);
         
-        // Clean up previous call if any
         if (this.currentCall && this.currentCall !== call) {
           try {
             this.currentCall.close();
@@ -180,7 +209,6 @@ class MobileCamService {
         }
         this.currentCall = call;
 
-        // Parse metadata sent by mobile client
         if (call.metadata) {
           this.deviceName = call.metadata.device || 'Mobile Camera';
           this.resolution = call.metadata.resolution || '1080p';
@@ -191,25 +219,49 @@ class MobileCamService {
           this.deviceName = 'Wireless Phone';
         }
 
-        // Answer call with audio/video accept
+        // Answer incoming media call
         call.answer();
 
+        // 1. PeerJS high-level stream event
         call.on('stream', (remoteStream: MediaStream) => {
-          console.log('[MobileCam] Mobile video stream established:', remoteStream.getTracks());
-          this.activeStream = remoteStream;
-          this.state = 'connected';
-          this.notify();
+          if (remoteStream && remoteStream.getVideoTracks().length > 0) {
+            console.log('[MobileCam] Mobile stream attached via call.on("stream"):', remoteStream.id);
+            this.activeStream = remoteStream;
+            this.state = 'connected';
+            this.notify();
+          }
         });
 
-        // Inspect ICE connection to detect direct USB / LAN vs TURN relay
+        // 2. Direct WebRTC ontrack fallback (guarantees reception in modern Chromium/WebView2)
         if (call.peerConnection) {
           const pc = call.peerConnection;
-          pc.oniceconnectionstatechange = () => {
-            const iceState = pc.iceConnectionState;
-            console.log('[MobileCam] ICE connection state:', iceState);
-            if (iceState === 'connected' || iceState === 'completed') {
+
+          pc.ontrack = (event) => {
+            console.log('[MobileCam] Direct ontrack event received:', event.track.kind);
+            const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
+            this.activeStream = stream;
+            this.state = 'connected';
+            this.notify();
+          };
+
+          pc.onconnectionstatechange = () => {
+            console.log('[MobileCam] PeerConnection state:', pc.connectionState);
+            if (pc.connectionState === 'connected') {
               this.state = 'connected';
-              // Check stats to identify if connection is host/direct (USB/LAN) or relay
+              this.notify();
+            } else if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+              setTimeout(() => {
+                if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+                  this.handleDisconnect();
+                }
+              }, 3000);
+            }
+          };
+
+          pc.oniceconnectionstatechange = () => {
+            console.log('[MobileCam] ICE state:', pc.iceConnectionState);
+            if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+              this.state = 'connected';
               pc.getStats().then((stats) => {
                 stats.forEach((report) => {
                   if (report.type === 'candidate-pair' && report.state === 'succeeded') {
@@ -220,19 +272,12 @@ class MobileCamService {
                       this.connectionType = this.activeMode === 'usb' ? 'Direct USB Cable' : 'Direct Local Wi-Fi';
                     } else {
                       this.isDirect = false;
-                      this.connectionType = 'Encrypted Relay';
+                      this.connectionType = 'Encrypted Stream';
                     }
                     this.notify();
                   }
                 });
               }).catch(() => {});
-            } else if (iceState === 'failed' || iceState === 'disconnected') {
-              // Wait briefly before marking disconnected to allow transient recovery
-              setTimeout(() => {
-                if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
-                  this.handleDisconnect();
-                }
-              }, 2000);
             }
           };
         }
@@ -250,22 +295,20 @@ class MobileCamService {
 
       this.peer.on('error', (err: any) => {
         console.warn('[MobileCam] Peer error:', err);
-        // If room ID conflict, generate new ID and restart
         if (err.type === 'unavailable-id') {
-          this.generateRoomId();
+          this.generateNewRoomId();
           this.startServer();
           return;
         }
-        // Do not immediately fail for temporary peer network errors
         if (err.type !== 'network') {
           this.state = 'error';
-          this.errorMessage = err?.message || 'Failed to connect signaling server';
+          this.errorMessage = err?.message || 'Signaling error';
           this.notify();
         }
       });
 
       this.peer.on('disconnected', () => {
-        console.log('[MobileCam] Desktop peer signaling disconnected, reconnecting...');
+        console.log('[MobileCam] Peer signaling disconnected, reconnecting...');
         if (this.peer && !this.peer.destroyed) {
           this.peer.reconnect();
         }

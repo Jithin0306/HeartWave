@@ -272,6 +272,43 @@ export const MobileCamModal: React.FC = () => {
               )}
             </div>
 
+            {/* Room Code Badge & Refresh */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '4px 8px',
+                borderRadius: 'var(--hw-radius-sm)',
+                backgroundColor: 'var(--hw-bg-primary)',
+                border: '1px solid var(--hw-border-subtle)',
+                fontSize: '11px',
+              }}
+            >
+              <span style={{ color: 'var(--hw-text-muted)' }}>Room:</span>
+              <span style={{ color: 'var(--hw-text-primary)', fontFamily: 'monospace', fontWeight: 700 }}>
+                {telemetry.roomId || 'Connecting...'}
+              </span>
+              <button
+                onClick={() => {
+                  mobileCamService.generateNewRoomId();
+                  mobileCamService.startServer();
+                }}
+                title="Generate new Room Code"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--hw-text-muted)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '2px',
+                }}
+              >
+                <RefreshCw size={12} />
+              </button>
+            </div>
+
             {/* Live Status Beacon */}
             <div
               style={{
