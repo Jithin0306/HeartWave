@@ -15,7 +15,10 @@
     "start": "electron .",
     "pack": "npm run build && electron-builder --dir",
     "dist": "npm run build && electron-builder --win",
-    "release": "npm run build && electron-builder --win --publish always"
+    "release": "npm run build && electron-builder --win --publish always",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "npm run build:renderer && tauri build"
   },
   "build": {
     "appId": "com.heartwave.app",
@@ -63,6 +66,7 @@
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^1.1.0",
+    "@tauri-apps/api": "^2.12.3",
     "electron-updater": "^6.8.9",
     "lucide-react": "^1.16.0",
     "react": "^18.3.1",
@@ -70,6 +74,7 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.12.2",
     "@types/node": "^22.13.4",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
