@@ -206,6 +206,144 @@
       pointer-events: auto;
     }
 
+    /* Connecting System Progress Overlay Card */
+    #progressOverlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(20, 18, 17, 0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: 35;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      opacity: 1;
+      pointer-events: auto;
+    }
+    #progressOverlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.96);
+    }
+    .progress-card {
+      width: 100%;
+      max-width: 340px;
+      background: rgba(30, 27, 26, 0.96);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 0 0 24px rgba(232, 44, 85, 0.15);
+    }
+    .progress-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: rgba(232, 44, 85, 0.15);
+      border: 1.5px solid var(--hw-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 14px;
+      animation: pulseGlow 2s infinite ease-in-out;
+      color: var(--hw-accent);
+    }
+    @keyframes pulseGlow {
+      0% { box-shadow: 0 0 0 0 rgba(232, 44, 85, 0.4); }
+      70% { box-shadow: 0 0 0 14px rgba(232, 44, 85, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(232, 44, 85, 0); }
+    }
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 16px 0 10px;
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .progress-bar {
+      height: 100%;
+      width: 15%;
+      background: linear-gradient(90deg, #E82C55, #FF5E7E, #D6BD91);
+      border-radius: 999px;
+      transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .progress-bar.success {
+      background: #34C759 !important;
+      box-shadow: 0 0 14px #34C759;
+    }
+    .progress-labels {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--hw-muted);
+      font-weight: 600;
+    }
+    .progress-percent {
+      font-size: 14px;
+      font-weight: 800;
+      color: #FFF;
+      font-family: monospace;
+    }
+    .room-edit-row {
+      margin-top: 14px;
+      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      width: 100%;
+      justify-content: space-between;
+    }
+    .room-edit-row input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #FFF;
+      font-family: monospace;
+      font-size: 12px;
+      font-weight: 700;
+      flex: 1;
+      text-align: center;
+    }
+    .btn-action-small {
+      background: rgba(232, 44, 85, 0.2);
+      border: 1px solid var(--hw-accent);
+      color: #FFF;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .btn-action-small:active {
+      transform: scale(0.94);
+    }
+    .troubleshoot-hint {
+      margin-top: 14px;
+      font-size: 11px;
+      color: var(--hw-muted);
+      line-height: 1.45;
+      display: none;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 10px;
+      width: 100%;
+    }
+
     /* Permission / Start Screen */
     #startScreen {
       position: absolute;
@@ -381,6 +519,48 @@
       </button>
     </div>
 
+    <!-- Connection Progress Bar Overlay -->
+    <div id="progressOverlay" class="hidden">
+      <div class="progress-card">
+        <div class="progress-icon" id="progressIcon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+            <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+            <line x1="12" y1="20" x2="12.01" y2="20"></line>
+          </svg>
+        </div>
+
+        <h3 id="progressTitle" style="font-size: 16px; font-weight: 700; color: #FFF; margin-bottom: 4px;">Connecting to PC...</h3>
+        <p id="progressSub" style="font-size: 12px; color: var(--hw-muted); line-height: 1.4;">Negotiating direct WebRTC handshake</p>
+
+        <!-- Dynamic Percentage Progress Bar -->
+        <div class="progress-track">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <div class="progress-labels">
+          <span id="progressStep">Initializing WebRTC</span>
+          <span class="progress-percent" id="progressPercent">15%</span>
+        </div>
+
+        <!-- Room ID Verification & Edit Box -->
+        <div class="room-edit-row">
+          <span style="color: var(--hw-muted); font-weight: 600;">Room:</span>
+          <input type="text" id="overlayRoomInput" placeholder="hw-cam-xxxxxx" spellcheck="false" autocomplete="off" />
+          <button class="btn-action-small" id="btnOverlayConnect">Reconnect</button>
+        </div>
+
+        <!-- Troubleshooting Guidance after 4s -->
+        <div class="troubleshoot-hint" id="troubleshootHint">
+          <span style="color: var(--hw-champagne); font-weight: 600; display: block; margin-bottom: 4px;">💡 Taking longer than usual?</span>
+          1. Keep HeartWave Desktop open on your PC.<br/>
+          2. Ensure phone and PC are on the same Wi-Fi network (or connect USB wire).<br/>
+          3. Tap <strong>Reconnect</strong> above to retry instantly.
+        </div>
+      </div>
+    </div>
+
     <!-- Battery Saver Screen Overlay -->
     <div id="saverOverlay">
       <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#E82C55" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
@@ -440,6 +620,66 @@
     const saverOverlay = document.getElementById('saverOverlay');
     const btnWake = document.getElementById('btnWake');
     const roomInput = document.getElementById('roomInput');
+    const progressOverlay = document.getElementById('progressOverlay');
+    const progressBar = document.getElementById('progressBar');
+    const progressPercent = document.getElementById('progressPercent');
+    const progressStep = document.getElementById('progressStep');
+    const progressTitle = document.getElementById('progressTitle');
+    const progressSub = document.getElementById('progressSub');
+    const progressIcon = document.getElementById('progressIcon');
+    const troubleshootHint = document.getElementById('troubleshootHint');
+    const overlayRoomInput = document.getElementById('overlayRoomInput');
+    const btnOverlayConnect = document.getElementById('btnOverlayConnect');
+
+    let hintTimeout = null;
+
+    function setProgress(percent, stepText, subText, isSuccess = false) {
+      if (!progressOverlay || !progressBar) return;
+      progressOverlay.classList.remove('hidden');
+      progressBar.style.width = percent + '%';
+      if (progressPercent) progressPercent.innerText = percent + '%';
+      if (stepText && progressStep) progressStep.innerText = stepText;
+      if (subText && progressSub) progressSub.innerText = subText;
+
+      if (isSuccess) {
+        progressBar.classList.add('success');
+        if (progressTitle) {
+          progressTitle.innerText = 'Connected Successfully!';
+          progressTitle.style.color = '#34C759';
+        }
+        if (progressIcon) {
+          progressIcon.style.borderColor = '#34C759';
+          progressIcon.style.color = '#34C759';
+          progressIcon.innerHTML = `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#34C759" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+        }
+        if (hintTimeout) clearTimeout(hintTimeout);
+        if (troubleshootHint) troubleshootHint.style.display = 'none';
+
+        setTimeout(() => {
+          progressOverlay.classList.add('hidden');
+        }, 850);
+      } else {
+        progressBar.classList.remove('success');
+        if (progressTitle) {
+          progressTitle.innerText = percent < 90 ? 'Connecting to PC...' : 'Finalizing Video Stream...';
+          progressTitle.style.color = '#FFF';
+        }
+        if (progressIcon) {
+          progressIcon.style.borderColor = 'var(--hw-accent)';
+          progressIcon.style.color = 'var(--hw-accent)';
+          progressIcon.innerHTML = `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>`;
+        }
+      }
+    }
+
+    function showTroubleshootHint() {
+      if (hintTimeout) clearTimeout(hintTimeout);
+      hintTimeout = setTimeout(() => {
+        if (troubleshootHint && progressOverlay && !progressOverlay.classList.contains('hidden')) {
+          troubleshootHint.style.display = 'block';
+        }
+      }, 4000);
+    }
 
     // Robust Parameter Parsing Supporting Queries and Hash Fragments
     function parseUrlConfig() {
@@ -459,6 +699,9 @@
 
       desktopRoomId = r || 'hw-cam-main';
       roomInput.value = desktopRoomId;
+      if (overlayRoomInput) {
+        overlayRoomInput.value = desktopRoomId;
+      }
 
       // Update Mode UI
       if (connectionMode === 'usb') {
@@ -481,7 +724,27 @@
     window.addEventListener('popstate', parseUrlConfig);
     roomInput.addEventListener('change', () => {
       desktopRoomId = roomInput.value.trim();
+      if (overlayRoomInput) overlayRoomInput.value = desktopRoomId;
     });
+
+    if (overlayRoomInput) {
+      overlayRoomInput.addEventListener('change', () => {
+        desktopRoomId = overlayRoomInput.value.trim();
+        roomInput.value = desktopRoomId;
+      });
+    }
+
+    if (btnOverlayConnect) {
+      btnOverlayConnect.addEventListener('click', () => {
+        if (overlayRoomInput && overlayRoomInput.value.trim()) {
+          desktopRoomId = overlayRoomInput.value.trim();
+          roomInput.value = desktopRoomId;
+          try { window.location.hash = desktopRoomId; } catch {}
+        }
+        setProgress(70, 'Reconnecting...', 'Contacting PC room ' + desktopRoomId);
+        connectToDesktop();
+      });
+    }
 
     // Camera Access with Automatic Fallback
     async function startCamera() {
@@ -564,6 +827,7 @@
 
       peer.on('open', (id) => {
         console.log('[MobileCam] Mobile Peer opened with ID:', id);
+        setProgress(55, 'Connected to Signaling', 'Ready to contact PC room ' + desktopRoomId);
         startKeepAlive();
         connectToDesktop();
       });
@@ -572,9 +836,12 @@
         console.warn('[MobileCam] Peer error:', err.type, err.message);
         if (err.type === 'peer-unavailable') {
           setStatus('Connecting to PC room...', 'connecting');
+          setProgress(65, 'Waiting for PC Room...', 'Waiting for HeartWave desktop (' + desktopRoomId + ')');
+          showTroubleshootHint();
           scheduleRetry(1200);
         } else if (err.type !== 'network') {
           setStatus('Reconnecting...', 'connecting');
+          setProgress(50, 'Reconnecting...', 'Re-establishing cloud signaling session');
           scheduleRetry(2000);
         }
       });
@@ -625,11 +892,14 @@
 
       if (!desktopRoomId) {
         setStatus('No room specified', 'error');
+        setProgress(0, 'Room Error', 'Please enter a valid room ID');
         return;
       }
 
       console.log('[MobileCam] Connecting to desktop room:', desktopRoomId);
       setStatus('Connecting to PC...', 'connecting');
+      setProgress(75, 'Contacting PC Room', 'Sending handshake to ' + desktopRoomId + '...');
+      showTroubleshootHint();
 
       // 1. Instant Data Channel Handshake
       try {
@@ -649,6 +919,7 @@
             });
           } catch {}
           setStatus(connectionMode === 'usb' ? 'Live on PC (USB)' : 'Live on PC', 'live');
+          setProgress(100, 'Streaming Live on PC', 'Ultra-low latency connection established!', true);
           startTimer();
         });
 
@@ -656,6 +927,7 @@
           console.log('[MobileCam] Message from PC:', d);
           if (d && (d.type === 'HANDSHAKE_ACK' || d.type === 'STREAM_RECEIVED')) {
             setStatus(connectionMode === 'usb' ? 'Live on PC (USB)' : 'Live on PC', 'live');
+            setProgress(100, 'Streaming Live on PC', 'Video received and rendering on PC!', true);
             startTimer();
           }
         });
@@ -684,10 +956,14 @@
             console.log('[MobileCam] Media Connection state:', pc.connectionState);
             if (pc.connectionState === 'connected') {
               setStatus(connectionMode === 'usb' ? 'Live on PC (USB)' : 'Live on PC', 'live');
+              setProgress(100, 'Streaming Live on PC', 'Direct WebRTC video stream active!', true);
               startTimer();
+            } else if (pc.connectionState === 'connecting') {
+              setProgress(90, 'Establishing Video Pipeline', 'Negotiating high-speed ICE pair...');
             } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
               stopTimer();
               setStatus('Reconnecting...', 'connecting');
+              setProgress(55, 'Reconnecting...', 'Signal interrupted, renegotiating...');
               scheduleRetry(1500);
             }
           };
@@ -696,6 +972,7 @@
             console.log('[MobileCam] Media ICE state:', pc.iceConnectionState);
             if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
               setStatus(connectionMode === 'usb' ? 'Live on PC (USB)' : 'Live on PC', 'live');
+              setProgress(100, 'Streaming Live on PC', 'Direct WebRTC ICE connection established!', true);
               startTimer();
             }
           };
@@ -705,6 +982,7 @@
           console.log('[MobileCam] Call closed');
           stopTimer();
           setStatus('Reconnecting...', 'connecting');
+          setProgress(55, 'Call Closed', 'Reconnecting to PC room...');
           scheduleRetry(2000);
         });
 
@@ -712,11 +990,13 @@
           console.warn('[MobileCam] Call error:', err);
           stopTimer();
           setStatus('Retrying...', 'connecting');
+          setProgress(65, 'Retrying Call', 'Peer media error: ' + (err.message || 'Retrying'));
           scheduleRetry(1500);
         });
       } catch (e) {
         console.error('[MobileCam] Call creation failed:', e);
         setStatus('Retrying...', 'connecting');
+        setProgress(60, 'Call Failed', 'Retrying connection in 2s...');
         scheduleRetry(2000);
       }
     }
@@ -724,11 +1004,14 @@
     // Controls Listeners
     document.getElementById('btnStart').addEventListener('click', async () => {
       startScreen.style.display = 'none';
+      setProgress(15, 'Accessing Camera Hardware', 'Requesting lens permission...');
       const ok = await startCamera();
       if (ok) {
+        setProgress(35, 'Initializing WebRTC Engine', 'Generating peer session...');
         initPeer();
       } else {
         startScreen.style.display = 'flex';
+        if (progressOverlay) progressOverlay.classList.add('hidden');
       }
     });
 
@@ -767,6 +1050,7 @@
 
     btnRetry.addEventListener('click', () => {
       isCallInProgress = false;
+      setProgress(70, 'Retrying...', 'Re-initiating handshake with ' + desktopRoomId);
       connectToDesktop();
     });
   </script>

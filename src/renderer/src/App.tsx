@@ -7,12 +7,21 @@ import { StreamerHub } from './components/streamer/StreamerHub';
 import { SettingsModal } from './components/settings/SettingsModal';
 import { MobileCamModal } from './components/mobile/MobileCamModal';
 import { useAppStore } from './store/appStore';
+import { mobileCamService } from './services/mobileCamService';
 
 export const App: React.FC = () => {
-  const { activeNav, togglePrivacyShutter, toggleBypass, toggleVirtualOutput, toggleMirror } = useAppStore();
+  const { activeNav, togglePrivacyShutter, toggleBypass, toggleVirtualOutput, toggleMirror, attachMobileStream } = useAppStore();
 
   useEffect(() => {
-    if (!window.heartwaveApi) return;
+    // 1. Keep Desktop room always warmed up and listening so mobile phone connects instantly
+    mobileCamService.startServer();
+    const unsubMobile = mobileCamService.subscribe((data) => {
+      if (data.state === 'connected' && data.stream) {
+        attachMobileStream(data.stream, data.deviceName || 'Wireless Phone');
+      }
+    });
+
+    if (!window.heartwaveApi) return () => unsubMobile();
 
     const unsubs = [
       window.heartwaveApi.onHotkeyPrivacy?.(() => togglePrivacyShutter()),
@@ -22,9 +31,10 @@ export const App: React.FC = () => {
     ].filter(Boolean) as (() => void)[];
 
     return () => {
+      unsubMobile();
       unsubs.forEach((unsub) => unsub());
     };
-  }, [togglePrivacyShutter, toggleBypass, toggleVirtualOutput, toggleMirror]);
+  }, [togglePrivacyShutter, toggleBypass, toggleVirtualOutput, toggleMirror, attachMobileStream]);
   return (
     <div
       style={{

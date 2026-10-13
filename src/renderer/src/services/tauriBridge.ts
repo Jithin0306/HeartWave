@@ -113,7 +113,11 @@ export function initTauriBridge(): void {
           if (res.ok) {
             const data = await res.json();
             const latestTag = (data.tag_name || '').replace(/^v/, '');
-            const currentVer = '1.0.1';
+            let currentVer = '1.3.2';
+            try {
+              const info = await invoke<{ version: string }>('get_app_info');
+              if (info?.version) currentVer = info.version;
+            } catch {}
             if (latestTag && latestTag !== currentVer) {
               const status = {
                 state: 'available' as const,

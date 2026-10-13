@@ -50,7 +50,6 @@ class MobileCamService {
   private errorMessage: string = '';
   private listeners = new Set<MobileCamListener>();
   private pingTimer: any = null;
-  private unavailableRetries = 0;
 
   constructor() {
     this.initRoomId();
@@ -77,7 +76,6 @@ class MobileCamService {
       code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     this.roomId = `hw-cam-${code}`;
-    this.unavailableRetries = 0;
     try {
       localStorage.setItem('hw_mobile_room_id', this.roomId);
     } catch {}
@@ -216,7 +214,6 @@ class MobileCamService {
 
       this.peer.on('open', (id) => {
         console.log('[MobileCam] Desktop Peer waiting in room:', id);
-        this.unavailableRetries = 0;
         this.state = 'waiting';
         this.startKeepAlive();
         this.notify();
@@ -367,14 +364,10 @@ class MobileCamService {
       this.peer.on('error', (err: any) => {
         console.warn('[MobileCam] Peer error:', err);
         if (err.type === 'unavailable-id') {
-          this.unavailableRetries++;
-          if (this.unavailableRetries > 2) {
-            console.log('[MobileCam] Generating new room ID after repeated conflicts');
-            this.generateNewRoomId();
-          }
+          console.log('[MobileCam] Room ID in use or socket lingering, retrying with same stable room ID in 1.5s...');
           setTimeout(() => {
             this.startServer();
-          }, 1200);
+          }, 1500);
           return;
         }
         if (err.type !== 'network') {

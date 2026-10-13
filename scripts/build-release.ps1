@@ -45,8 +45,9 @@ if (Test-Path $nsisSigPath) {
 
     $manifestJson = $manifest | ConvertTo-Json -Depth 5
     $outPath = "src-tauri\target\release\bundle\latest.json"
-    $manifestJson | Out-File -FilePath $outPath -Encoding utf8
-    Write-Host " Generated updater manifest at: $outPath" -ForegroundColor Green
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($outPath, $manifestJson, $utf8NoBom)
+    Write-Host " Generated updater manifest (UTF-8 without BOM) at: $outPath" -ForegroundColor Green
     Write-Host " Upload 'latest.json' and 'HeartWave_${Version}_x64-setup.exe' to GitHub Release v$Version." -ForegroundColor Cyan
 }
 
