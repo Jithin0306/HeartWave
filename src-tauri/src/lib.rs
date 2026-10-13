@@ -27,7 +27,7 @@ pub struct VcamStatus {
 #[tauri::command]
 fn get_app_info() -> AppInfo {
     AppInfo {
-        version: "1.0.1".into(),
+        version: "1.3.1".into(),
         name: "HeartWave".into(),
         platform: "win32".into(),
         arch: "x64".into(),

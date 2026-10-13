@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#141211">
-  <title>HeartWave Wireless Mobile Webcam</title>
+  <title>HeartWave Mobile Cam - Ultra-Low Latency</title>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <style>
     :root {
@@ -17,6 +17,8 @@
       --hw-text: #FFFFFF;
       --hw-muted: #8E8785;
       --hw-success: #34C759;
+      --hw-usb-blue: #0A84FF;
+      --hw-warn: #E5A83B;
     }
     * {
       box-sizing: border-box;
@@ -54,35 +56,43 @@
     video.mirrored {
       transform: scaleX(-1);
     }
-    /* Top Status Bar */
+
+    /* Top HUD */
     .header-bar {
       position: absolute;
       top: env(safe-area-inset-top, 16px);
-      left: 16px;
-      right: 16px;
+      left: 12px;
+      right: 12px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       z-index: 30;
       pointer-events: none;
+      gap: 8px;
+    }
+    .hud-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      pointer-events: auto;
     }
     .badge {
-      pointer-events: auto;
       display: flex;
       align-items: center;
       gap: 6px;
       padding: 6px 12px;
       border-radius: 999px;
-      background: rgba(20, 18, 17, 0.75);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      background: rgba(20, 18, 17, 0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
       border: 1px solid rgba(255, 255, 255, 0.15);
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 600;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     }
     .badge-dot {
-      width: 8px;
-      height: 8px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
       background: var(--hw-muted);
     }
@@ -92,13 +102,37 @@
       animation: pulse 1.5s infinite;
     }
     .badge-dot.connecting {
-      background: #E5A83B;
+      background: var(--hw-warn);
+      animation: pulse 1.2s infinite;
+    }
+    .badge-dot.error {
+      background: #FF453A;
     }
     @keyframes pulse {
       0% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.85); }
+      50% { opacity: 0.4; transform: scale(0.85); }
       100% { opacity: 1; transform: scale(1); }
     }
+
+    /* Mode Pill */
+    .mode-pill {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(232, 44, 85, 0.2);
+      border: 1px solid var(--hw-accent);
+      color: #FFF;
+    }
+    .mode-pill.usb {
+      background: rgba(10, 132, 255, 0.25);
+      border-color: var(--hw-usb-blue);
+      color: #64D2FF;
+    }
+
     /* Controls Shelf */
     .controls-shelf {
       position: absolute;
@@ -108,15 +142,15 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 16px;
+      gap: 14px;
       z-index: 30;
       padding: 0 16px;
     }
     .btn-circle {
-      width: 52px;
-      height: 52px;
+      width: 50px;
+      height: 50px;
       border-radius: 50%;
-      background: rgba(30, 27, 26, 0.85);
+      background: rgba(30, 27, 26, 0.88);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border: 1px solid rgba(255, 255, 255, 0.2);
@@ -126,10 +160,10 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      font-size: 10px;
-      font-weight: 500;
+      font-size: 9px;
+      font-weight: 600;
       gap: 2px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
       transition: all 0.15s ease;
     }
     .btn-circle:active {
@@ -142,14 +176,15 @@
       border-color: var(--hw-accent);
     }
     .btn-circle svg {
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
       fill: none;
       stroke: currentColor;
       stroke-width: 2;
       stroke-linecap: round;
       stroke-linejoin: round;
     }
+
     /* Battery Saver Blackout Overlay */
     #saverOverlay {
       position: absolute;
@@ -158,7 +193,7 @@
       opacity: 0;
       pointer-events: none;
       z-index: 40;
-      transition: opacity 0.3s ease;
+      transition: opacity 0.25s ease;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -167,9 +202,10 @@
       padding: 24px;
     }
     #saverOverlay.active {
-      opacity: 0.96;
+      opacity: 0.98;
       pointer-events: auto;
     }
+
     /* Permission / Start Screen */
     #startScreen {
       position: absolute;
@@ -184,64 +220,99 @@
       z-index: 50;
     }
     .logo-glow {
-      width: 72px;
-      height: 72px;
-      border-radius: 20px;
+      width: 76px;
+      height: 76px;
+      border-radius: 22px;
       background: rgba(232, 44, 85, 0.15);
       border: 1px solid rgba(232, 44, 85, 0.4);
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 24px;
-      box-shadow: 0 0 30px rgba(232, 44, 85, 0.3);
+      margin-bottom: 20px;
+      box-shadow: 0 0 32px rgba(232, 44, 85, 0.3);
     }
     .start-btn {
-      margin-top: 32px;
+      margin-top: 28px;
       padding: 16px 36px;
       background: var(--hw-accent);
       color: #FFF;
       border: none;
       border-radius: 999px;
       font-size: 16px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
       box-shadow: 0 8px 24px rgba(232, 44, 85, 0.4);
       transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     .start-btn:active {
       transform: scale(0.96);
+    }
+    .notice-box {
+      margin-top: 20px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: var(--hw-surface);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 11px;
+      color: var(--hw-muted);
+      line-height: 1.5;
+      max-width: 320px;
     }
   </style>
 </head>
 <body>
 
-  <!-- Initial Tap to Connect Screen (needed for iOS audio/camera autoplay policy) -->
+  <!-- Start Permission Screen -->
   <div id="startScreen">
     <div class="logo-glow">
-      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#E82C55" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#E82C55" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
         <circle cx="12" cy="13" r="3"></circle>
       </svg>
     </div>
-    <h1 style="font-size: 22px; font-weight: 700; margin-bottom: 8px;">HeartWave Mobile Cam</h1>
-    <p style="font-size: 13px; color: var(--hw-muted); line-height: 1.5; max-width: 280px;">
-      Use your phone as a high-definition wireless webcam directly in HeartWave desktop.
+    <h1 style="font-size: 22px; font-weight: 700; margin-bottom: 6px;">HeartWave Mobile Cam</h1>
+    <p style="font-size: 13px; color: var(--hw-muted); line-height: 1.5; max-width: 290px;" id="startSubtitle">
+      High-definition phone webcam with hardware H.264 acceleration.
     </p>
-    <button class="start-btn" id="btnStart">Connect Camera</button>
+
+    <div class="notice-box" id="modeNoticeBox">
+      <strong id="modeTitle" style="color: #FFF; display: block; margin-bottom: 2px;">📶 Local Wi-Fi Mode</strong>
+      <span id="modeDesc">Fast wireless streaming on your local home network.</span>
+    </div>
+
+    <button class="start-btn" id="btnStart">
+      <span>Connect Camera</span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+    </button>
   </div>
 
   <!-- Video Viewport -->
   <div id="videoContainer">
     <video id="videoPreview" autoplay playsinline muted></video>
 
-    <!-- Top Status Bar -->
+    <!-- Top HUD Bar -->
     <div class="header-bar">
-      <div class="badge" id="statusBadge">
-        <span class="badge-dot connecting" id="statusDot"></span>
-        <span id="statusText">Connecting...</span>
+      <div class="hud-group">
+        <div class="badge" id="statusBadge">
+          <span class="badge-dot connecting" id="statusDot"></span>
+          <span id="statusText">Connecting...</span>
+        </div>
+        <div class="mode-pill" id="modePill">
+          <span id="modePillIcon">📶</span>
+          <span id="modePillText">Wi-Fi</span>
+        </div>
       </div>
-      <div class="badge" id="resBadge" style="font-size: 11px; color: var(--hw-champagne);">
-        1080p
+
+      <div class="hud-group">
+        <div class="badge" id="timerBadge" style="font-size: 10px; color: var(--hw-muted); display: none;">
+          <span id="timerText">00:00</span>
+        </div>
+        <div class="badge" id="resBadge" style="font-size: 11px; color: var(--hw-champagne);">
+          1080p
+        </div>
       </div>
     </div>
 
@@ -259,7 +330,7 @@
         <span id="qualityLabel">1080p</span>
       </button>
 
-      <!-- Flashlight / Torch (where supported) -->
+      <!-- Flashlight / Torch -->
       <button class="btn-circle" id="btnTorch" title="Flashlight">
         <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
         <span>Torch</span>
@@ -270,49 +341,109 @@
         <svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
         <span>Dim</span>
       </button>
+
+      <!-- Retry / Reconnect button (visible if disconnected) -->
+      <button class="btn-circle" id="btnRetry" title="Reconnect" style="display: none; border-color: var(--hw-accent); background: rgba(232, 44, 85, 0.4);">
+        <svg viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+        <span>Retry</span>
+      </button>
     </div>
 
     <!-- Battery Saver Screen Overlay -->
     <div id="saverOverlay">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#E82C55" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-      <h3 style="font-size: 16px; margin: 12px 0 6px;">Battery Saver Active</h3>
-      <p style="font-size: 12px; color: var(--hw-muted); margin-bottom: 24px;">
-        Camera is streaming in high definition. Screen is dimmed to conserve battery and reduce heat.
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#E82C55" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      <h3 style="font-size: 17px; margin: 14px 0 6px;">Battery Saver Active</h3>
+      <p style="font-size: 12px; color: var(--hw-muted); margin-bottom: 24px; max-width: 280px; line-height: 1.5;">
+        Streaming live in 1080p. Screen brightness is minimized to preserve battery and prevent thermal throttling.
       </p>
-      <button class="start-btn" id="btnWake" style="padding: 10px 24px; font-size: 13px;">Wake Screen</button>
+      <button class="start-btn" id="btnWake" style="padding: 12px 28px; font-size: 13px;">Wake Screen</button>
     </div>
   </div>
 
   <script>
+    // High-speed ICE Gathering: Google, Twilio, and Cloudflare STUN
+    const PEER_ICE_CONFIG = {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' },
+        { urls: 'stun:global.stun.twilio.com:3478' },
+        { urls: 'stun:stun.cloudflare.com:3478' }
+      ],
+      iceCandidatePoolSize: 10
+    };
+
     let localStream = null;
     let peer = null;
     let currentCall = null;
-    let facingMode = 'environment'; // default to back camera for highest quality
+    let facingMode = 'environment'; // default to high-res rear lens
     let is1080p = true;
     let isTorchOn = false;
-    let desktopRoomId = null;
+    let desktopRoomId = '';
+    let connectionMode = 'wifi';
+    let streamStartTime = null;
+    let timerInterval = null;
+    let isCallInProgress = false;
+    let retryTimeout = null;
 
-    // Parse target room from hash or URL query (?room=xyz or #room=xyz)
-    function getRoomId() {
-      const hash = window.location.hash.replace('#', '');
-      const params = new URLSearchParams(window.location.search || hash);
-      return params.get('room') || hash || 'heartwave-dev';
+    // Clean URL Parameter Parsing
+    function parseUrlConfig() {
+      const searchParams = new URLSearchParams(window.location.search);
+      const hashClean = window.location.hash.replace(/^#/, '');
+      const hashParams = new URLSearchParams(hashClean);
+
+      connectionMode = searchParams.get('mode') || hashParams.get('mode') || 'wifi';
+      desktopRoomId = searchParams.get('room') || hashParams.get('room');
+      
+      // If room wasn't found in key-value format, check if hash itself is the room ID
+      if (!desktopRoomId && hashClean.startsWith('hw-cam-')) {
+        desktopRoomId = hashClean;
+      }
+      if (!desktopRoomId) {
+        desktopRoomId = 'hw-cam-default';
+      }
     }
 
-    desktopRoomId = getRoomId();
+    parseUrlConfig();
 
+    // DOM Elements
     const videoPreview = document.getElementById('videoPreview');
     const startScreen = document.getElementById('startScreen');
     const statusText = document.getElementById('statusText');
     const statusDot = document.getElementById('statusDot');
+    const modePill = document.getElementById('modePill');
+    const modePillIcon = document.getElementById('modePillIcon');
+    const modePillText = document.getElementById('modePillText');
+    const modeTitle = document.getElementById('modeTitle');
+    const modeDesc = document.getElementById('modeDesc');
     const resBadge = document.getElementById('resBadge');
+    const timerBadge = document.getElementById('timerBadge');
+    const timerText = document.getElementById('timerText');
     const btnFlip = document.getElementById('btnFlip');
     const btnQuality = document.getElementById('btnQuality');
     const btnTorch = document.getElementById('btnTorch');
     const btnDim = document.getElementById('btnDim');
+    const btnRetry = document.getElementById('btnRetry');
     const saverOverlay = document.getElementById('saverOverlay');
     const btnWake = document.getElementById('btnWake');
 
+    // Setup initial mode UI
+    if (connectionMode === 'usb') {
+      modePill.classList.add('usb');
+      modePillIcon.innerText = '🔌';
+      modePillText.innerText = 'USB Wire';
+      modeTitle.innerText = '🔌 High-Speed Wired USB Mode';
+      modeDesc.innerText = 'Connected via USB tethering for zero-latency, 60fps streaming.';
+    } else {
+      modePillIcon.innerText = '📶';
+      modePillText.innerText = 'Wi-Fi';
+      modeTitle.innerText = '📶 Fast Wireless Wi-Fi Mode';
+      modeDesc.innerText = 'Zero downloads needed. Connects directly over your local network.';
+    }
+
+    // Start mobile camera
     async function startCamera() {
       if (localStream) {
         localStream.getTracks().forEach(t => t.stop());
@@ -335,17 +466,15 @@
 
         const track = localStream.getVideoTracks()[0];
         const settings = track.getSettings();
-        resBadge.innerText = `${settings.width || (is1080p ? 1080 : 720)}p`;
+        resBadge.innerText = `${settings.height || (is1080p ? 1080 : 720)}p`;
 
-        // If there's an ongoing peer call, replace track
+        // If active peer call exists, replace track dynamically
         if (currentCall && currentCall.peerConnection) {
           const senders = currentCall.peerConnection.getSenders();
           const videoSender = senders.find(s => s.track && s.track.kind === 'video');
           if (videoSender) {
             videoSender.replaceTrack(track);
           }
-        } else if (peer && peer.open) {
-          connectToDesktop();
         }
       } catch (err) {
         console.error('Camera access failed:', err);
@@ -353,77 +482,151 @@
       }
     }
 
+    // Initialize PeerJS
     function initPeer() {
-      // Connect to PeerJS cloud
-      const randomClientId = 'hw-mob-' + Math.random().toString(36).substring(2, 8);
+      if (peer && !peer.destroyed) {
+        connectToDesktop();
+        return;
+      }
+
+      const randomClientId = 'hw-mob-' + Math.random().toString(36).substring(2, 9);
       peer = new Peer(randomClientId, {
         debug: 1,
-        config: {
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:global.stun.twilio.com:3478' }
-          ]
-        }
+        config: PEER_ICE_CONFIG
       });
 
       peer.on('open', (id) => {
-        console.log('Mobile Peer opened with ID:', id);
+        console.log('[MobileCam] Peer opened with ID:', id);
         connectToDesktop();
       });
 
       peer.on('error', (err) => {
-        console.warn('Peer error:', err);
-        statusText.innerText = 'Reconnecting...';
-        statusDot.className = 'badge-dot connecting';
-        setTimeout(connectToDesktop, 3000);
+        console.warn('[MobileCam] Peer error:', err);
+        if (err.type !== 'network') {
+          setStatus('Reconnecting...', 'connecting');
+          scheduleRetry(3000);
+        }
       });
 
       peer.on('disconnected', () => {
-        peer.reconnect();
+        console.log('[MobileCam] Disconnected from signaling, reconnecting...');
+        if (peer && !peer.destroyed) {
+          peer.reconnect();
+        }
       });
     }
 
+    function setStatus(text, stateClass) {
+      statusText.innerText = text;
+      statusDot.className = 'badge-dot ' + (stateClass || '');
+      btnRetry.style.display = stateClass === 'error' ? 'flex' : 'none';
+    }
+
+    function startTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      streamStartTime = Date.now();
+      timerBadge.style.display = 'flex';
+      timerInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - streamStartTime) / 1000);
+        const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
+        const secs = String(elapsed % 60).padStart(2, '0');
+        timerText.innerText = `${mins}:${secs}`;
+      }, 1000);
+    }
+
+    function stopTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = null;
+      timerBadge.style.display = 'none';
+    }
+
+    function scheduleRetry(delayMs) {
+      if (retryTimeout) clearTimeout(retryTimeout);
+      retryTimeout = setTimeout(() => {
+        connectToDesktop();
+      }, delayMs);
+    }
+
+    // Connect to Desktop Room
     function connectToDesktop() {
       if (!peer || !peer.open || !localStream) return;
       if (!desktopRoomId) return;
 
-      statusText.innerText = 'Connecting to PC...';
-      statusDot.className = 'badge-dot connecting';
-
-      console.log('Calling desktop room:', desktopRoomId);
-      currentCall = peer.call(desktopRoomId, localStream, {
-        metadata: {
-          device: navigator.userAgent.includes('iPhone') ? 'iPhone' : 'Android',
-          facing: facingMode,
-          resolution: is1080p ? '1080p' : '720p'
+      // Avoid interrupting an ongoing call in 'connecting' phase
+      if (isCallInProgress && currentCall && currentCall.peerConnection) {
+        const cs = currentCall.peerConnection.connectionState;
+        if (cs === 'connecting' || cs === 'connected') {
+          return;
         }
-      });
+      }
 
-      currentCall.on('close', () => {
-        statusText.innerText = 'Disconnected';
-        statusDot.className = 'badge-dot';
-        setTimeout(connectToDesktop, 3000);
-      });
+      isCallInProgress = true;
+      setStatus('Connecting to PC...', 'connecting');
+      console.log('[MobileCam] Calling desktop room:', desktopRoomId);
 
-      // Peer connection state changes
-      if (currentCall.peerConnection) {
-        currentCall.peerConnection.onconnectionstatechange = () => {
-          const state = currentCall.peerConnection.connectionState;
-          if (state === 'connected') {
-            statusText.innerText = 'Live on PC';
-            statusDot.className = 'badge-dot live';
-          } else if (state === 'disconnected' || state === 'failed') {
-            statusText.innerText = 'Reconnecting...';
-            statusDot.className = 'badge-dot connecting';
+      try {
+        currentCall = peer.call(desktopRoomId, localStream, {
+          metadata: {
+            device: navigator.userAgent.includes('iPhone') ? 'iPhone' : 'Android',
+            facing: facingMode,
+            resolution: is1080p ? '1080p' : '720p',
+            mode: connectionMode
           }
-        };
-      } else {
-        statusText.innerText = 'Live on PC';
-        statusDot.className = 'badge-dot live';
+        });
+
+        const pc = currentCall.peerConnection;
+        if (pc) {
+          pc.onconnectionstatechange = () => {
+            console.log('[MobileCam] Connection state change:', pc.connectionState);
+            if (pc.connectionState === 'connected') {
+              isCallInProgress = false;
+              setStatus(connectionMode === 'usb' ? 'Live on PC (USB)' : 'Live on PC', 'live');
+              startTimer();
+            } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+              isCallInProgress = false;
+              stopTimer();
+              setStatus('Reconnecting...', 'connecting');
+              scheduleRetry(2500);
+            }
+          };
+
+          pc.oniceconnectionstatechange = () => {
+            console.log('[MobileCam] ICE state:', pc.iceConnectionState);
+            if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+              isCallInProgress = false;
+              setStatus(connectionMode === 'usb' ? 'Live on PC (USB)' : 'Live on PC', 'live');
+              startTimer();
+            }
+          };
+        } else {
+          setStatus('Live on PC', 'live');
+          startTimer();
+        }
+
+        currentCall.on('close', () => {
+          console.log('[MobileCam] Call closed');
+          isCallInProgress = false;
+          stopTimer();
+          setStatus('Disconnected', 'error');
+          scheduleRetry(3000);
+        });
+
+        currentCall.on('error', (err) => {
+          console.warn('[MobileCam] Call error:', err);
+          isCallInProgress = false;
+          stopTimer();
+          setStatus('Connection issue', 'error');
+          scheduleRetry(4000);
+        });
+      } catch (e) {
+        console.error('[MobileCam] Call creation failed:', e);
+        isCallInProgress = false;
+        setStatus('Retry needed', 'error');
+        scheduleRetry(4000);
       }
     }
 
-    // Controls listeners
+    // Controls Listeners
     document.getElementById('btnStart').addEventListener('click', async () => {
       startScreen.style.display = 'none';
       await startCamera();
@@ -451,8 +654,7 @@
         });
         btnTorch.classList.toggle('active', isTorchOn);
       } catch (e) {
-        console.warn('Torch not supported on this lens:', e);
-        alert('Torch/Flash is not supported by this camera lens.');
+        alert('Torch/Flashlight is not supported on this lens.');
       }
     });
 
@@ -464,12 +666,9 @@
       saverOverlay.classList.remove('active');
     });
 
-    // Auto-reconnect heartbeat every 5 seconds if connection drops
-    setInterval(() => {
-      if (peer && peer.open && (!currentCall || currentCall.peerConnection?.connectionState !== 'connected')) {
-        connectToDesktop();
-      }
-    }, 5000);
+    btnRetry.addEventListener('click', () => {
+      connectToDesktop();
+    });
   </script>
 </body>
 </html>
