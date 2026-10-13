@@ -8,8 +8,8 @@
   <a href="https://github.com/Jithin0306/HeartWave/releases/latest">
     <img src="https://img.shields.io/github/v/release/Jithin0306/HeartWave?style=for-the-badge&color=e05260&label=Release" alt="Latest Release">
   </a>
-  <img src="https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011%20(x64)-0078D6?style=for-the-badge&logo=windows" alt="Windows Platform">
-  <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="License">
+  <img src="https://img.shields.io/badge/Engine-Rust%20%7C%20Tauri%20v2-DEA584?style=for-the-badge&logo=rust" alt="Rust Core">
+  <img src="https://img.shields.io/badge/RAM-56%20MB-success?style=for-the-badge" alt="56 MB RAM">
   <img src="https://img.shields.io/badge/Virtual%20Camera-DirectShow%20Native-brightgreen?style=for-the-badge" alt="DirectShow Native">
 </p>
 
