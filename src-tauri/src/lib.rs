@@ -1,14 +1,14 @@
 mod vcam;
 
-use std::sync::Arc;
 use parking_lot::Mutex;
 use serde::Serialize;
+use std::sync::Arc;
 use tauri::{
+    AppHandle, Emitter, Manager, State, Window,
     menu::{Menu, MenuItem},
     tray::{TrayIconBuilder, TrayIconEvent},
-    AppHandle, Emitter, Manager, State, Window,
 };
-use vcam::{ensure_driver_registered, ensure_obs_safeguard, SharedVcamBridge, VirtualCameraBridge};
+use vcam::{SharedVcamBridge, VirtualCameraBridge, ensure_driver_registered, ensure_obs_safeguard};
 
 #[derive(Serialize)]
 pub struct AppInfo {
@@ -111,10 +111,10 @@ pub fn run() {
     #[cfg(windows)]
     {
         use windows_sys::Win32::System::Power::{
-            SetThreadExecutionState, ES_CONTINUOUS, ES_SYSTEM_REQUIRED,
+            ES_CONTINUOUS, ES_SYSTEM_REQUIRED, SetThreadExecutionState,
         };
         use windows_sys::Win32::System::Threading::{
-            GetCurrentProcess, SetPriorityClass, ABOVE_NORMAL_PRIORITY_CLASS,
+            ABOVE_NORMAL_PRIORITY_CLASS, GetCurrentProcess, SetPriorityClass,
         };
         unsafe {
             SetPriorityClass(GetCurrentProcess(), ABOVE_NORMAL_PRIORITY_CLASS);
@@ -127,6 +127,7 @@ pub fn run() {
     let shared_vcam: SharedVcamBridge = Arc::new(Mutex::new(VirtualCameraBridge::new()));
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(shared_vcam)
         .setup(|app| {
             if cfg!(debug_assertions) {
@@ -147,9 +148,12 @@ pub fn run() {
 
             // System Tray Menu & Actions
             let quit_i = MenuItem::with_id(app, "quit", "Quit HeartWave", true, None::<&str>)?;
-            let show_i = MenuItem::with_id(app, "show", "Show / Hide HeartWave", true, None::<&str>)?;
-            let vcam_i = MenuItem::with_id(app, "vcam", "Toggle Virtual Camera", true, None::<&str>)?;
-            let privacy_i = MenuItem::with_id(app, "privacy", "Toggle Privacy Shutter", true, None::<&str>)?;
+            let show_i =
+                MenuItem::with_id(app, "show", "Show / Hide HeartWave", true, None::<&str>)?;
+            let vcam_i =
+                MenuItem::with_id(app, "vcam", "Toggle Virtual Camera", true, None::<&str>)?;
+            let privacy_i =
+                MenuItem::with_id(app, "privacy", "Toggle Privacy Shutter", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_i, &vcam_i, &privacy_i, &quit_i])?;
 
             let icon = app.default_window_icon().cloned().unwrap();

@@ -1,15 +1,15 @@
+use parking_lot::Mutex;
+use rayon::prelude::*;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
 use std::ptr::{null, null_mut};
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
-use parking_lot::Mutex;
-use rayon::prelude::*;
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use windows_sys::Win32::Foundation::{CloseHandle, HANDLE, INVALID_HANDLE_VALUE};
 use windows_sys::Win32::System::Memory::{
-    CreateFileMappingW, MapViewOfFile, UnmapViewOfFile, FILE_MAP_ALL_ACCESS,
-    MEMORY_MAPPED_VIEW_ADDRESS, PAGE_READWRITE,
+    CreateFileMappingW, FILE_MAP_ALL_ACCESS, MEMORY_MAPPED_VIEW_ADDRESS, MapViewOfFile,
+    PAGE_READWRITE, UnmapViewOfFile,
 };
 use windows_sys::Win32::System::Threading::{CreateEventW, SetEvent};
 
@@ -105,10 +105,8 @@ impl VirtualCameraBridge {
             header_slice[36..40].copy_from_slice(&0u32.to_le_bytes());
 
             // Default dark luxury standby frame
-            let frame_slice = std::slice::from_raw_parts_mut(
-                self.view_ptr.add(HEADER_SIZE),
-                nv12_size,
-            );
+            let frame_slice =
+                std::slice::from_raw_parts_mut(self.view_ptr.add(HEADER_SIZE), nv12_size);
             let y_size = (width * height) as usize;
             for i in 0..y_size {
                 frame_slice[i] = 26;
@@ -136,10 +134,8 @@ impl VirtualCameraBridge {
         let nv12_size = y_size * 3 / 2;
 
         unsafe {
-            let frame_dest = std::slice::from_raw_parts_mut(
-                self.view_ptr.add(HEADER_SIZE),
-                nv12_size,
-            );
+            let frame_dest =
+                std::slice::from_raw_parts_mut(self.view_ptr.add(HEADER_SIZE), nv12_size);
 
             if is_privacy {
                 frame_dest[0..y_size].fill(16);
@@ -167,8 +163,10 @@ impl VirtualCameraBridge {
                                 y_row[x] = (((66 * r + 129 * g + 25 * b + 128) >> 8) + 16) as u8;
 
                                 if is_even_row && (x & 1) == 0 {
-                                    let u_val = (((-38 * r - 74 * g + 112 * b + 128) >> 8) + 128) as u8;
-                                    let v_val = (((112 * r - 94 * g - 18 * b + 128) >> 8) + 128) as u8;
+                                    let u_val =
+                                        (((-38 * r - 74 * g + 112 * b + 128) >> 8) + 128) as u8;
+                                    let v_val =
+                                        (((112 * r - 94 * g - 18 * b + 128) >> 8) + 128) as u8;
 
                                     let uv_idx = uv_row_start + x;
                                     if uv_idx + 1 < nv12_size - y_size {
@@ -190,7 +188,8 @@ impl VirtualCameraBridge {
                 .unwrap_or_default()
                 .as_nanos() as u64;
             header_slice[24..32].copy_from_slice(&now_ticks.to_le_bytes());
-            header_slice[36..40].copy_from_slice(&(if is_privacy { 1u32 } else { 0u32 }).to_le_bytes());
+            header_slice[36..40]
+                .copy_from_slice(&(if is_privacy { 1u32 } else { 0u32 }).to_le_bytes());
 
             SetEvent(self.event_handle);
         }

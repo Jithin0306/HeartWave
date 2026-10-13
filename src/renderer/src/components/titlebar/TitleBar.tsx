@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Minus, Square, Copy, X, Palette, Check, ChevronDown } from 'lucide-react';
+import { Minus, Square, Copy, X, Palette, Check, ChevronDown, Download } from 'lucide-react';
 import { useAppStore, THEMES, AppTheme } from '../../store/appStore';
 import logoIconRomantic from '../../assets/logo-icon-romantic.png';
 import logoIconStudio from '../../assets/logo-icon-studio.png';
@@ -28,7 +28,8 @@ const THEME_WORDMARKS: Record<AppTheme, string> = {
 export const TitleBar: React.FC = () => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
-  const { virtualCameraStatus, currentTheme, setTheme } = useAppStore();
+  const [updateAvailable, setUpdateAvailable] = useState<string | null>(null);
+  const { virtualCameraStatus, currentTheme, setTheme, setIsSettingsOpen } = useAppStore();
 
   const activeThemeConfig = THEMES.find((t) => t.id === currentTheme) || THEMES[0];
 
@@ -39,6 +40,19 @@ export const TitleBar: React.FC = () => {
         setIsMaximized(maximized);
       });
       return unsubscribe;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (window.heartwaveApi?.onUpdateStatus) {
+      const unsub = window.heartwaveApi.onUpdateStatus((status) => {
+        if (status.state === 'available' || status.state === 'downloaded') {
+          setUpdateAvailable(status.version || 'New');
+        } else {
+          setUpdateAvailable(null);
+        }
+      });
+      return unsub;
     }
   }, []);
 
@@ -318,6 +332,35 @@ export const TitleBar: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* In-App Update Notification Pill */}
+        {updateAvailable && (
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            title={`HeartWave v${updateAvailable} is available! Click to update now.`}
+            style={
+              {
+                WebkitAppRegion: 'no-drag',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '3px 8px',
+                marginRight: '8px',
+                borderRadius: 'var(--hw-radius-full)',
+                backgroundColor: 'rgba(232, 44, 85, 0.15)',
+                border: '1px solid var(--hw-accent-rose)',
+                fontSize: '10px',
+                fontWeight: 600,
+                color: 'var(--hw-accent-rose)',
+                cursor: 'pointer',
+                transition: 'all var(--hw-transition-fast)',
+              } as React.CSSProperties
+            }
+          >
+            <Download size={11} />
+            <span>Update v{updateAvailable}</span>
+          </button>
+        )}
 
         {/* Virtual Driver Status Indicator */}
         <div

@@ -8,3 +8,5 @@ resources/bin/*_old*.dll
 *.obj
 *.lib
 *.exp
+*.key
+src-tauri/target/

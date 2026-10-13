@@ -32,6 +32,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "resources": [
       "../resources/bin/HeartWaveCam.dll"
     ],
@@ -44,6 +45,14 @@
     ],
     "android": {
       "debugApplicationIdSuffix": ".debug"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDRBRDFDM0ZDODNBNThBMDkKUldRSmlxV0QvTVBSU3NENWlJTFVsTW5zNDAzWjZKU2lsZGxLTUNTa0kwQUxJRHRWMHJPMjE3V0cK",
+      "endpoints": [
+        "https://github.com/Jithin0306/HeartWave/releases/latest/download/latest.json"
+      ]
     }
   }
 }
