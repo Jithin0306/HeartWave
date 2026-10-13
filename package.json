@@ -1,6 +1,6 @@
 {
   "name": "heartwave",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "HeartWave - Gesture-Powered Virtual Camera",
   "main": "dist-electron/main.js",
   "author": "HeartWave",
@@ -68,8 +68,11 @@
     "@mediapipe/tasks-vision": "^1.1.0",
     "@tauri-apps/api": "^2.12.3",
     "@tauri-apps/plugin-updater": "^2.13.3",
+    "@types/qrcode": "^1.5.6",
     "electron-updater": "^6.8.9",
     "lucide-react": "^1.16.0",
+    "peerjs": "^1.5.5",
+    "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zustand": "^5.0.3"

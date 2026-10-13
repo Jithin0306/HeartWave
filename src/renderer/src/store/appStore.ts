@@ -198,6 +198,14 @@ interface AppState {
   setIsSettingsOpen: (open: boolean) => void;
   isInspectorOpen: boolean;
   setIsInspectorOpen: (open: boolean) => void;
+  isMobileCamModalOpen: boolean;
+  setIsMobileCamModalOpen: (open: boolean) => void;
+
+  // Wireless Mobile Camera
+  isMobileConnected: boolean;
+  mobileDeviceName: string | null;
+  attachMobileStream: (stream: MediaStream, deviceName?: string) => void;
+  detachMobileStream: () => void;
 
   // Phase 7: Sound Feedback & Audio Engine
   isSoundEnabled: boolean;
@@ -346,7 +354,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   selectDevice: async (deviceId: string) => {
     set({ selectedDeviceId: deviceId });
-    if (get().cameraStatus === 'active') {
+    if (deviceId !== 'mobile-wireless' && get().cameraStatus === 'active') {
       await get().startCamera();
     }
   },
@@ -477,4 +485,38 @@ export const useAppStore = create<AppState>((set, get) => ({
   setIsSettingsOpen: (open) => set({ isSettingsOpen: open }),
   isInspectorOpen: true,
   setIsInspectorOpen: (open) => set({ isInspectorOpen: open }),
+
+  // Wireless Mobile Camera
+  isMobileCamModalOpen: false,
+  setIsMobileCamModalOpen: (open) => set({ isMobileCamModalOpen: open }),
+  isMobileConnected: false,
+  mobileDeviceName: null,
+  attachMobileStream: (stream, deviceName = '📱 Mobile Camera (Wireless)') => {
+    const devices = get().availableDevices;
+    const mobileId = 'mobile-wireless';
+    const exists = devices.some((d) => d.id === mobileId);
+    const updatedDevices = exists
+      ? devices
+      : [{ id: mobileId, label: `📱 ${deviceName}`, groupId: 'wireless', isDefault: false }, ...devices];
+
+    set({
+      availableDevices: updatedDevices,
+      selectedDeviceId: mobileId,
+      activeStream: stream,
+      cameraStatus: 'active',
+      isMobileConnected: true,
+      mobileDeviceName: deviceName,
+      isMobileCamModalOpen: false,
+    });
+  },
+  detachMobileStream: () => {
+    const devices = get().availableDevices.filter((d) => d.id !== 'mobile-wireless');
+    set({
+      availableDevices: devices,
+      selectedDeviceId: devices[0]?.id || 'default',
+      isMobileConnected: false,
+      mobileDeviceName: null,
+    });
+    get().startCamera().catch(() => {});
+  },
 }));

@@ -5,6 +5,7 @@ import { CameraPreviewViewport } from './components/preview/CameraPreviewViewpor
 import { EffectsLibrary } from './components/effects/EffectsLibrary';
 import { StreamerHub } from './components/streamer/StreamerHub';
 import { SettingsModal } from './components/settings/SettingsModal';
+import { MobileCamModal } from './components/mobile/MobileCamModal';
 import { useAppStore } from './store/appStore';
 
 export const App: React.FC = () => {
@@ -59,6 +60,9 @@ export const App: React.FC = () => {
 
       {/* Settings & Privacy Modal */}
       <SettingsModal />
+
+      {/* Wireless Mobile Camera QR Modal */}
+      <MobileCamModal />
     </div>
   );
 };

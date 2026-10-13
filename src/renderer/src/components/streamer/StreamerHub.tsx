@@ -9,6 +9,8 @@ import {
   VolumeX,
   Cpu,
   Zap,
+  Smartphone,
+  QrCode,
 } from 'lucide-react';
 import { useAppStore, RESOLUTION_PRESETS } from '../../store/appStore';
 
@@ -27,6 +29,9 @@ export const StreamerHub: React.FC = () => {
     isSoundEnabled,
     setSoundEnabled,
     soundVolume,
+    isMobileConnected,
+    mobileDeviceName,
+    setIsMobileCamModalOpen,
   } = useAppStore();
 
   const isVirtualOutputActive = virtualOutputStatus === 'broadcasting';
@@ -165,6 +170,65 @@ export const StreamerHub: React.FC = () => {
             <Radio size={14} />
             {isVirtualOutputActive ? 'Stop Virtual Camera (Ctrl+Shift+V)' : 'Start Virtual Camera (Ctrl+Shift+V)'}
           </button>
+        </div>
+
+        {/* Wireless Mobile Camera Quick Launcher Card */}
+        <div
+          onClick={() => setIsMobileCamModalOpen(true)}
+          style={{
+            padding: '12px 14px',
+            borderRadius: 'var(--hw-radius-md)',
+            backgroundColor: isMobileConnected ? 'rgba(52, 199, 89, 0.08)' : 'var(--hw-surface-elevated)',
+            border: isMobileConnected ? '1px solid rgba(52, 199, 89, 0.35)' : '1px solid var(--hw-border-subtle)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            transition: 'all var(--hw-transition-fast)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: 'var(--hw-radius-sm)',
+                backgroundColor: isMobileConnected ? 'rgba(52, 199, 89, 0.15)' : 'rgba(232, 44, 85, 0.12)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: isMobileConnected ? '#34c759' : 'var(--hw-accent-rose)',
+              }}
+            >
+              <Smartphone size={16} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--hw-text-primary)' }}>
+                  Wireless Phone as Webcam
+                </span>
+                {isMobileConnected && (
+                  <span
+                    style={{
+                      fontSize: '9px',
+                      color: '#34c759',
+                      fontWeight: 700,
+                      backgroundColor: 'rgba(52,199,89,0.15)',
+                      padding: '1px 5px',
+                      borderRadius: '4px',
+                    }}
+                  >
+                    CONNECTED
+                  </span>
+                )}
+              </div>
+              <p style={{ fontSize: '10px', color: 'var(--hw-text-muted)' }}>
+                {isMobileConnected ? `Streaming: ${mobileDeviceName || 'Phone'} (1080p)` : 'Scan QR • No phone app download required'}
+              </p>
+            </div>
+          </div>
+
+          <QrCode size={16} color="var(--hw-text-muted)" />
         </div>
 
         {/* Live Controls Grid */}

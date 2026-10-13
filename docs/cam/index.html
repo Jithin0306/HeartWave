@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#141211">
+  <title>HeartWave Wireless Mobile Webcam</title>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <style>
+    :root {
+      --hw-bg: #141211;
+      --hw-surface: #1e1b1a;
+      --hw-accent: #E82C55;
+      --hw-champagne: #D6BD91;
+      --hw-text: #FFFFFF;
+      --hw-muted: #8E8785;
+      --hw-success: #34C759;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    body {
+      background: var(--hw-bg);
+      color: var(--hw-text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    #videoContainer {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(1);
+    }
+    video.mirrored {
+      transform: scaleX(-1);
+    }
+    /* Top Status Bar */
+    .header-bar {
+      position: absolute;
+      top: env(safe-area-inset-top, 16px);
+      left: 16px;
+      right: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 30;
+      pointer-events: none;
+    }
+    .badge {
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(20, 18, 17, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--hw-muted);
+    }
+    .badge-dot.live {
+      background: var(--hw-success);
+      box-shadow: 0 0 8px var(--hw-success);
+      animation: pulse 1.5s infinite;
+    }
+    .badge-dot.connecting {
+      background: #E5A83B;
+    }
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    /* Controls Shelf */
+    .controls-shelf {
+      position: absolute;
+      bottom: calc(env(safe-area-inset-bottom, 16px) + 16px);
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      z-index: 30;
+      padding: 0 16px;
+    }
+    .btn-circle {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: rgba(30, 27, 26, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #FFF;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 10px;
+      font-weight: 500;
+      gap: 2px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      transition: all 0.15s ease;
+    }
+    .btn-circle:active {
+      transform: scale(0.92);
+      background: rgba(232, 44, 85, 0.3);
+      border-color: var(--hw-accent);
+    }
+    .btn-circle.active {
+      background: var(--hw-accent);
+      border-color: var(--hw-accent);
+    }
+    .btn-circle svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    /* Battery Saver Blackout Overlay */
+    #saverOverlay {
+      position: absolute;
+      inset: 0;
+      background: #000;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 40;
+      transition: opacity 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+    }
+    #saverOverlay.active {
+      opacity: 0.96;
+      pointer-events: auto;
+    }
+    /* Permission / Start Screen */
+    #startScreen {
+      position: absolute;
+      inset: 0;
+      background: var(--hw-bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      text-align: center;
+      z-index: 50;
+    }
+    .logo-glow {
+      width: 72px;
+      height: 72px;
+      border-radius: 20px;
+      background: rgba(232, 44, 85, 0.15);
+      border: 1px solid rgba(232, 44, 85, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      box-shadow: 0 0 30px rgba(232, 44, 85, 0.3);
+    }
+    .start-btn {
+      margin-top: 32px;
+      padding: 16px 36px;
+      background: var(--hw-accent);
+      color: #FFF;
+      border: none;
+      border-radius: 999px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(232, 44, 85, 0.4);
+      transition: all 0.2s ease;
+    }
+    .start-btn:active {
+      transform: scale(0.96);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Initial Tap to Connect Screen (needed for iOS audio/camera autoplay policy) -->
+  <div id="startScreen">
+    <div class="logo-glow">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#E82C55" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
+        <circle cx="12" cy="13" r="3"></circle>
+      </svg>
+    </div>
+    <h1 style="font-size: 22px; font-weight: 700; margin-bottom: 8px;">HeartWave Mobile Cam</h1>
+    <p style="font-size: 13px; color: var(--hw-muted); line-height: 1.5; max-width: 280px;">
+      Use your phone as a high-definition wireless webcam directly in HeartWave desktop.
+    </p>
+    <button class="start-btn" id="btnStart">Connect Camera</button>
+  </div>
+
+  <!-- Video Viewport -->
+  <div id="videoContainer">
+    <video id="videoPreview" autoplay playsinline muted></video>
+
+    <!-- Top Status Bar -->
+    <div class="header-bar">
+      <div class="badge" id="statusBadge">
+        <span class="badge-dot connecting" id="statusDot"></span>
+        <span id="statusText">Connecting...</span>
+      </div>
+      <div class="badge" id="resBadge" style="font-size: 11px; color: var(--hw-champagne);">
+        1080p
+      </div>
+    </div>
+
+    <!-- Bottom Controls -->
+    <div class="controls-shelf">
+      <!-- Switch Front/Back -->
+      <button class="btn-circle" id="btnFlip" title="Flip Camera">
+        <svg viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+        <span>Flip</span>
+      </button>
+
+      <!-- Resolution Toggle -->
+      <button class="btn-circle" id="btnQuality" title="HD Toggle">
+        <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        <span id="qualityLabel">1080p</span>
+      </button>
+
+      <!-- Flashlight / Torch (where supported) -->
+      <button class="btn-circle" id="btnTorch" title="Flashlight">
+        <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <span>Torch</span>
+      </button>
+
+      <!-- Battery Saver / Dim Screen -->
+      <button class="btn-circle" id="btnDim" title="Battery Saver">
+        <svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        <span>Dim</span>
+      </button>
+    </div>
+
+    <!-- Battery Saver Screen Overlay -->
+    <div id="saverOverlay">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#E82C55" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      <h3 style="font-size: 16px; margin: 12px 0 6px;">Battery Saver Active</h3>
+      <p style="font-size: 12px; color: var(--hw-muted); margin-bottom: 24px;">
+        Camera is streaming in high definition. Screen is dimmed to conserve battery and reduce heat.
+      </p>
+      <button class="start-btn" id="btnWake" style="padding: 10px 24px; font-size: 13px;">Wake Screen</button>
+    </div>
+  </div>
+
+  <script>
+    let localStream = null;
+    let peer = null;
+    let currentCall = null;
+    let facingMode = 'environment'; // default to back camera for highest quality
+    let is1080p = true;
+    let isTorchOn = false;
+    let desktopRoomId = null;
+
+    // Parse target room from hash or URL query (?room=xyz or #room=xyz)
+    function getRoomId() {
+      const hash = window.location.hash.replace('#', '');
+      const params = new URLSearchParams(window.location.search || hash);
+      return params.get('room') || hash || 'heartwave-dev';
+    }
+
+    desktopRoomId = getRoomId();
+
+    const videoPreview = document.getElementById('videoPreview');
+    const startScreen = document.getElementById('startScreen');
+    const statusText = document.getElementById('statusText');
+    const statusDot = document.getElementById('statusDot');
+    const resBadge = document.getElementById('resBadge');
+    const btnFlip = document.getElementById('btnFlip');
+    const btnQuality = document.getElementById('btnQuality');
+    const btnTorch = document.getElementById('btnTorch');
+    const btnDim = document.getElementById('btnDim');
+    const saverOverlay = document.getElementById('saverOverlay');
+    const btnWake = document.getElementById('btnWake');
+
+    async function startCamera() {
+      if (localStream) {
+        localStream.getTracks().forEach(t => t.stop());
+      }
+
+      const constraints = {
+        video: {
+          facingMode: { ideal: facingMode },
+          width: { ideal: is1080p ? 1920 : 1280 },
+          height: { ideal: is1080p ? 1080 : 720 },
+          frameRate: { ideal: 60, max: 60 }
+        },
+        audio: false
+      };
+
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia(constraints);
+        videoPreview.srcObject = localStream;
+        videoPreview.className = facingMode === 'user' ? 'mirrored' : '';
+
+        const track = localStream.getVideoTracks()[0];
+        const settings = track.getSettings();
+        resBadge.innerText = `${settings.width || (is1080p ? 1080 : 720)}p`;
+
+        // If there's an ongoing peer call, replace track
+        if (currentCall && currentCall.peerConnection) {
+          const senders = currentCall.peerConnection.getSenders();
+          const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+          if (videoSender) {
+            videoSender.replaceTrack(track);
+          }
+        } else if (peer && peer.open) {
+          connectToDesktop();
+        }
+      } catch (err) {
+        console.error('Camera access failed:', err);
+        alert('Please allow camera permissions to use your phone as a webcam.');
+      }
+    }
+
+    function initPeer() {
+      // Connect to PeerJS cloud
+      const randomClientId = 'hw-mob-' + Math.random().toString(36).substring(2, 8);
+      peer = new Peer(randomClientId, {
+        debug: 1,
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:global.stun.twilio.com:3478' }
+          ]
+        }
+      });
+
+      peer.on('open', (id) => {
+        console.log('Mobile Peer opened with ID:', id);
+        connectToDesktop();
+      });
+
+      peer.on('error', (err) => {
+        console.warn('Peer error:', err);
+        statusText.innerText = 'Reconnecting...';
+        statusDot.className = 'badge-dot connecting';
+        setTimeout(connectToDesktop, 3000);
+      });
+
+      peer.on('disconnected', () => {
+        peer.reconnect();
+      });
+    }
+
+    function connectToDesktop() {
+      if (!peer || !peer.open || !localStream) return;
+      if (!desktopRoomId) return;
+
+      statusText.innerText = 'Connecting to PC...';
+      statusDot.className = 'badge-dot connecting';
+
+      console.log('Calling desktop room:', desktopRoomId);
+      currentCall = peer.call(desktopRoomId, localStream, {
+        metadata: {
+          device: navigator.userAgent.includes('iPhone') ? 'iPhone' : 'Android',
+          facing: facingMode,
+          resolution: is1080p ? '1080p' : '720p'
+        }
+      });
+
+      currentCall.on('close', () => {
+        statusText.innerText = 'Disconnected';
+        statusDot.className = 'badge-dot';
+        setTimeout(connectToDesktop, 3000);
+      });
+
+      // Peer connection state changes
+      if (currentCall.peerConnection) {
+        currentCall.peerConnection.onconnectionstatechange = () => {
+          const state = currentCall.peerConnection.connectionState;
+          if (state === 'connected') {
+            statusText.innerText = 'Live on PC';
+            statusDot.className = 'badge-dot live';
+          } else if (state === 'disconnected' || state === 'failed') {
+            statusText.innerText = 'Reconnecting...';
+            statusDot.className = 'badge-dot connecting';
+          }
+        };
+      } else {
+        statusText.innerText = 'Live on PC';
+        statusDot.className = 'badge-dot live';
+      }
+    }
+
+    // Controls listeners
+    document.getElementById('btnStart').addEventListener('click', async () => {
+      startScreen.style.display = 'none';
+      await startCamera();
+      initPeer();
+    });
+
+    btnFlip.addEventListener('click', async () => {
+      facingMode = facingMode === 'environment' ? 'user' : 'environment';
+      await startCamera();
+    });
+
+    btnQuality.addEventListener('click', async () => {
+      is1080p = !is1080p;
+      document.getElementById('qualityLabel').innerText = is1080p ? '1080p' : '720p';
+      await startCamera();
+    });
+
+    btnTorch.addEventListener('click', async () => {
+      if (!localStream) return;
+      const track = localStream.getVideoTracks()[0];
+      try {
+        isTorchOn = !isTorchOn;
+        await track.applyConstraints({
+          advanced: [{ torch: isTorchOn }]
+        });
+        btnTorch.classList.toggle('active', isTorchOn);
+      } catch (e) {
+        console.warn('Torch not supported on this lens:', e);
+        alert('Torch/Flash is not supported by this camera lens.');
+      }
+    });
+
+    btnDim.addEventListener('click', () => {
+      saverOverlay.classList.add('active');
+    });
+
+    btnWake.addEventListener('click', () => {
+      saverOverlay.classList.remove('active');
+    });
+
+    // Auto-reconnect heartbeat every 5 seconds if connection drops
+    setInterval(() => {
+      if (peer && peer.open && (!currentCall || currentCall.peerConnection?.connectionState !== 'connected')) {
+        connectToDesktop();
+      }
+    }, 5000);
+  </script>
+</body>
+</html>

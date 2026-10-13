@@ -13,6 +13,7 @@ import {
   Users,
   Heart,
   Star,
+  Smartphone,
 } from 'lucide-react';
 import { useAppStore, RESOLUTION_PRESETS, THEMES } from '../../store/appStore';
 import { cameraManager } from '../../services/cameraManager';
@@ -75,6 +76,9 @@ export const CameraPreviewViewport: React.FC = () => {
     setCompositorMetrics,
     activeNav,
     virtualOutputStatus,
+    isMobileConnected,
+    mobileDeviceName,
+    setIsMobileCamModalOpen,
   } = useAppStore();
 
   // Initialize hardware enumeration and device change listeners
@@ -523,8 +527,40 @@ export const CameraPreviewViewport: React.FC = () => {
           </div>
         </div>
 
-        {/* Real Device Dropdown */}
+        {/* Camera Device Controls & Mobile Phone Link */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Wireless Mobile Camera Trigger Button */}
+          <button
+            onClick={() => setIsMobileCamModalOpen(true)}
+            title={isMobileConnected ? 'Wireless phone camera connected' : 'Use smartphone as wireless webcam via QR scan'}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '5px 12px',
+              borderRadius: 'var(--hw-radius-sm)',
+              backgroundColor: isMobileConnected ? 'rgba(52, 199, 89, 0.15)' : 'var(--hw-bg-secondary)',
+              border: isMobileConnected ? '1px solid #34c759' : '1px solid var(--hw-border-subtle)',
+              fontSize: '11px',
+              fontWeight: 600,
+              color: isMobileConnected ? '#34c759' : 'var(--hw-text-secondary)',
+              cursor: 'pointer',
+              transition: 'all var(--hw-transition-fast)',
+            }}
+          >
+            <Smartphone size={13} strokeWidth={2} color={isMobileConnected ? '#34c759' : 'var(--hw-accent-rose)'} />
+            <span>{isMobileConnected ? (mobileDeviceName || 'Phone Connected') : 'Phone as Cam'}</span>
+            <span
+              style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                backgroundColor: isMobileConnected ? '#34c759' : 'var(--hw-status-idle)',
+              }}
+            />
+          </button>
+
+          {/* Real Device Dropdown */}
           <div
             style={{
               display: 'flex',
