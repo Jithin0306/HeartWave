@@ -41,15 +41,26 @@ export const MobileCamModal: React.FC = () => {
 
     const unsub = mobileCamService.subscribe((data) => {
       setTelemetry(data);
-      if (data.state === 'connected' && data.stream) {
-        attachMobileStream(data.stream, data.deviceName || 'Wireless Phone');
+      if (data.state === 'connected') {
+        if (data.stream) {
+          attachMobileStream(data.stream, data.deviceName || 'Wireless Phone');
+        }
+        // User requirement: Automatically close QR modal on connection
+        setIsMobileCamModalOpen(false);
       }
     });
 
     return () => {
       unsub();
     };
-  }, [isMobileCamModalOpen, attachMobileStream]);
+  }, [isMobileCamModalOpen, attachMobileStream, setIsMobileCamModalOpen]);
+
+  // Secondary guarantee: auto-close if telemetry state flips to connected while modal is open
+  useEffect(() => {
+    if (telemetry.state === 'connected' && isMobileCamModalOpen) {
+      setIsMobileCamModalOpen(false);
+    }
+  }, [telemetry.state, isMobileCamModalOpen, setIsMobileCamModalOpen]);
 
   if (!isMobileCamModalOpen) return null;
 

@@ -1,17 +1,14 @@
-import Peer, { MediaConnection } from 'peerjs';
+import Peer, { MediaConnection, DataConnection } from 'peerjs';
 import QRCode from 'qrcode';
 
 export type MobileConnectionState = 'idle' | 'waiting' | 'connected' | 'error';
 export type MobileConnectionMode = 'wifi' | 'usb';
 
 export const PEER_ICE_SERVERS: RTCIceServer[] = [
+  { urls: 'stun:stun.cloudflare.com:3478' },
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
   { urls: 'stun:stun2.l.google.com:19302' },
-  { urls: 'stun:stun3.l.google.com:19302' },
-  { urls: 'stun:stun4.l.google.com:19302' },
-  { urls: 'stun:global.stun.twilio.com:3478' },
-  { urls: 'stun:stun.cloudflare.com:3478' },
 ];
 
 export interface MobileCamTelemetry {
@@ -37,6 +34,7 @@ type MobileCamListener = (telemetry: MobileCamTelemetry) => void;
 class MobileCamService {
   private peer: Peer | null = null;
   private currentCall: MediaConnection | null = null;
+  private currentDataConn: DataConnection | null = null;
   private activeStream: MediaStream | null = null;
   private roomId: string = '';
   private wifiPortalUrl: string = '';
@@ -51,13 +49,14 @@ class MobileCamService {
   private connectionType: string = 'Local Network';
   private errorMessage: string = '';
   private listeners = new Set<MobileCamListener>();
+  private pingTimer: any = null;
+  private unavailableRetries = 0;
 
   constructor() {
     this.initRoomId();
   }
 
   private initRoomId() {
-    // Check localStorage for existing persistent room ID
     let saved = '';
     try {
       saved = localStorage.getItem('hw_mobile_room_id') || '';
@@ -78,6 +77,7 @@ class MobileCamService {
       code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     this.roomId = `hw-cam-${code}`;
+    this.unavailableRetries = 0;
     try {
       localStorage.setItem('hw_mobile_room_id', this.roomId);
     } catch {}
@@ -85,7 +85,6 @@ class MobileCamService {
   }
 
   private updatePortalUrls() {
-    // Use query parameter ?room= to prevent QR scanners from stripping hash fragments
     this.wifiPortalUrl = `https://jithin0306.github.io/HeartWave/cam/?room=${this.roomId}&mode=wifi`;
     this.usbPortalUrl = `https://jithin0306.github.io/HeartWave/cam/?room=${this.roomId}&mode=usb`;
   }
@@ -135,11 +134,33 @@ class MobileCamService {
     });
   }
 
+  private startKeepAlive() {
+    this.stopKeepAlive();
+    this.pingTimer = setInterval(() => {
+      if (this.peer && this.peer.open && !this.peer.destroyed) {
+        try {
+          const socket = (this.peer as any).socket;
+          if (socket && socket._ws && socket._ws.readyState === 1) {
+            socket._ws.send(JSON.stringify({ type: 'HEARTBEAT' }));
+          }
+        } catch {}
+      }
+    }, 7500);
+  }
+
+  private stopKeepAlive() {
+    if (this.pingTimer) {
+      clearInterval(this.pingTimer);
+      this.pingTimer = null;
+    }
+  }
+
   /**
    * Start waiting for mobile phone connection
    */
   public async startServer(): Promise<void> {
     if (this.peer && this.peer.open && !this.peer.destroyed) {
+      this.state = this.activeStream ? 'connected' : 'waiting';
       this.notify();
       return;
     }
@@ -151,7 +172,7 @@ class MobileCamService {
     this.errorMessage = '';
     this.notify();
 
-    // Generate high-resolution QR Codes with query parameters
+    // Generate high-resolution QR Codes
     try {
       const qrOpts: QRCode.QRCodeToDataURLOptions = {
         width: 360,
@@ -189,16 +210,54 @@ class MobileCamService {
         debug: 1,
         config: {
           iceServers: PEER_ICE_SERVERS,
-          iceCandidatePoolSize: 10,
+          iceCandidatePoolSize: 2,
         },
       });
 
       this.peer.on('open', (id) => {
         console.log('[MobileCam] Desktop Peer waiting in room:', id);
+        this.unavailableRetries = 0;
         this.state = 'waiting';
+        this.startKeepAlive();
         this.notify();
       });
 
+      // 1. Dual-Channel: Fast Data Connection listener from mobile
+      this.peer.on('connection', (conn: DataConnection) => {
+        console.log('[MobileCam] Data connection initiated by phone:', conn.peer);
+        if (this.currentDataConn && this.currentDataConn !== conn) {
+          try {
+            this.currentDataConn.close();
+          } catch {}
+        }
+        this.currentDataConn = conn;
+
+        conn.on('open', () => {
+          console.log('[MobileCam] Data channel open with phone');
+          try {
+            conn.send({ type: 'HANDSHAKE_ACK', timestamp: Date.now() });
+          } catch {}
+          this.state = 'connected';
+          this.notify();
+        });
+
+        conn.on('data', (data: any) => {
+          console.log('[MobileCam] Received data from phone:', data);
+          if (data && typeof data === 'object') {
+            if (data.device) this.deviceName = data.device;
+            if (data.resolution) this.resolution = data.resolution;
+            if (data.mode === 'usb') this.activeMode = 'usb';
+            this.state = 'connected';
+            this.notify();
+          }
+        });
+
+        conn.on('close', () => {
+          console.log('[MobileCam] Data channel closed by phone');
+        });
+      });
+
+      // 2. Media Call listener from mobile
       this.peer.on('call', (call: MediaConnection) => {
         console.log('[MobileCam] Incoming call from mobile device:', call.metadata);
         
@@ -219,20 +278,26 @@ class MobileCamService {
           this.deviceName = 'Wireless Phone';
         }
 
-        // Answer incoming media call
+        // Answer incoming media call immediately
         call.answer();
 
-        // 1. PeerJS high-level stream event
+        // High-level PeerJS stream event
         call.on('stream', (remoteStream: MediaStream) => {
           if (remoteStream && remoteStream.getVideoTracks().length > 0) {
             console.log('[MobileCam] Mobile stream attached via call.on("stream"):', remoteStream.id);
             this.activeStream = remoteStream;
             this.state = 'connected';
             this.notify();
+
+            if (this.currentDataConn && this.currentDataConn.open) {
+              try {
+                this.currentDataConn.send({ type: 'STREAM_RECEIVED' });
+              } catch {}
+            }
           }
         });
 
-        // 2. Direct WebRTC ontrack fallback (guarantees reception in modern Chromium/WebView2)
+        // Direct WebRTC ontrack fallback
         if (call.peerConnection) {
           const pc = call.peerConnection;
 
@@ -242,6 +307,12 @@ class MobileCamService {
             this.activeStream = stream;
             this.state = 'connected';
             this.notify();
+
+            if (this.currentDataConn && this.currentDataConn.open) {
+              try {
+                this.currentDataConn.send({ type: 'STREAM_RECEIVED' });
+              } catch {}
+            }
           };
 
           pc.onconnectionstatechange = () => {
@@ -272,7 +343,7 @@ class MobileCamService {
                       this.connectionType = this.activeMode === 'usb' ? 'Direct USB Cable' : 'Direct Local Wi-Fi';
                     } else {
                       this.isDirect = false;
-                      this.connectionType = 'Encrypted Stream';
+                      this.connectionType = 'High-Speed Stream';
                     }
                     this.notify();
                   }
@@ -296,8 +367,14 @@ class MobileCamService {
       this.peer.on('error', (err: any) => {
         console.warn('[MobileCam] Peer error:', err);
         if (err.type === 'unavailable-id') {
-          this.generateNewRoomId();
-          this.startServer();
+          this.unavailableRetries++;
+          if (this.unavailableRetries > 2) {
+            console.log('[MobileCam] Generating new room ID after repeated conflicts');
+            this.generateNewRoomId();
+          }
+          setTimeout(() => {
+            this.startServer();
+          }, 1200);
           return;
         }
         if (err.type !== 'network') {
@@ -310,7 +387,9 @@ class MobileCamService {
       this.peer.on('disconnected', () => {
         console.log('[MobileCam] Peer signaling disconnected, reconnecting...');
         if (this.peer && !this.peer.destroyed) {
-          this.peer.reconnect();
+          try {
+            this.peer.reconnect();
+          } catch {}
         }
       });
     } catch (err: any) {
@@ -332,6 +411,13 @@ class MobileCamService {
    * Stop session and disconnect mobile phone
    */
   public stopSession(): void {
+    this.stopKeepAlive();
+    if (this.currentDataConn) {
+      try {
+        this.currentDataConn.close();
+      } catch {}
+      this.currentDataConn = null;
+    }
     if (this.currentCall) {
       try {
         this.currentCall.close();

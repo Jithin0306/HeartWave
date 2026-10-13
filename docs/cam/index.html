@@ -393,25 +393,24 @@
   </div>
 
   <script>
-    // Responsive STUN Configuration (Google, Twilio, Cloudflare)
+    // Ultra-Fast Global STUN Configuration (Cloudflare, Google)
     const PEER_ICE_CONFIG = {
       iceServers: [
+        { urls: 'stun:stun.cloudflare.com:3478' },
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' },
-        { urls: 'stun:global.stun.twilio.com:3478' },
-        { urls: 'stun:stun.cloudflare.com:3478' }
+        { urls: 'stun:stun2.l.google.com:19302' }
       ],
-      iceCandidatePoolSize: 10
+      iceCandidatePoolSize: 2
     };
 
     let localStream = null;
     let peer = null;
     let currentCall = null;
+    let currentDataConn = null;
+    let keepAliveTimer = null;
     let facingMode = 'environment';
-    let is1080p = true;
+    let is1080p = false;
     let isTorchOn = false;
     let desktopRoomId = '';
     let connectionMode = 'wifi';
@@ -536,9 +535,23 @@
       return true;
     }
 
+    function startKeepAlive() {
+      if (keepAliveTimer) clearInterval(keepAliveTimer);
+      keepAliveTimer = setInterval(() => {
+        if (peer && peer.open && !peer.destroyed) {
+          try {
+            const socket = peer.socket;
+            if (socket && socket._ws && socket._ws.readyState === 1) {
+              socket._ws.send(JSON.stringify({ type: 'HEARTBEAT' }));
+            }
+          } catch {}
+        }
+      }, 7500);
+    }
+
     // Initialize PeerJS
     function initPeer() {
-      if (peer && !peer.destroyed) {
+      if (peer && !peer.destroyed && peer.open) {
         connectToDesktop();
         return;
       }
@@ -551,25 +564,25 @@
 
       peer.on('open', (id) => {
         console.log('[MobileCam] Mobile Peer opened with ID:', id);
+        startKeepAlive();
         connectToDesktop();
       });
 
       peer.on('error', (err) => {
         console.warn('[MobileCam] Peer error:', err.type, err.message);
-        isCallInProgress = false;
         if (err.type === 'peer-unavailable') {
-          setStatus('Waiting for PC to open room...', 'connecting');
-          scheduleRetry(2500);
+          setStatus('Connecting to PC room...', 'connecting');
+          scheduleRetry(1200);
         } else if (err.type !== 'network') {
           setStatus('Reconnecting...', 'connecting');
-          scheduleRetry(3000);
+          scheduleRetry(2000);
         }
       });
 
       peer.on('disconnected', () => {
         console.log('[MobileCam] Signaling disconnected, reconnecting...');
         if (peer && !peer.destroyed) {
-          peer.reconnect();
+          try { peer.reconnect(); } catch {}
         }
       });
     }
@@ -581,7 +594,7 @@
     }
 
     function startTimer() {
-      if (timerInterval) clearInterval(timerInterval);
+      if (timerInterval) return;
       streamStartTime = Date.now();
       timerBadge.style.display = 'flex';
       timerInterval = setInterval(() => {
@@ -605,31 +618,60 @@
       }, delayMs);
     }
 
-    // Connect to Desktop Room
+    // Connect to Desktop Room using Dual-Channel (DataChannel + MediaCall)
     function connectToDesktop() {
       if (!peer || !peer.open || !localStream) return;
-      parseUrlConfig(); // re-verify latest room code
+      parseUrlConfig();
 
       if (!desktopRoomId) {
         setStatus('No room specified', 'error');
         return;
       }
 
-      if (isCallInProgress && currentCall && currentCall.peerConnection) {
-        const cs = currentCall.peerConnection.connectionState;
-        if (cs === 'connecting' || cs === 'connected') {
-          return;
+      console.log('[MobileCam] Connecting to desktop room:', desktopRoomId);
+      setStatus('Connecting to PC...', 'connecting');
+
+      // 1. Instant Data Channel Handshake
+      try {
+        if (currentDataConn) {
+          try { currentDataConn.close(); } catch {}
         }
+        currentDataConn = peer.connect(desktopRoomId, { reliable: true });
+
+        currentDataConn.on('open', () => {
+          console.log('[MobileCam] Data channel opened with PC!');
+          try {
+            currentDataConn.send({
+              type: 'HANDSHAKE',
+              device: navigator.userAgent.includes('iPhone') ? 'iPhone' : 'Android Phone',
+              resolution: is1080p ? '1080p' : '720p',
+              mode: connectionMode
+            });
+          } catch {}
+          setStatus(connectionMode === 'usb' ? 'Live on PC (USB)' : 'Live on PC', 'live');
+          startTimer();
+        });
+
+        currentDataConn.on('data', (d) => {
+          console.log('[MobileCam] Message from PC:', d);
+          if (d && (d.type === 'HANDSHAKE_ACK' || d.type === 'STREAM_RECEIVED')) {
+            setStatus(connectionMode === 'usb' ? 'Live on PC (USB)' : 'Live on PC', 'live');
+            startTimer();
+          }
+        });
+      } catch (err) {
+        console.warn('[MobileCam] Data connection init err:', err);
       }
 
-      isCallInProgress = true;
-      setStatus('Connecting to PC...', 'connecting');
-      console.log('[MobileCam] Calling desktop room:', desktopRoomId);
-
+      // 2. Media Call
       try {
+        if (currentCall) {
+          try { currentCall.close(); } catch {}
+        }
+
         currentCall = peer.call(desktopRoomId, localStream, {
           metadata: {
-            device: navigator.userAgent.includes('iPhone') ? 'iPhone' : 'Android',
+            device: navigator.userAgent.includes('iPhone') ? 'iPhone' : 'Android Phone',
             facing: facingMode,
             resolution: is1080p ? '1080p' : '720p',
             mode: connectionMode
@@ -639,52 +681,43 @@
         const pc = currentCall.peerConnection;
         if (pc) {
           pc.onconnectionstatechange = () => {
-            console.log('[MobileCam] Connection state:', pc.connectionState);
+            console.log('[MobileCam] Media Connection state:', pc.connectionState);
             if (pc.connectionState === 'connected') {
-              isCallInProgress = false;
               setStatus(connectionMode === 'usb' ? 'Live on PC (USB)' : 'Live on PC', 'live');
               startTimer();
             } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
-              isCallInProgress = false;
               stopTimer();
               setStatus('Reconnecting...', 'connecting');
-              scheduleRetry(2500);
+              scheduleRetry(1500);
             }
           };
 
           pc.oniceconnectionstatechange = () => {
-            console.log('[MobileCam] ICE state:', pc.iceConnectionState);
+            console.log('[MobileCam] Media ICE state:', pc.iceConnectionState);
             if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-              isCallInProgress = false;
               setStatus(connectionMode === 'usb' ? 'Live on PC (USB)' : 'Live on PC', 'live');
               startTimer();
             }
           };
-        } else {
-          setStatus('Live on PC', 'live');
-          startTimer();
         }
 
         currentCall.on('close', () => {
           console.log('[MobileCam] Call closed');
-          isCallInProgress = false;
           stopTimer();
-          setStatus('Disconnected', 'error');
-          scheduleRetry(3000);
+          setStatus('Reconnecting...', 'connecting');
+          scheduleRetry(2000);
         });
 
         currentCall.on('error', (err) => {
           console.warn('[MobileCam] Call error:', err);
-          isCallInProgress = false;
           stopTimer();
           setStatus('Retrying...', 'connecting');
-          scheduleRetry(3000);
+          scheduleRetry(1500);
         });
       } catch (e) {
         console.error('[MobileCam] Call creation failed:', e);
-        isCallInProgress = false;
         setStatus('Retrying...', 'connecting');
-        scheduleRetry(3000);
+        scheduleRetry(2000);
       }
     }
 
