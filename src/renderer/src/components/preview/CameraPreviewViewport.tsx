@@ -1057,7 +1057,7 @@ export const CameraPreviewViewport: React.FC = () => {
           style={{
             position: 'absolute',
             top: '16px',
-            right: isRightPanelCollapsed ? '150px' : '36px',
+            right: '24px',
             zIndex: 20,
             display: 'flex',
             alignItems: 'center',
@@ -1118,37 +1118,6 @@ export const CameraPreviewViewport: React.FC = () => {
             }}
           />
         </div>
-
-        {/* Floating Open Studio Pill inside viewport when collapsed */}
-        {isRightPanelCollapsed && (
-          <button
-            onClick={toggleRightPanel}
-            title="Open Effects Studio"
-            style={{
-              position: 'absolute',
-              top: '16px',
-              right: '36px',
-              zIndex: 25,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '5px 12px',
-              borderRadius: 'var(--hw-radius-sm)',
-              backgroundColor: 'var(--hw-bg-secondary)',
-              border: '1px solid var(--hw-accent-rose)',
-              boxShadow: 'var(--hw-shadow-md)',
-              fontSize: '11px',
-              fontWeight: 600,
-              color: 'var(--hw-accent-rose)',
-              cursor: 'pointer',
-              transition: 'all var(--hw-transition-fast)',
-            }}
-          >
-            <Sparkles size={12} color="var(--hw-accent-rose)" />
-            <span>Open Studio</span>
-            <PanelRightOpen size={13} />
-          </button>
-        )}
 
         {/* Active Gesture Detection Floating Feedback Pill */}
         {cameraStatus === 'active' && activeGestureEvent && activeGestureEvent.gesture !== 'none' && (
@@ -1576,8 +1545,8 @@ export const CameraPreviewViewport: React.FC = () => {
         </div>
       </div>
 
-      {/* Phase 5: Processed Video Output Pipeline Control Bar */}
-      <VirtualOutputBar />
+      {/* Streamer Broadcast Bar: Rendered specifically for Streamer mode */}
+      {activeNav === 'streamer' && <VirtualOutputBar />}
 
       {/* Unique Home Studio Command Deck: Telemetry, Quick-Fire Shelf, and 4 Studio Launchpad Cards */}
       {activeNav === 'home' && <HomeStudioDeck />}

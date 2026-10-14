@@ -53,6 +53,8 @@ interface Window {
       percent?: number;
       message?: string;
     }>;
+    relaunchApp?: () => Promise<void>;
+    downloadDirectInstaller?: () => void;
     onUpdateStatus?: (
       callback: (status: {
         state: 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error';

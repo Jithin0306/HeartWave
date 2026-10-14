@@ -106,7 +106,12 @@ export const SettingsModal: React.FC = () => {
     if (window.heartwaveApi?.checkForUpdates) {
       try {
         const res = await window.heartwaveApi.checkForUpdates();
-        if (res) setUpdateStatus(res);
+        if (res) {
+          setUpdateStatus(res);
+          if (res.state === 'available') {
+            window.heartwaveApi?.installUpdate?.();
+          }
+        }
       } catch (err: any) {
         setUpdateStatus({ state: 'error', message: err?.message || 'Failed to check updates' });
       } finally {
@@ -1156,31 +1161,58 @@ export const SettingsModal: React.FC = () => {
                         <CheckCircle2 size={16} color="#34c759" />
                         <div>
                           <p style={{ fontSize: '12px', fontWeight: 600, color: '#34c759' }}>
-                            Update Ready! (v{updateStatus.version})
+                            Update Ready! (v{updateStatus.version || '1.3.8'})
                           </p>
                           <p style={{ fontSize: '11px', color: 'var(--hw-text-secondary)' }}>
-                            Downloaded and verified. Restart to apply update immediately.
+                            Downloaded and verified. Click Restart to apply update immediately.
                           </p>
                         </div>
                       </div>
-                      <button
-                        onClick={handleInstallUpdate}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '6px 12px',
-                          borderRadius: 'var(--hw-radius-sm)',
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          backgroundColor: '#34c759',
-                          color: '#ffffff',
-                          border: 'none',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <Download size={12} /> Restart & Install
-                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <button
+                          onClick={() => {
+                            if (window.heartwaveApi?.relaunchApp) {
+                              window.heartwaveApi.relaunchApp();
+                            } else {
+                              handleInstallUpdate();
+                            }
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '6px 14px',
+                            borderRadius: 'var(--hw-radius-sm)',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            backgroundColor: '#34c759',
+                            color: '#ffffff',
+                            border: 'none',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <RefreshCw size={12} /> Restart & Apply
+                        </button>
+                        <button
+                          onClick={() => window.heartwaveApi?.downloadDirectInstaller?.()}
+                          title="Directly download HeartWave setup installer"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '6px 10px',
+                            borderRadius: 'var(--hw-radius-sm)',
+                            fontSize: '11px',
+                            fontWeight: 500,
+                            backgroundColor: 'var(--hw-surface-elevated)',
+                            color: 'var(--hw-text-secondary)',
+                            border: '1px solid var(--hw-border-subtle)',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Direct Setup (.exe)
+                        </button>
+                      </div>
                     </div>
                   )}
 
@@ -1226,19 +1258,65 @@ export const SettingsModal: React.FC = () => {
                   {updateStatus.state === 'available' && (
                     <div
                       style={{
-                        padding: '10px 12px',
+                        padding: '12px 14px',
                         borderRadius: 'var(--hw-radius-sm)',
                         backgroundColor: 'var(--hw-surface-subtle)',
-                        border: '1px solid var(--hw-border-subtle)',
-                        fontSize: '11px',
-                        color: 'var(--hw-accent-rose)',
+                        border: '1px solid var(--hw-accent-rose)',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '6px',
+                        justifyContent: 'space-between',
                       }}
                     >
-                      <ArrowUpCircle size={14} />
-                      <span>New version found (v{updateStatus.version}). Starting background download...</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <ArrowUpCircle size={16} color="var(--hw-accent-rose)" />
+                        <div>
+                          <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--hw-text-primary)' }}>
+                            New Version Available: v{updateStatus.version}
+                          </p>
+                          <p style={{ fontSize: '11px', color: 'var(--hw-text-secondary)' }}>
+                            Downloading update in the background...
+                          </p>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <button
+                          onClick={handleInstallUpdate}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '6px 12px',
+                            borderRadius: 'var(--hw-radius-sm)',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            backgroundColor: 'var(--hw-accent-rose)',
+                            color: '#ffffff',
+                            border: 'none',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <Download size={12} /> Download Now
+                        </button>
+                        <button
+                          onClick={() => window.heartwaveApi?.downloadDirectInstaller?.()}
+                          title="Directly download HeartWave setup installer"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '6px 10px',
+                            borderRadius: 'var(--hw-radius-sm)',
+                            fontSize: '11px',
+                            fontWeight: 500,
+                            backgroundColor: 'var(--hw-surface-elevated)',
+                            color: 'var(--hw-text-secondary)',
+                            border: '1px solid var(--hw-border-subtle)',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Direct Setup (.exe)
+                        </button>
+                      </div>
                     </div>
                   )}
 
@@ -1253,30 +1331,62 @@ export const SettingsModal: React.FC = () => {
                         color: 'var(--hw-text-primary)',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '6px',
+                        justifyContent: 'space-between',
                       }}
                     >
-                      <CheckCircle2 size={14} color="#34c759" />
-                      <span>{updateStatus.message || 'You have the latest version installed.'}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <CheckCircle2 size={14} color="#34c759" />
+                        <span>{updateStatus.message || 'You have the latest version installed.'}</span>
+                      </div>
+                      <button
+                        onClick={() => window.open('https://github.com/Jithin0306/HeartWave/releases', '_blank')}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'var(--hw-text-muted)',
+                          fontSize: '10px',
+                          cursor: 'pointer',
+                          textDecoration: 'underline',
+                        }}
+                      >
+                        GitHub Releases
+                      </button>
                     </div>
                   )}
 
                   {updateStatus.state === 'error' && (
                     <div
                       style={{
-                        padding: '10px 12px',
+                        padding: '12px 14px',
                         borderRadius: 'var(--hw-radius-sm)',
                         backgroundColor: 'rgba(255, 69, 58, 0.08)',
                         border: '1px solid rgba(255, 69, 58, 0.25)',
-                        fontSize: '11px',
-                        color: 'var(--hw-text-secondary)',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '6px',
+                        justifyContent: 'space-between',
                       }}
                     >
-                      <AlertCircle size={14} color="var(--hw-accent-rose)" />
-                      <span>{updateStatus.message || 'Unable to reach update server.'}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <AlertCircle size={15} color="var(--hw-accent-rose)" />
+                        <span style={{ fontSize: '11px', color: 'var(--hw-text-primary)' }}>
+                          {updateStatus.message || 'Unable to complete in-app update.'}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => window.heartwaveApi?.downloadDirectInstaller?.()}
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: 'var(--hw-radius-sm)',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          backgroundColor: 'var(--hw-accent-rose)',
+                          color: '#ffffff',
+                          border: 'none',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Download Setup (.exe)
+                      </button>
                     </div>
                   )}
 

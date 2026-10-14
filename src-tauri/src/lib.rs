@@ -105,6 +105,11 @@ fn quit_app(app: AppHandle) {
     app.exit(0);
 }
 
+#[tauri::command]
+fn relaunch_app(app: AppHandle) {
+    app.restart();
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // 1. Windows EcoQoS & thread priority safeguard
@@ -208,7 +213,8 @@ pub fn run() {
             maximize_window,
             is_window_maximized,
             close_window,
-            quit_app
+            quit_app,
+            relaunch_app
         ])
         .run(tauri::generate_context!())
         .expect("error while building tauri application");

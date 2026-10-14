@@ -145,12 +145,35 @@ export function initTauriBridge(): void {
         return status;
       }
     },
+    relaunchApp: () => invoke<void>('relaunch_app'),
+    downloadDirectInstaller: () => {
+      const version = currentStatus.version || '1.3.8';
+      window.open(
+        `https://github.com/Jithin0306/HeartWave/releases/download/v${version}/HeartWave_${version}_x64-setup.exe`,
+        '_blank'
+      );
+    },
     installUpdate: async () => {
+      if (currentStatus.state === 'downloaded') {
+        try {
+          await invoke('relaunch_app');
+          return true;
+        } catch (e) {
+          console.error('[Updater] relaunch_app failed:', e);
+          window.open('https://github.com/Jithin0306/HeartWave/releases/latest', '_blank');
+          return false;
+        }
+      }
+
       if (!currentUpdate) {
-        // Fallback: open release page
-        window.open('https://github.com/Jithin0306/HeartWave/releases/latest', '_blank');
+        const ver = currentStatus.version || '1.3.8';
+        window.open(
+          `https://github.com/Jithin0306/HeartWave/releases/download/v${ver}/HeartWave_${ver}_x64-setup.exe`,
+          '_blank'
+        );
         return false;
       }
+
       try {
         notifyStatus({ state: 'downloading', percent: 0, version: currentUpdate.version });
         let total = 0;
@@ -158,9 +181,10 @@ export function initTauriBridge(): void {
         await currentUpdate.downloadAndInstall((event) => {
           if (event.event === 'Started') {
             total = event.data.contentLength || 0;
+            notifyStatus({ state: 'downloading', percent: 5, version: currentUpdate?.version });
           } else if (event.event === 'Progress') {
             downloaded += event.data.chunkLength;
-            const percent = total > 0 ? Math.round((downloaded / total) * 100) : 50;
+            const percent = total > 0 ? Math.min(99, Math.round((downloaded / total) * 100)) : 50;
             notifyStatus({
               state: 'downloading',
               percent,
@@ -171,7 +195,7 @@ export function initTauriBridge(): void {
               state: 'downloaded',
               percent: 100,
               version: currentUpdate?.version,
-              message: 'Update downloaded! Restarting...',
+              message: 'Update downloaded! Ready to restart.',
             });
           }
         });
@@ -179,13 +203,14 @@ export function initTauriBridge(): void {
           state: 'downloaded',
           percent: 100,
           version: currentUpdate.version,
-          message: 'Update ready! Restarting...',
+          message: 'Update downloaded! Click Restart & Install to apply.',
         });
         return true;
       } catch (err: any) {
+        console.error('[Updater] downloadAndInstall failed:', err);
         notifyStatus({
           state: 'error',
-          message: err?.message || 'Download & install failed',
+          message: err?.message || 'Download & install failed. You can download the setup installer directly.',
         });
         return false;
       }

@@ -5,9 +5,7 @@ import {
   Radio,
   Smartphone,
   Sparkles,
-  Hand,
   ArrowRight,
-  Camera,
 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { soundEngine } from '../../services/soundEngine';
@@ -19,21 +17,11 @@ export const HomeStudioDeck: React.FC = () => {
     effects,
     selectedEffectId,
     setSelectedEffectId,
-    cameraStatus,
-    availableDevices,
-    selectedDeviceId,
-    cameraMetrics,
-    isTrackingActive,
-    toggleTracking,
-    virtualOutputStatus,
     isMobileConnected,
-    mobileDeviceName,
     setIsMobileCamModalOpen,
   } = useAppStore();
 
-  const selectedDevice = availableDevices.find((d) => d.id === selectedDeviceId);
-
-  // Curated Quick-Fire Effects for 1-click live testing directly on Home
+  // Curated top 6 effects for 1-click testing
   const quickFireEffects = effects.slice(0, 6);
 
   const handleLaunchMode = (mode: string, filter?: any) => {
@@ -54,323 +42,55 @@ export const HomeStudioDeck: React.FC = () => {
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: '14px',
-        marginTop: '14px',
-        animation: 'fadeIn 0.25s ease-out',
+        gap: '8px',
+        marginTop: '8px',
+        animation: 'fadeIn 0.2s ease-out',
       }}
     >
-      {/* 1. System Readiness & Hardware Status Telemetry Strip */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-          gap: '10px',
-        }}
-      >
-        {/* Metric 1: Camera Hardware */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            padding: '10px 14px',
-            borderRadius: 'var(--hw-radius-md)',
-            backgroundColor: 'var(--hw-bg-secondary)',
-            border: '1px solid var(--hw-border-subtle)',
-          }}
-        >
-          <div
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: 'var(--hw-radius-sm)',
-              backgroundColor:
-                cameraStatus === 'active'
-                  ? 'rgba(78, 170, 121, 0.15)'
-                  : 'var(--hw-surface-elevated)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color:
-                cameraStatus === 'active'
-                  ? 'var(--hw-status-active)'
-                  : 'var(--hw-text-muted)',
-              flexShrink: 0,
-            }}
-          >
-            <Camera size={16} />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <span
-              style={{
-                fontSize: '10px',
-                fontWeight: 600,
-                color: 'var(--hw-text-muted)',
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase',
-              }}
-            >
-              Camera Feed
-            </span>
-            <span
-              style={{
-                fontSize: '12px',
-                fontWeight: 600,
-                color: 'var(--hw-text-primary)',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-              title={selectedDevice?.label || 'Ready'}
-            >
-              {cameraStatus === 'active'
-                ? cameraMetrics
-                  ? `${cameraMetrics.actualWidth}×${cameraMetrics.actualHeight} @ ${cameraMetrics.actualFps}fps`
-                  : 'Feed Active'
-                : 'Camera Standby'}
-            </span>
-          </div>
-        </div>
-
-        {/* Metric 2: AI Hand Tracking Engine */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '10px 14px',
-            borderRadius: 'var(--hw-radius-md)',
-            backgroundColor: 'var(--hw-bg-secondary)',
-            border: '1px solid var(--hw-border-subtle)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: 'var(--hw-radius-sm)',
-                backgroundColor: isTrackingActive
-                  ? 'rgba(214, 189, 145, 0.15)'
-                  : 'var(--hw-surface-elevated)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: isTrackingActive
-                  ? 'var(--hw-accent-champagne)'
-                  : 'var(--hw-text-muted)',
-                flexShrink: 0,
-              }}
-            >
-              <Hand size={16} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span
-                style={{
-                  fontSize: '10px',
-                  fontWeight: 600,
-                  color: 'var(--hw-text-muted)',
-                  letterSpacing: '0.04em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                AI Gesture Engine
-              </span>
-              <span
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  color: isTrackingActive
-                    ? 'var(--hw-accent-champagne)'
-                    : 'var(--hw-text-secondary)',
-                }}
-              >
-                {isTrackingActive ? 'MediaPipe 21-3D On' : 'Tracking Inactive'}
-              </span>
-            </div>
-          </div>
-          <button
-            onClick={toggleTracking}
-            title={isTrackingActive ? 'Disable tracking' : 'Enable 21-point tracking'}
-            style={{
-              padding: '4px 8px',
-              borderRadius: 'var(--hw-radius-xs)',
-              backgroundColor: isTrackingActive
-                ? 'var(--hw-surface-elevated)'
-                : 'var(--hw-accent-champagne)',
-              color: isTrackingActive ? 'var(--hw-text-secondary)' : '#0A0A0D',
-              border: 'none',
-              fontSize: '10px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              transition: 'all var(--hw-transition-fast)',
-            }}
-          >
-            {isTrackingActive ? 'Pause' : 'Activate'}
-          </button>
-        </div>
-
-        {/* Metric 3: DirectShow Broadcast */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            padding: '10px 14px',
-            borderRadius: 'var(--hw-radius-md)',
-            backgroundColor: 'var(--hw-bg-secondary)',
-            border: '1px solid var(--hw-border-subtle)',
-          }}
-        >
-          <div
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: 'var(--hw-radius-sm)',
-              backgroundColor:
-                virtualOutputStatus === 'broadcasting'
-                  ? 'rgba(52, 199, 89, 0.15)'
-                  : 'var(--hw-surface-elevated)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color:
-                virtualOutputStatus === 'broadcasting'
-                  ? '#34c759'
-                  : 'var(--hw-text-muted)',
-              flexShrink: 0,
-            }}
-          >
-            <Radio size={16} />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span
-              style={{
-                fontSize: '10px',
-                fontWeight: 600,
-                color: 'var(--hw-text-muted)',
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase',
-              }}
-            >
-              DirectShow Pipe
-            </span>
-            <span
-              style={{
-                fontSize: '12px',
-                fontWeight: 600,
-                color:
-                  virtualOutputStatus === 'broadcasting'
-                    ? '#34c759'
-                    : 'var(--hw-text-secondary)',
-              }}
-            >
-              {virtualOutputStatus === 'broadcasting' ? 'Broadcasting 60FPS' : 'Ready for OBS'}
-            </span>
-          </div>
-        </div>
-
-        {/* Metric 4: Wireless Mobile Cam */}
-        <div
-          onClick={() => setIsMobileCamModalOpen(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '10px 14px',
-            borderRadius: 'var(--hw-radius-md)',
-            backgroundColor: isMobileConnected
-              ? 'rgba(52, 199, 89, 0.08)'
-              : 'var(--hw-bg-secondary)',
-            border: `1px solid ${
-              isMobileConnected ? 'rgba(52, 199, 89, 0.3)' : 'var(--hw-border-subtle)'
-            }`,
-            cursor: 'pointer',
-            transition: 'all var(--hw-transition-fast)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: 'var(--hw-radius-sm)',
-                backgroundColor: isMobileConnected
-                  ? 'rgba(52, 199, 89, 0.2)'
-                  : 'var(--hw-surface-elevated)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: isMobileConnected ? '#34c759' : 'var(--hw-accent-rose)',
-                flexShrink: 0,
-              }}
-            >
-              <Smartphone size={16} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span
-                style={{
-                  fontSize: '10px',
-                  fontWeight: 600,
-                  color: 'var(--hw-text-muted)',
-                  letterSpacing: '0.04em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                Wireless Phone Cam
-              </span>
-              <span
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  color: isMobileConnected ? '#34c759' : 'var(--hw-text-primary)',
-                }}
-              >
-                {isMobileConnected ? mobileDeviceName || 'Connected' : 'Click to Pair QR'}
-              </span>
-            </div>
-          </div>
-          <ArrowRight size={13} color="var(--hw-text-muted)" />
-        </div>
-      </div>
-
-      {/* 2. Quick-Fire Effect Shelf (1-Click Instant Trigger Directly on Home) */}
+      {/* 1. Slim Quick-Fire Effects Rail (Compact 1-Click Trigger) */}
       <div
         style={{
           display: 'flex',
-          flexDirection: 'column',
+          alignItems: 'center',
           gap: '8px',
-          padding: '12px 14px',
+          padding: '6px 12px',
           borderRadius: 'var(--hw-radius-md)',
           backgroundColor: 'var(--hw-bg-secondary)',
           border: '1px solid var(--hw-border-subtle)',
+          overflowX: 'auto',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Sparkles size={13} color="var(--hw-accent-rose)" />
-            <span
-              style={{
-                fontSize: '11px',
-                fontWeight: 700,
-                color: 'var(--hw-text-primary)',
-                letterSpacing: '0.02em',
-                textTransform: 'uppercase',
-              }}
-            >
-              Quick-Fire Effects Shelf
-            </span>
-          </div>
-          <span style={{ fontSize: '10px', color: 'var(--hw-text-muted)' }}>
-            Instant 1-Click Trigger
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px',
+            flexShrink: 0,
+            paddingRight: '6px',
+            borderRight: '1px solid var(--hw-border-subtle)',
+          }}
+        >
+          <Sparkles size={12} color="var(--hw-accent-rose)" />
+          <span
+            style={{
+              fontSize: '10px',
+              fontWeight: 700,
+              color: 'var(--hw-text-primary)',
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+            }}
+          >
+            Quick FX
           </span>
         </div>
 
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-            gap: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            flex: 1,
+            overflowX: 'auto',
           }}
         >
           {quickFireEffects.map((eff) => {
@@ -379,499 +99,242 @@ export const HomeStudioDeck: React.FC = () => {
               <button
                 key={eff.id}
                 onClick={() => handleSelectQuickEffect(eff.id)}
+                title={`Select ${eff.name} (${eff.gestureName})`}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  padding: '7px 10px',
-                  borderRadius: 'var(--hw-radius-sm)',
+                  gap: '6px',
+                  padding: '4px 10px',
+                  borderRadius: 'var(--hw-radius-full)',
                   backgroundColor: isSelected
                     ? 'var(--hw-surface-active)'
                     : 'var(--hw-surface-elevated)',
                   border: isSelected
-                    ? '1px solid var(--hw-accent-primary)'
+                    ? '1px solid var(--hw-accent-rose)'
                     : '1px solid var(--hw-border-subtle)',
                   color: isSelected ? 'var(--hw-text-primary)' : 'var(--hw-text-secondary)',
                   cursor: 'pointer',
-                  textAlign: 'left',
+                  fontSize: '11px',
+                  fontWeight: isSelected ? 600 : 500,
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
                   transition: 'all var(--hw-transition-fast)',
-                  boxShadow: isSelected ? '0 0 10px rgba(184, 92, 112, 0.25)' : 'none',
                 }}
               >
-                <div
+                <span
                   style={{
-                    width: '8px',
-                    height: '8px',
+                    width: '6px',
+                    height: '6px',
                     borderRadius: '50%',
                     backgroundColor: isSelected
                       ? 'var(--hw-accent-rose)'
                       : 'var(--hw-border-medium)',
-                    flexShrink: 0,
                   }}
                 />
-                <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                  <span
-                    style={{
-                      fontSize: '11px',
-                      fontWeight: isSelected ? 700 : 500,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {eff.name}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: '9px',
-                      color: 'var(--hw-text-muted)',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {eff.gestureName}
-                  </span>
-                </div>
+                <span>{eff.name}</span>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* 3. The 4 Studio Hub Launchpad Cards */}
+      {/* 2. Low-Profile Studio Launchpad Cards (Single Slim Row) */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '12px',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: '8px',
         }}
       >
-        {/* Card 1: Couples & Duo Mode */}
+        {/* Card 1: Couples Duo */}
         <div
           onClick={() => handleLaunchMode('couples', 'couples')}
           style={{
-            position: 'relative',
             display: 'flex',
-            flexDirection: 'column',
+            alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '14px',
-            borderRadius: 'var(--hw-radius-lg)',
+            padding: '8px 12px',
+            borderRadius: 'var(--hw-radius-md)',
             backgroundColor: 'var(--hw-bg-secondary)',
             border: '1px solid var(--hw-border-subtle)',
             cursor: 'pointer',
-            transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-            overflow: 'hidden',
+            transition: 'all 0.15s ease',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
             e.currentTarget.style.borderColor = 'var(--hw-accent-rose)';
-            e.currentTarget.style.boxShadow = '0 8px 24px rgba(215, 154, 166, 0.15)';
+            e.currentTarget.style.backgroundColor = 'var(--hw-surface-hover)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'none';
             e.currentTarget.style.borderColor = 'var(--hw-border-subtle)';
-            e.currentTarget.style.boxShadow = 'none';
+            e.currentTarget.style.backgroundColor = 'var(--hw-bg-secondary)';
           }}
         >
-          <div>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '10px',
-              }}
-            >
-              <div
-                style={{
-                  width: '34px',
-                  height: '34px',
-                  borderRadius: 'var(--hw-radius-md)',
-                  backgroundColor: 'rgba(215, 154, 166, 0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--hw-accent-rose)',
-                }}
-              >
-                <Users size={18} />
-              </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+            <Users size={14} color="var(--hw-accent-rose)" style={{ flexShrink: 0 }} />
+            <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <span
                 style={{
-                  fontSize: '9px',
-                  fontWeight: 700,
-                  letterSpacing: '0.05em',
-                  textTransform: 'uppercase',
-                  padding: '2px 7px',
-                  borderRadius: 'var(--hw-radius-full)',
-                  backgroundColor: 'rgba(215, 154, 166, 0.1)',
-                  color: 'var(--hw-accent-rose)',
-                  border: '1px solid rgba(215, 154, 166, 0.2)',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  color: 'var(--hw-text-primary)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
                 }}
               >
+                Couples & Duo
+              </span>
+              <span style={{ fontSize: '9px', color: 'var(--hw-text-muted)', whiteSpace: 'nowrap' }}>
                 Dual-Cam Sync
               </span>
             </div>
-
-            <h3
-              style={{
-                fontSize: '13px',
-                fontWeight: 700,
-                color: 'var(--hw-text-primary)',
-                marginBottom: '4px',
-              }}
-            >
-              Couples & Duo Mode
-            </h3>
-            <p
-              style={{
-                fontSize: '11px',
-                color: 'var(--hw-text-secondary)',
-                lineHeight: '1.4',
-                margin: 0,
-              }}
-            >
-              Dual-palm heart detection and co-stream tracking. Perfect for couples, friends, and co-hosts.
-            </p>
           </div>
-
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              marginTop: '12px',
-              fontSize: '11px',
-              fontWeight: 600,
-              color: 'var(--hw-accent-rose)',
-            }}
-          >
-            <span>Launch Duo Studio</span>
-            <ArrowRight size={12} />
-          </div>
+          <ArrowRight size={11} color="var(--hw-text-muted)" style={{ flexShrink: 0 }} />
         </div>
 
-        {/* Card 2: Romantic FX Studio */}
+        {/* Card 2: Romantic FX */}
         <div
           onClick={() => handleLaunchMode('romantic', 'romantic')}
           style={{
-            position: 'relative',
             display: 'flex',
-            flexDirection: 'column',
+            alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '14px',
-            borderRadius: 'var(--hw-radius-lg)',
+            padding: '8px 12px',
+            borderRadius: 'var(--hw-radius-md)',
             backgroundColor: 'var(--hw-bg-secondary)',
             border: '1px solid var(--hw-border-subtle)',
             cursor: 'pointer',
-            transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-            overflow: 'hidden',
+            transition: 'all 0.15s ease',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
             e.currentTarget.style.borderColor = 'var(--hw-accent-champagne)';
-            e.currentTarget.style.boxShadow = '0 8px 24px rgba(214, 189, 145, 0.15)';
+            e.currentTarget.style.backgroundColor = 'var(--hw-surface-hover)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'none';
             e.currentTarget.style.borderColor = 'var(--hw-border-subtle)';
-            e.currentTarget.style.boxShadow = 'none';
+            e.currentTarget.style.backgroundColor = 'var(--hw-bg-secondary)';
           }}
         >
-          <div>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '10px',
-              }}
-            >
-              <div
-                style={{
-                  width: '34px',
-                  height: '34px',
-                  borderRadius: 'var(--hw-radius-md)',
-                  backgroundColor: 'rgba(214, 189, 145, 0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--hw-accent-champagne)',
-                }}
-              >
-                <Heart size={18} />
-              </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+            <Heart size={14} color="var(--hw-accent-champagne)" style={{ flexShrink: 0 }} />
+            <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <span
                 style={{
-                  fontSize: '9px',
-                  fontWeight: 700,
-                  letterSpacing: '0.05em',
-                  textTransform: 'uppercase',
-                  padding: '2px 7px',
-                  borderRadius: 'var(--hw-radius-full)',
-                  backgroundColor: 'rgba(214, 189, 145, 0.1)',
-                  color: 'var(--hw-accent-champagne)',
-                  border: '1px solid rgba(214, 189, 145, 0.2)',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  color: 'var(--hw-text-primary)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
                 }}
               >
-                Cinematic FX
+                Romantic Visual FX
+              </span>
+              <span style={{ fontSize: '9px', color: 'var(--hw-text-muted)', whiteSpace: 'nowrap' }}>
+                Cinematic Atmosphere
               </span>
             </div>
-
-            <h3
-              style={{
-                fontSize: '13px',
-                fontWeight: 700,
-                color: 'var(--hw-text-primary)',
-                marginBottom: '4px',
-              }}
-            >
-              Romantic Visual FX
-            </h3>
-            <p
-              style={{
-                fontSize: '11px',
-                color: 'var(--hw-text-secondary)',
-                lineHeight: '1.4',
-                margin: 0,
-              }}
-            >
-              Floating rose petals, celestial particle rings, ethereal golden glow, and cupid's arrow.
-            </p>
           </div>
-
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              marginTop: '12px',
-              fontSize: '11px',
-              fontWeight: 600,
-              color: 'var(--hw-accent-champagne)',
-            }}
-          >
-            <span>Explore Romantic VFX</span>
-            <ArrowRight size={12} />
-          </div>
+          <ArrowRight size={11} color="var(--hw-text-muted)" style={{ flexShrink: 0 }} />
         </div>
 
-        {/* Card 3: Streamer Broadcast Deck */}
+        {/* Card 3: Streamer Hub */}
         <div
           onClick={() => handleLaunchMode('streamer')}
           style={{
-            position: 'relative',
             display: 'flex',
-            flexDirection: 'column',
+            alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '14px',
-            borderRadius: 'var(--hw-radius-lg)',
+            padding: '8px 12px',
+            borderRadius: 'var(--hw-radius-md)',
             backgroundColor: 'var(--hw-bg-secondary)',
             border: '1px solid var(--hw-border-subtle)',
             cursor: 'pointer',
-            transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-            overflow: 'hidden',
+            transition: 'all 0.15s ease',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.borderColor = 'var(--hw-accent-primary)';
-            e.currentTarget.style.boxShadow = '0 8px 24px rgba(184, 92, 112, 0.15)';
+            e.currentTarget.style.borderColor = '#34c759';
+            e.currentTarget.style.backgroundColor = 'var(--hw-surface-hover)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'none';
             e.currentTarget.style.borderColor = 'var(--hw-border-subtle)';
-            e.currentTarget.style.boxShadow = 'none';
+            e.currentTarget.style.backgroundColor = 'var(--hw-bg-secondary)';
           }}
         >
-          <div>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '10px',
-              }}
-            >
-              <div
-                style={{
-                  width: '34px',
-                  height: '34px',
-                  borderRadius: 'var(--hw-radius-md)',
-                  backgroundColor: 'rgba(52, 199, 89, 0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#34c759',
-                }}
-              >
-                <Radio size={18} />
-              </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+            <Radio size={14} color="#34c759" style={{ flexShrink: 0 }} />
+            <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <span
                 style={{
-                  fontSize: '9px',
-                  fontWeight: 700,
-                  letterSpacing: '0.05em',
-                  textTransform: 'uppercase',
-                  padding: '2px 7px',
-                  borderRadius: 'var(--hw-radius-full)',
-                  backgroundColor: 'rgba(52, 199, 89, 0.1)',
-                  color: '#34c759',
-                  border: '1px solid rgba(52, 199, 89, 0.2)',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  color: 'var(--hw-text-primary)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
                 }}
               >
-                DirectShow 60FPS
+                Streamer Hub
+              </span>
+              <span style={{ fontSize: '9px', color: 'var(--hw-text-muted)', whiteSpace: 'nowrap' }}>
+                OBS & Discord Output
               </span>
             </div>
-
-            <h3
-              style={{
-                fontSize: '13px',
-                fontWeight: 700,
-                color: 'var(--hw-text-primary)',
-                marginBottom: '4px',
-              }}
-            >
-              Streamer Broadcast Hub
-            </h3>
-            <p
-              style={{
-                fontSize: '11px',
-                color: 'var(--hw-text-secondary)',
-                lineHeight: '1.4',
-                margin: 0,
-              }}
-            >
-              Output composited video to OBS Studio, Discord, Twitch, and Zoom with one-click privacy shutter.
-            </p>
           </div>
-
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              marginTop: '12px',
-              fontSize: '11px',
-              fontWeight: 600,
-              color: '#34c759',
-            }}
-          >
-            <span>Open Broadcast Deck</span>
-            <ArrowRight size={12} />
-          </div>
+          <ArrowRight size={11} color="var(--hw-text-muted)" style={{ flexShrink: 0 }} />
         </div>
 
-        {/* Card 4: Wireless Mobile Camera */}
+        {/* Card 4: Wireless Phone Cam */}
         <div
           onClick={() => {
             soundEngine.playHeartChime();
             setIsMobileCamModalOpen(true);
           }}
           style={{
-            position: 'relative',
             display: 'flex',
-            flexDirection: 'column',
+            alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '14px',
-            borderRadius: 'var(--hw-radius-lg)',
+            padding: '8px 12px',
+            borderRadius: 'var(--hw-radius-md)',
             backgroundColor: 'var(--hw-bg-secondary)',
             border: '1px solid var(--hw-border-subtle)',
             cursor: 'pointer',
-            transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-            overflow: 'hidden',
+            transition: 'all 0.15s ease',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.borderColor = 'var(--hw-accent-rose)';
-            e.currentTarget.style.boxShadow = '0 8px 24px rgba(215, 154, 166, 0.15)';
+            e.currentTarget.style.borderColor = '#818cf8';
+            e.currentTarget.style.backgroundColor = 'var(--hw-surface-hover)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'none';
             e.currentTarget.style.borderColor = 'var(--hw-border-subtle)';
-            e.currentTarget.style.boxShadow = 'none';
+            e.currentTarget.style.backgroundColor = 'var(--hw-bg-secondary)';
           }}
         >
-          <div>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '10px',
-              }}
-            >
-              <div
-                style={{
-                  width: '34px',
-                  height: '34px',
-                  borderRadius: 'var(--hw-radius-md)',
-                  backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#818cf8',
-                }}
-              >
-                <Smartphone size={18} />
-              </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+            <Smartphone
+              size={14}
+              color={isMobileConnected ? '#34c759' : '#818cf8'}
+              style={{ flexShrink: 0 }}
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <span
                 style={{
-                  fontSize: '9px',
-                  fontWeight: 700,
-                  letterSpacing: '0.05em',
-                  textTransform: 'uppercase',
-                  padding: '2px 7px',
-                  borderRadius: 'var(--hw-radius-full)',
-                  backgroundColor: isMobileConnected
-                    ? 'rgba(52, 199, 89, 0.1)'
-                    : 'rgba(99, 102, 241, 0.1)',
-                  color: isMobileConnected ? '#34c759' : '#818cf8',
-                  border: `1px solid ${
-                    isMobileConnected ? 'rgba(52, 199, 89, 0.2)' : 'rgba(99, 102, 241, 0.2)'
-                  }`,
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  color: isMobileConnected ? '#34c759' : 'var(--hw-text-primary)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
                 }}
               >
-                {isMobileConnected ? 'Connected' : 'QR Scan Ready'}
+                {isMobileConnected ? 'Phone Active' : 'Phone as Webcam'}
+              </span>
+              <span style={{ fontSize: '9px', color: 'var(--hw-text-muted)', whiteSpace: 'nowrap' }}>
+                {isMobileConnected ? 'Tap to Manage' : 'QR Scan Ready'}
               </span>
             </div>
-
-            <h3
-              style={{
-                fontSize: '13px',
-                fontWeight: 700,
-                color: 'var(--hw-text-primary)',
-                marginBottom: '4px',
-              }}
-            >
-              Wireless Phone Cam
-            </h3>
-            <p
-              style={{
-                fontSize: '11px',
-                color: 'var(--hw-text-secondary)',
-                lineHeight: '1.4',
-                margin: 0,
-              }}
-            >
-              Use your iPhone or Android phone as an HD webcam. Features remote zoom, flashlight, and lens switcher.
-            </p>
           </div>
-
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              marginTop: '12px',
-              fontSize: '11px',
-              fontWeight: 600,
-              color: '#818cf8',
-            }}
-          >
-            <span>{isMobileConnected ? 'Manage Mobile Cam' : 'Scan QR Code'}</span>
-            <ArrowRight size={12} />
-          </div>
+          <ArrowRight size={11} color="var(--hw-text-muted)" style={{ flexShrink: 0 }} />
         </div>
       </div>
     </div>
