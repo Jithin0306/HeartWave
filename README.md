@@ -73,6 +73,11 @@ Don't have a high-end webcam? Turn your iPhone or Android phone into an ultra-lo
   - Zero-dependency Web Audio API synthesizer generates real-time harmonious acoustic chimes upon gesture triggers.
 - **🎨 6 Tailored Workspace Themes**:
   - *Black & Gold*, *Royal Ivory & Gold*, *Romantic Blush*, *Studio Neutral*, *Cyber Neon*, and *Midnight Slate* with authentic 3D typography.
+- **🎬 AI Cinematic DSLR Background Blur & Green Screen**:
+  - Offline GPU-accelerated human segmentation powered by Google MediaPipe.
+  - Optical aperture presets: **f/1.4 Prime** (deep bokeh), **f/2.8 Studio** (natural portrait depth), **f/4.0 Soft-Focus**.
+  - Built-in studio environments (*Luxury Penthouse*, *Modern Studio*, *Cyberpunk*, *Cafe*) + custom photo upload.
+  - Pixel-perfect Chroma Green Screen (`#00FF00`) and Blue Screen (`#0000FF`) for OBS Studio and Discord.
 - **🛡️ 100% Private & On-Device**:
   - Zero video frames or biometric data leave your computer. No cloud telemetry, no accounts required.
 - **🔄 Built-In Auto-Updates**:
@@ -83,7 +88,7 @@ Don't have a high-end webcam? Turn your iPhone or Android phone into an ultra-lo
 ## 📥 Quick Download & Installation
 
 1. Head over to the [**Latest Releases Page**](https://github.com/Jithin0306/HeartWave/releases/latest).
-2. Download **`HeartWave_1.3.7_x64-setup.exe`** (Installer) or **`HeartWave-Portable.exe`** (Standalone portable).
+2. Download **`HeartWave_1.3.9_x64-setup.exe`** (Installer) or **`HeartWave-Portable.exe`** (Standalone portable).
 3. Launch HeartWave.
 4. Select your camera or scan the QR code to use your phone, turn on **"Start Virtual Camera"** (or press `Ctrl+Shift+V`), and pick **Heartwave Virtual Camera** in your favorite streaming or meeting app!
 
@@ -93,6 +98,7 @@ Don't have a high-end webcam? Turn your iPhone or Android phone into an ultra-lo
 
 | Shortcut | Action | Description |
 | :--- | :--- | :--- |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>K</kbd> | **Toggle DSLR Blur** | Instantly toggles cinematic background blur on/off |
 | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> | **Privacy Shutter** | Immediately blacks out the video feed |
 | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd> | **Bypass Mode** | Sends clean, raw camera feed with zero effects |
 | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>V</kbd> | **Toggle Virtual Camera** | Starts or stops the DirectShow video broadcast |

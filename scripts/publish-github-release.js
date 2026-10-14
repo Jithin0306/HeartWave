@@ -19,28 +19,38 @@ function getGithubToken() {
   return '';
 }
 
-const VERSION = '1.3.8';
+const VERSION = '1.3.9';
 const TAG = `v${VERSION}`;
 const REPO = 'jithin0306/HeartWave';
 const TOKEN = getGithubToken();
 
-const RELEASE_TITLE = `HeartWave v${VERSION} - Collapsible Effects Studio, Default Home Mode & Studio Command Center`;
+const RELEASE_TITLE = `HeartWave v${VERSION} - AI Cinematic DSLR Background Blur, Virtual Backdrops & Chroma Green Screen`;
 const RELEASE_NOTES = `## HeartWave v${VERSION} Release Notes
 
-### 🎛️ Collapsible Effects Studio (With 1-Click Restore)
-- **Collapsible Sidebar**: Easily collapse the Effects Studio (and Streamer Hub) with a single click using the new header collapse button (\`PanelRightClose\`).
-- **Panoramic 100% Viewport**: Collapsing the sidebar lets the camera preview expand to full screen width.
-- **Instant Restore**: Restore the studio anytime via the top-bar "Open Studio" button or the floating glassmorphic pill in the top-right corner of the viewport.
-- **Session Persistence**: Remembers your preferred layout via \`localStorage\` (\`hw_right_panel_collapsed\`).
+### 🎬 AI Cinematic DSLR Background Blur (GPU Accelerated)
+- **Offline GPU-Accelerated Segmentation**: Powered by Google MediaPipe's official \`selfie_segmenter.tflite\` model running 100% locally on your machine with zero cloud dependency.
+- **Optical Aperture Depth Simulation**: Realistic camera lens bokeh simulation:
+  - **\`f/1.4 Prime\`** (85% blur) — Dreamy portrait bokeh with deep room defocus.
+  - **\`f/2.8 Studio\`** (50% blur, default) — Balanced cinematic depth of field.
+  - **\`f/4.0 Soft-Focus\`** (25% blur) — Subtle background softening.
+- **Silky Temporal Smoothing**: Exponential temporal filtering eliminates edge fluttering, silhouette flickering, and hair shimmer.
+- **Smoothstep Edge Feathering**: Natural optical transitions along subject contours without harsh cutout borders.
 
-### 🏠 Default Home Studio Landing Mode
-- **Home by Default**: The software now automatically opens in **Home Studio** mode (\`activeNav: 'home'\`) on startup.
+### 🏛️ Virtual Studio Backdrops & Custom Photo Upload
+- **4 Curated Built-In Studio Backdrops**:
+  - *Luxury Penthouse* (panoramic floor-to-ceiling glass & evening city bokeh lights)
+  - *Modern Acoustic Studio* (walnut acoustic slat wall & warm architectural sconces)
+  - *Cyberpunk Neon* (high-energy futuristic skyline with cyan & magenta holographic glows)
+  - *Cozy Evening Cafe* (warm espresso brick & glowing fairy light garlands)
+- **Personal Photo Upload**: Import custom \`.jpg\`, \`.png\`, or \`.webp\` room photos with persistent local storage.
 
-### 🚀 Distinctive & Unique Home Studio Experience
-- **Studio Command Center**: Dedicated command deck with live hardware & pipeline readiness chips (Camera feed with live FPS/resolution, MediaPipe 21-3D landmark tracker with quick toggle, DirectShow 60FPS broadcast pipe, and Wireless Mobile Cam).
-- **Quick-Fire Effects Shelf**: 6 instant 1-click effect trigger chips directly on the Home view with procedural harmonic sound feedback (Double Heart Glow, Rose Bloom Storm, Finger Heart Spark, Love Wave Ripple, Cupid's Golden Arrow, Angel Wings Aura).
-- **Interactive Studio Hub Launchpad**: 4 interactive visual cards below the viewport to instantly jump into **Couples Duo Mode**, **Romantic Visual FX**, **Streamer Broadcast Hub**, or **Wireless Mobile Camera**.
-- **Context-Specific Views**: When navigating to other tabs (\`couples\`, \`romantic\`, \`streamer\`, \`favorites\`), the launchpad cards tuck away to provide a focused workspace.
+### 🟩 Chroma Key Green Screen
+- **DirectShow Chroma Output**: Output pure solid green (\`#00FF00\`), blue (\`#0000FF\`), or magenta screen directly to OBS Studio, Zoom, and Discord for high-precision chroma keying.
+
+### 🎛️ Viewport Optics HUD & Settings Control Center
+- **Floating Optics HUD Bar**: Quick-switch pill bar directly in the viewport: \`[Off]\`, \`[DSLR Blur]\`, \`[Backdrop]\`, and \`[Chroma Key]\` with aperture presets and sliders.
+- **Global Hotkey**: Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>K</kbd> anywhere to toggle DSLR blur on/off on the fly.
+- **Settings Modal "Optics & AI Blur" Tab**: Complete control center with mode cards, aperture presets, backdrop gallery with custom upload/delete, chroma color picker, and silhouette tuning sliders (*Temporal Smoothing* & *Edge Feather Softness*).
 
 ---
 ### 📦 Downloads
