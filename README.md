@@ -51,10 +51,6 @@ Don't have a high-end webcam? Turn your iPhone or Android phone into an ultra-lo
 
 ## 🚀 Key Features
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/Jithin0306/HeartWave/main/resources/screenshots/4_heartwave_live_effects.png" alt="HeartWave Live Gesture Effects" width="100%">
-</p>
-
 - **🤲 Sub-Millisecond Gesture Tracking**:
   - Real-time 21-point 3D hand landmark estimation powered by MediaPipe Vision WASM.
   - Dual-hand detection, predictive landmark smoothing, and adaptive gesture state machine.
