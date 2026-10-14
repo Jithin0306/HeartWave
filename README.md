@@ -1,7 +1,7 @@
 # 💖 HeartWave
 
 <p align="center">
-  <strong>Real-Time Gesture-Powered Virtual Camera with 3D Cinematic Visual Effects</strong>
+  <strong>Real-Time Gesture-Powered Virtual Camera with 3D Cinematic Visual Effects & Mobile Webcam</strong>
 </p>
 
 <p align="center">
@@ -11,10 +11,11 @@
   <img src="https://img.shields.io/badge/Engine-Rust%20%7C%20Tauri%20v2-DEA584?style=for-the-badge&logo=rust" alt="Rust Core">
   <img src="https://img.shields.io/badge/RAM-56%20MB-success?style=for-the-badge" alt="56 MB RAM">
   <img src="https://img.shields.io/badge/Virtual%20Camera-DirectShow%20Native-brightgreen?style=for-the-badge" alt="DirectShow Native">
+  <img src="https://img.shields.io/badge/Mobile%20Cam-Zero%20Install-blue?style=for-the-badge" alt="Mobile Cam">
 </p>
 
 <p align="center">
-  <img src="resources/screenshots/2_heartwave_hero_showcase.jpg" alt="HeartWave Hero Showcase" width="100%">
+  <img src="https://raw.githubusercontent.com/Jithin0306/HeartWave/main/resources/screenshots/2_heartwave_hero_showcase.jpg" alt="HeartWave Hero Showcase" width="100%">
 </p>
 
 ---
@@ -22,10 +23,10 @@
 ## 🌟 Overview
 
 <p align="center">
-  <img src="resources/screenshots/1_heartwave_ui_dashboard.png" alt="HeartWave App Dashboard" width="100%">
+  <img src="https://raw.githubusercontent.com/Jithin0306/HeartWave/main/resources/screenshots/1_heartwave_ui_dashboard.png" alt="HeartWave App Dashboard" width="100%">
 </p>
 
-**HeartWave** transforms your ordinary webcam into an interactive, gesture-responsive virtual broadcast camera. Powered by Google MediaPipe AI running 100% locally on your machine, HeartWave detects your hand gestures in real time and renders procedural 3D visual effects directly onto your video feed.
+**HeartWave** transforms your ordinary webcam or smartphone into an interactive, gesture-responsive virtual broadcast camera. Powered by Google MediaPipe AI running 100% locally on your machine with an ultra-lightweight native Rust engine (using only 56 MB of RAM), HeartWave detects your hand gestures in real time and renders procedural 3D visual effects directly onto your video feed.
 
 The output streams seamlessly as **"Heartwave Virtual Camera"** into any Windows video software, including:
 - **Discord Desktop**
@@ -37,7 +38,22 @@ The output streams seamlessly as **"Heartwave Virtual Camera"** into any Windows
 
 ---
 
+## 📱 Use Mobile Phone as High-Definition Webcam
+
+Don't have a high-end webcam? Turn your iPhone or Android phone into an ultra-low latency 1080p camera with **zero mobile app downloads**:
+
+1. Click the **Mobile Cam** button in HeartWave.
+2. Scan the randomly generated QR code with your phone's native camera.
+3. Your mobile browser immediately streams 1080p video directly into HeartWave over **Fast Wi-Fi** or **Zero-Latency USB Cable**.
+4. The QR modal on your PC automatically closes the second your phone connects!
+
+---
+
 ## 🚀 Key Features
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Jithin0306/HeartWave/main/resources/screenshots/4_heartwave_live_effects.png" alt="HeartWave Live Gesture Effects" width="100%">
+</p>
 
 - **🤲 Sub-Millisecond Gesture Tracking**:
   - Real-time 21-point 3D hand landmark estimation powered by MediaPipe Vision WASM.
@@ -49,8 +65,10 @@ The output streams seamlessly as **"Heartwave Virtual Camera"** into any Windows
   - **Twin Hands Heart**: Duo-palm tracking with synchronized aura.
   - **Petal Rain**: Ambient falling blossom petals with wind turbulence simulation.
 - **🎥 Standalone Native DirectShow Virtual Camera**:
-  - Custom C++ DirectShow filter (`HeartWaveCam.dll`) paired with a high-throughput shared memory bridge (`HeartWaveBridge.exe`).
+  - Custom C++ DirectShow filter (`HeartWaveCam.dll`) paired with a high-throughput shared memory bridge.
   - Zero dependencies on OBS Studio — works fully standalone.
+- **🦀 Native Rust Engine (Tauri v2)**:
+  - Supercharged with memory-mapped frame streaming, dropping RAM usage down to just **56 MB** and CPU usage under 3%.
 - **🔔 Background Streaming & System Tray**:
   - Closing or minimizing the app parks HeartWave in the Windows System Tray without dropping frames in OBS or Discord.
 - **⌨️ System-Wide Global Hotkeys**:
@@ -62,16 +80,16 @@ The output streams seamlessly as **"Heartwave Virtual Camera"** into any Windows
 - **🛡️ 100% Private & On-Device**:
   - Zero video frames or biometric data leave your computer. No cloud telemetry, no accounts required.
 - **🔄 Built-In Auto-Updates**:
-  - Instant over-the-air differential updates delivered through GitHub Releases via `electron-updater`.
+  - Instant in-app auto updates with cryptographic verification.
 
 ---
 
 ## 📥 Quick Download & Installation
 
 1. Head over to the [**Latest Releases Page**](https://github.com/Jithin0306/HeartWave/releases/latest).
-2. Download **`HeartWave-Setup-1.0.0.exe`**.
-3. Double-click the installer and launch HeartWave.
-4. Select your webcam, turn on **"Start Virtual Camera"** (or press `Ctrl+Shift+V`), and pick **Heartwave Virtual Camera** in your favorite streaming or meeting app!
+2. Download **`HeartWave_1.3.3_x64-setup.exe`** (Installer) or **`HeartWave-Portable.exe`** (Standalone portable).
+3. Launch HeartWave.
+4. Select your camera or scan the QR code to use your phone, turn on **"Start Virtual Camera"** (or press `Ctrl+Shift+V`), and pick **Heartwave Virtual Camera** in your favorite streaming or meeting app!
 
 ---
 
@@ -89,36 +107,36 @@ The output streams seamlessly as **"Heartwave Virtual Camera"** into any Windows
 ## 🛠️ Tech Stack & Architecture
 
 <p align="center">
-  <img src="resources/screenshots/3_heartwave_architecture_diagram.jpg" alt="HeartWave Architecture Diagram" width="100%">
+  <img src="https://raw.githubusercontent.com/Jithin0306/HeartWave/main/resources/screenshots/3_heartwave_architecture_diagram.jpg" alt="HeartWave Architecture Diagram" width="100%">
 </p>
 
 ```
-[ Physical Webcam ]
-         │
-         ▼
+[ Physical Webcam / Mobile Phone Browser ]
+                    │
+                    ▼
 [ MediaPipe Vision WASM (Local 21-3D Landmarks) ]
-         │
-         ▼
+                    │
+                    ▼
 [ Gesture State Machine & Predictive Smoother ]
-         │
-         ▼
+                    │
+                    ▼
 [ Canvas 2D / WebGL Procedural Compositor ] ──► [ Web Audio Synthesizer ]
-         │
-         ▼
-[ Named Shared Memory Ring Buffer ]
-         │
-         ▼
+                    │
+                    ▼
+[ Native Rust Zero-Copy Shared Memory Bridge (Tauri v2) ]
+                    │
+                    ▼
 [ C++ DirectShow Virtual Camera Filter (HeartWaveCam.dll) ]
-         │
-         ▼
-[ Discord / OBS / Zoom / Chrome ]
+                    │
+                    ▼
+[ Discord / OBS / Zoom / Teams / Chrome ]
 ```
 
-- **Frontend**: React 18, TypeScript, Tailwind/CSS Tokens, Lucide Icons, Zustand
-- **Desktop Runtime**: Electron 34, Node.js, esbuild, Vite
+- **Frontend**: React 18, TypeScript, CSS Design Tokens, Lucide Icons, Zustand
+- **Desktop Runtime**: Tauri v2, Rust 2024, Webview2
 - **Vision AI**: Google MediaPipe Tasks Vision (`@mediapipe/tasks-vision`)
-- **Native Video Pipeline**: C++ DirectShow BaseClasses Filter (`HeartWaveCam.dll`), C# Native IPC Bridge (`HeartWaveBridge.exe`)
-- **Packaging & Delivery**: `electron-builder`, `electron-updater`, NSIS
+- **Native Video Pipeline**: C++ DirectShow BaseClasses Filter (`HeartWaveCam.dll`), Rust memory-mapped IPC bridge
+- **Packaging & Delivery**: Tauri bundler, NSIS, MSI, Minisign signature verification
 
 ---
 
@@ -126,6 +144,7 @@ The output streams seamlessly as **"Heartwave Virtual Camera"** into any Windows
 
 ### Prerequisites
 - [Node.js 18+](https://nodejs.org/)
+- [Rust & Cargo](https://rustup.rs/)
 - Windows 10 or 11 (64-bit)
 
 ### Installation
@@ -145,17 +164,11 @@ npm run dev
 
 ### Production Build & Packaging
 ```bash
-# Typecheck and build frontend + main process
+# Typecheck and build frontend
 npm run build
 
-# Package unpacked directory
-npm run pack
-
-# Build standalone Windows NSIS installer
-npm run dist
-
-# Build and publish new release to GitHub
-npm run release
+# Build standalone Windows installer with auto-updater manifest
+powershell -ExecutionPolicy Bypass -File .\scripts\build-release.ps1 -Version "1.3.3"
 ```
 
 ---

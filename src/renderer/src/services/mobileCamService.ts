@@ -9,6 +9,11 @@ export const PEER_ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
   { urls: 'stun:stun2.l.google.com:19302' },
+  {
+    urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'],
+    username: 'peerjs',
+    credential: 'peerjsp',
+  },
 ];
 
 export interface MobileCamTelemetry {
@@ -90,6 +95,20 @@ class MobileCamService {
   public setMode(mode: MobileConnectionMode) {
     this.activeMode = mode;
     this.notify();
+  }
+
+  public sendResolutionRequest(resolution: '720p' | '1080p'): void {
+    if (this.currentDataConn && this.currentDataConn.open) {
+      try {
+        console.log('[MobileCam] Requesting mobile resolution change to:', resolution);
+        this.currentDataConn.send({
+          type: 'CHANGE_RESOLUTION',
+          resolution,
+        });
+      } catch (err) {
+        console.warn('Failed to send resolution request to phone:', err);
+      }
+    }
   }
 
   public getTelemetry(): MobileCamTelemetry {

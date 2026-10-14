@@ -14,6 +14,7 @@ import { cameraManager } from '../services/cameraManager';
 import { CompositorMetrics, VirtualOutputStatus } from '../types/compositor';
 import { videoCompositor } from '../services/videoCompositor';
 import { soundEngine } from '../services/soundEngine';
+import { mobileCamService } from '../services/mobileCamService';
 
 export const RESOLUTION_PRESETS: ResolutionProfile[] = [
   { id: '720p30', label: '720p 30fps', width: 1280, height: 720, fps: 30 },
@@ -315,6 +316,13 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   startCamera: async () => {
     const { selectedDeviceId, selectedResolution } = get();
+    if (selectedDeviceId === 'mobile-wireless') {
+      const activeStream = mobileCamService.getTelemetry().stream;
+      if (activeStream) {
+        set({ activeStream, cameraStatus: 'active', cameraError: null });
+      }
+      return;
+    }
     set({ cameraStatus: 'connecting', cameraError: null });
 
     try {
@@ -361,6 +369,11 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   selectResolution: async (profile: ResolutionProfile) => {
     set({ selectedResolution: profile });
+    if (get().selectedDeviceId === 'mobile-wireless') {
+      // Mobile camera is active: smoothly request resolution change from phone without wiping stream!
+      mobileCamService.sendResolutionRequest(profile.height >= 1080 ? '1080p' : '720p');
+      return;
+    }
     if (get().cameraStatus === 'active') {
       await get().startCamera();
     }

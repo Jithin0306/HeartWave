@@ -10,4 +10,4 @@ resources/bin/*_old*.dll
 *.exp
 *.key
 src-tauri/target/
-release-v*/
+release-*/

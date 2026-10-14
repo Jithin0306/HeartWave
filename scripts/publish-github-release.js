@@ -1,24 +1,23 @@
 const fs = require('fs');
 const path = require('path');
 
-const VERSION = '1.3.3';
+const VERSION = '1.3.4';
 const TAG = `v${VERSION}`;
 const REPO = 'jithin0306/HeartWave';
 const TOKEN = process.env.GITHUB_TOKEN || '';
 
-const RELEASE_TITLE = `HeartWave v${VERSION} - Live Mobile Cam Percentage Bar & In-App Auto-Updater`;
+const RELEASE_TITLE = `HeartWave v${VERSION} - Zero-Blackout Resolution Switching & Enhanced WebRTC Stability`;
 const RELEASE_NOTES = `## HeartWave v${VERSION} Release Notes
 
-### 📱 High-Definition Mobile Webcam Improvements
-- **Real-Time Connection Percentage Bar**: Smooth progress indicator (15% -> 35% -> 55% -> 75% -> 90% -> 100%) showing real-time WebRTC negotiation stages.
-- **Diagnostic Helper & Quick Reconnect**: In-stream troubleshooting hints with editable room code input to immediately re-attempt handshakes.
-- **Always-On Desktop Server**: HeartWave desktop continuously warms up peer signaling on app startup so scanned mobile connections establish instantly.
-- **Stable Room ID Preservation**: Preserves user's scanned room code across temporary network reconnects without mutating IDs.
-- **Auto-Closing QR Code Modal**: Desktop QR code modal automatically dismisses the second your mobile camera stream is received.
+### 🎥 Zero-Blackout Resolution Switching
+- **Seamless Resolution Changes**: Switching between 720p and 1080p now uses dynamic in-place \`applyConstraints\` and WebRTC sender track replacement. No more blank or black screens when toggling resolution!
+- **Desktop-to-Mobile Command Channel**: Selecting a new resolution in the HeartWave desktop viewport automatically sends a command to the smartphone over WebRTC data channel without tearing down the active media session.
+- **Seamless Lens Flipping**: Switching between front and rear cameras seamlessly swaps video tracks without cutting or resetting the stream.
 
-### 🔄 In-App Auto-Updater Fixes
-- **Pure UTF-8 (No-BOM) Manifest**: Completely fixed \`latest.json\` parsing issue by eliminating UTF-8 Byte Order Marks (BOM) that caused Rust \`serde_json\` deserialization errors.
-- **Dynamic Version Reporting**: Synchronized \`env!("CARGO_PKG_VERSION")\` with the updater engine so updates are accurately detected and applied.
+### 🌐 Cross-Network Connectivity & Fast P2P
+- **WSS Signaling Permissions**: Updated Content Security Policy (CSP) to permit WebSocket signaling across all network topologies.
+- **PeerJS TURN Relay Fallbacks**: Integrated resilient TURN relay servers for guaranteed handshakes across Ethernet, Wi-Fi, and cellular networks.
+- **Auto-Closing QR Code**: Instant dismissal of the pairing modal upon successful media handshake.
 
 ---
 ### 📦 Downloads
@@ -28,25 +27,42 @@ const RELEASE_NOTES = `## HeartWave v${VERSION} Release Notes
 `;
 
 async function main() {
+  const releaseOutputDir = path.resolve(`release-${VERSION}`);
   const nsisDir = path.resolve('src-tauri/target/release/bundle/nsis');
   const msiDir = path.resolve('src-tauri/target/release/bundle/msi');
   const bundleDir = path.resolve('src-tauri/target/release/bundle');
-  const releaseDir = path.resolve('src-tauri/target/release');
-
-  // Copy portable exe
-  const rawExe = path.join(releaseDir, 'heartwave.exe');
-  const portableExe = path.join(bundleDir, 'HeartWave-Portable.exe');
-  if (fs.existsSync(rawExe)) {
-    fs.copyFileSync(rawExe, portableExe);
-    console.log('✓ Prepared HeartWave-Portable.exe');
-  }
 
   const assetsToUpload = [
-    { name: `HeartWave_${VERSION}_x64-setup.exe`, path: path.join(nsisDir, `HeartWave_${VERSION}_x64-setup.exe`) },
-    { name: `HeartWave_${VERSION}_x64-setup.exe.sig`, path: path.join(nsisDir, `HeartWave_${VERSION}_x64-setup.exe.sig`) },
-    { name: `HeartWave_${VERSION}_x64_en-US.msi`, path: path.join(msiDir, `HeartWave_${VERSION}_x64_en-US.msi`) },
-    { name: 'HeartWave-Portable.exe', path: portableExe },
-    { name: 'latest.json', path: path.join(bundleDir, 'latest.json') }
+    {
+      name: `HeartWave_${VERSION}_x64-setup.exe`,
+      path: fs.existsSync(path.join(releaseOutputDir, `HeartWave_${VERSION}_x64-setup.exe`))
+        ? path.join(releaseOutputDir, `HeartWave_${VERSION}_x64-setup.exe`)
+        : path.join(nsisDir, `HeartWave_${VERSION}_x64-setup.exe`)
+    },
+    {
+      name: `HeartWave_${VERSION}_x64-setup.exe.sig`,
+      path: fs.existsSync(path.join(releaseOutputDir, `HeartWave_${VERSION}_x64-setup.exe.sig`))
+        ? path.join(releaseOutputDir, `HeartWave_${VERSION}_x64-setup.exe.sig`)
+        : path.join(nsisDir, `HeartWave_${VERSION}_x64-setup.exe.sig`)
+    },
+    {
+      name: `HeartWave_${VERSION}_x64_en-US.msi`,
+      path: fs.existsSync(path.join(releaseOutputDir, `HeartWave_${VERSION}_x64_en-US.msi`))
+        ? path.join(releaseOutputDir, `HeartWave_${VERSION}_x64_en-US.msi`)
+        : path.join(msiDir, `HeartWave_${VERSION}_x64_en-US.msi`)
+    },
+    {
+      name: 'HeartWave-Portable.exe',
+      path: fs.existsSync(path.join(releaseOutputDir, 'HeartWave-Portable.exe'))
+        ? path.join(releaseOutputDir, 'HeartWave-Portable.exe')
+        : path.join(bundleDir, 'HeartWave-Portable.exe')
+    },
+    {
+      name: 'latest.json',
+      path: fs.existsSync(path.join(releaseOutputDir, 'latest.json'))
+        ? path.join(releaseOutputDir, 'latest.json')
+        : path.join(bundleDir, 'latest.json')
+    }
   ];
 
   console.log(`Checking build assets for v${VERSION}...`);

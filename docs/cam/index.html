@@ -579,7 +579,15 @@
         { urls: 'stun:stun.cloudflare.com:3478' },
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' }
+        { urls: 'stun:stun2.l.google.com:19302' },
+        {
+          urls: [
+            'turn:eu-0.turn.peerjs.com:3478',
+            'turn:us-0.turn.peerjs.com:3478'
+          ],
+          username: 'peerjs',
+          credential: 'peerjsp'
+        }
       ],
       iceCandidatePoolSize: 2
     };
@@ -798,6 +806,95 @@
       return true;
     }
 
+    // Seamless in-place resolution switching (zero-blackout)
+    async function changeResolution(want1080p) {
+      is1080p = want1080p;
+      const label = document.getElementById('qualityLabel');
+      if (label) label.innerText = is1080p ? '1080p' : '720p';
+      
+      const track = localStream ? localStream.getVideoTracks()[0] : null;
+      if (track) {
+        try {
+          await track.applyConstraints({
+            width: { ideal: is1080p ? 1920 : 1280 },
+            height: { ideal: is1080p ? 1080 : 720 },
+            frameRate: { ideal: 30 }
+          });
+          const settings = track.getSettings();
+          resBadge.innerText = `${settings.height || (is1080p ? 1080 : 720)}p`;
+          console.log('[MobileCam] Resolution updated via applyConstraints:', settings.width, 'x', settings.height);
+          return true;
+        } catch (e) {
+          console.warn('[MobileCam] applyConstraints failed, falling back to seamless track replacement:', e);
+        }
+      }
+
+      // Seamless fallback: acquire new stream BEFORE stopping the old track
+      try {
+        const newStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: facingMode },
+            width: { ideal: is1080p ? 1920 : 1280 },
+            height: { ideal: is1080p ? 1080 : 720 },
+            frameRate: { ideal: 30 }
+          },
+          audio: false
+        });
+        const newTrack = newStream.getVideoTracks()[0];
+        
+        if (currentCall && currentCall.peerConnection) {
+          const senders = currentCall.peerConnection.getSenders();
+          const videoSender = senders.find(s => s.track ? s.track.kind === 'video' : false);
+          if (videoSender) {
+            await videoSender.replaceTrack(newTrack);
+          }
+        }
+        
+        if (localStream) {
+          localStream.getTracks().forEach(t => t.stop());
+        }
+        localStream = newStream;
+        videoPreview.srcObject = newStream;
+        const settings = newTrack.getSettings();
+        resBadge.innerText = `${settings.height || (is1080p ? 1080 : 720)}p`;
+        return true;
+      } catch (err) {
+        console.error('[MobileCam] Failed to switch resolution:', err);
+        return false;
+      }
+    }
+
+    async function flipCamera() {
+      facingMode = facingMode === 'environment' ? 'user' : 'environment';
+      try {
+        const newStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: facingMode },
+            width: { ideal: is1080p ? 1920 : 1280 },
+            height: { ideal: is1080p ? 1080 : 720 },
+            frameRate: { ideal: 30 }
+          },
+          audio: false
+        });
+        const newTrack = newStream.getVideoTracks()[0];
+        if (currentCall && currentCall.peerConnection) {
+          const senders = currentCall.peerConnection.getSenders();
+          const videoSender = senders.find(s => s.track ? s.track.kind === 'video' : false);
+          if (videoSender) {
+            await videoSender.replaceTrack(newTrack);
+          }
+        }
+        if (localStream) {
+          localStream.getTracks().forEach(t => t.stop());
+        }
+        localStream = newStream;
+        videoPreview.srcObject = newStream;
+        videoPreview.className = facingMode === 'user' ? 'mirrored' : '';
+      } catch (e) {
+        console.error('[MobileCam] Failed to flip camera:', e);
+      }
+    }
+
     function startKeepAlive() {
       if (keepAliveTimer) clearInterval(keepAliveTimer);
       keepAliveTimer = setInterval(() => {
@@ -923,12 +1020,15 @@
           startTimer();
         });
 
-        currentDataConn.on('data', (d) => {
+        currentDataConn.on('data', async (d) => {
           console.log('[MobileCam] Message from PC:', d);
           if (d && (d.type === 'HANDSHAKE_ACK' || d.type === 'STREAM_RECEIVED')) {
             setStatus(connectionMode === 'usb' ? 'Live on PC (USB)' : 'Live on PC', 'live');
             setProgress(100, 'Streaming Live on PC', 'Video received and rendering on PC!', true);
             startTimer();
+          } else if (d && d.type === 'CHANGE_RESOLUTION') {
+            console.log('[MobileCam] Desktop requested resolution change:', d.resolution);
+            await changeResolution(d.resolution === '1080p');
           }
         });
       } catch (err) {
@@ -1016,14 +1116,11 @@
     });
 
     btnFlip.addEventListener('click', async () => {
-      facingMode = facingMode === 'environment' ? 'user' : 'environment';
-      await startCamera();
+      await flipCamera();
     });
 
     btnQuality.addEventListener('click', async () => {
-      is1080p = !is1080p;
-      document.getElementById('qualityLabel').innerText = is1080p ? '1080p' : '720p';
-      await startCamera();
+      await changeResolution(!is1080p);
     });
 
     btnTorch.addEventListener('click', async () => {
