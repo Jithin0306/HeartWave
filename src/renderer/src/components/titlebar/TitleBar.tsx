@@ -6,12 +6,14 @@ import logoIconStudio from '../../assets/logo-icon-studio.png';
 import logoIconCyber from '../../assets/logo-icon-cyber.png';
 import logoIconMidnight from '../../assets/logo-icon-midnight.png';
 import logoIconGold from '../../assets/logo-icon-gold.png';
+import logoIconBlackGold from '../../assets/logo-icon-blackgold.png';
 
 import wordmarkRomantic from '../../assets/wordmark-romantic.png';
 import wordmarkStudio from '../../assets/wordmark-studio.png';
 import wordmarkCyber from '../../assets/wordmark-cyber.png';
 import wordmarkMidnight from '../../assets/wordmark-midnight.png';
 import wordmarkGold from '../../assets/wordmark-gold.png';
+import wordmarkBlackGold from '../../assets/wordmark-blackgold.png';
 
 const THEME_ICONS: Record<AppTheme, string> = {
   romantic: logoIconRomantic,
@@ -19,6 +21,7 @@ const THEME_ICONS: Record<AppTheme, string> = {
   cyber: logoIconCyber,
   midnight: logoIconMidnight,
   gold: logoIconGold,
+  blackgold: logoIconBlackGold,
 };
 
 const THEME_WORDMARKS: Record<AppTheme, string> = {
@@ -27,6 +30,7 @@ const THEME_WORDMARKS: Record<AppTheme, string> = {
   cyber: wordmarkCyber,
   midnight: wordmarkMidnight,
   gold: wordmarkGold,
+  blackgold: wordmarkBlackGold,
 };
 
 export const TitleBar: React.FC = () => {
@@ -128,7 +132,9 @@ export const TitleBar: React.FC = () => {
                 ? 'drop-shadow(0 0 6px rgba(0, 229, 255, 0.5))'
                 : currentTheme === 'midnight'
                 ? 'drop-shadow(0 0 6px rgba(16, 185, 129, 0.45))'
-                : 'drop-shadow(0 1px 3px rgba(180, 130, 20, 0.45))',
+                : currentTheme === 'gold'
+                ? 'drop-shadow(0 1px 3px rgba(180, 130, 20, 0.45))'
+                : 'drop-shadow(0 0 7px rgba(212, 175, 55, 0.55))',
           }}
         >
           <img
@@ -164,24 +170,12 @@ export const TitleBar: React.FC = () => {
                   ? 'drop-shadow(0 0 5px rgba(0, 229, 255, 0.45))'
                   : currentTheme === 'midnight'
                   ? 'drop-shadow(0 0 5px rgba(16, 185, 129, 0.4))'
-                  : 'drop-shadow(0 1px 2px rgba(153, 101, 21, 0.35))',
+                  : currentTheme === 'gold'
+                  ? 'drop-shadow(0 1px 2px rgba(153, 101, 21, 0.35))'
+                  : 'drop-shadow(0 0 6px rgba(212, 175, 55, 0.5))',
             }}
           />
         </div>
-
-        {/* Dynamic Tagline based on active theme */}
-        <span
-          style={{
-            fontSize: '11px',
-            color: 'var(--hw-text-muted)',
-            letterSpacing: '0.04em',
-            fontFamily: 'var(--hw-font-sans)',
-            fontStyle: 'italic',
-            marginLeft: '8px',
-          }}
-        >
-          "{activeThemeConfig.tagline}"
-        </span>
       </div>
 
       {/* Right Controls: Theme Quick Switcher, Status & Window Buttons */}

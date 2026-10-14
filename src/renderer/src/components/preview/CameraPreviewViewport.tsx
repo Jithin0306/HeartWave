@@ -17,8 +17,9 @@ import {
   SwitchCamera,
   Zap,
   ZoomIn,
+  Sliders,
 } from 'lucide-react';
-import { useAppStore, RESOLUTION_PRESETS, THEMES } from '../../store/appStore';
+import { useAppStore, RESOLUTION_PRESETS } from '../../store/appStore';
 import { cameraManager } from '../../services/cameraManager';
 import { handTracker } from '../../tracking/handTracker';
 import { DiagnosticsRenderer } from '../../tracking/diagnosticsRenderer';
@@ -49,7 +50,6 @@ export const CameraPreviewViewport: React.FC = () => {
   const [isTrackerWarming, setIsTrackerWarming] = useState(false);
 
   const {
-    currentTheme,
     cameraStatus,
     availableDevices,
     selectedDeviceId,
@@ -1017,14 +1017,17 @@ export const CameraPreviewViewport: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            padding: '3px 10px',
+            padding: '4px 10px',
             borderRadius: 'var(--hw-radius-sm)',
-            backgroundColor: 'rgba(29, 25, 24, 0.85)',
-            border: '1px solid var(--hw-border-subtle)',
+            backgroundColor: 'var(--hw-bg-secondary)',
+            border: '1px solid var(--hw-border-medium)',
+            boxShadow: 'var(--hw-shadow-md)',
             fontSize: '11px',
-            color: 'var(--hw-text-secondary)',
+            color: 'var(--hw-text-primary)',
+            transition: 'all var(--hw-transition-fast)',
           }}
         >
+          <Sliders size={12} strokeWidth={2.2} style={{ color: 'var(--hw-accent-primary)', flexShrink: 0 }} />
           <select
             value={selectedResolution.id}
             onChange={(e) => {
@@ -1034,15 +1037,41 @@ export const CameraPreviewViewport: React.FC = () => {
             style={{
               cursor: 'pointer',
               color: 'var(--hw-text-primary)',
-              background: 'transparent',
+              backgroundColor: 'transparent',
+              fontWeight: 600,
+              fontSize: '11px',
+              fontFamily: 'inherit',
+              paddingRight: '12px',
+              appearance: 'none',
+              WebkitAppearance: 'none',
+              border: 'none',
+              outline: 'none',
             }}
           >
             {RESOLUTION_PRESETS.map((res) => (
-              <option key={res.id} value={res.id} style={{ backgroundColor: 'var(--hw-bg-secondary)', color: 'var(--hw-text-primary)' }}>
+              <option
+                key={res.id}
+                value={res.id}
+                style={{
+                  backgroundColor: 'var(--hw-bg-secondary)',
+                  color: 'var(--hw-text-primary)',
+                  fontWeight: 500,
+                }}
+              >
                 {res.label}
               </option>
             ))}
           </select>
+          <ChevronDown
+            size={11}
+            strokeWidth={2}
+            style={{
+              color: 'var(--hw-text-muted)',
+              flexShrink: 0,
+              marginLeft: '-8px',
+              pointerEvents: 'none',
+            }}
+          />
         </div>
 
         {/* Active Gesture Detection Floating Feedback Pill */}
@@ -1166,19 +1195,6 @@ export const CameraPreviewViewport: React.FC = () => {
             >
               <Camera size={26} strokeWidth={1.8} />
             </div>
-
-            <h3
-              style={{
-                fontSize: '17px',
-                fontWeight: 600,
-                color: 'var(--hw-text-primary)',
-                marginBottom: '6px',
-                fontFamily: 'var(--hw-font-sans)',
-                letterSpacing: '-0.01em',
-              }}
-            >
-              {THEMES.find((t) => t.id === currentTheme)?.tagline || 'Make Every Gesture Mean Something'}
-            </h3>
 
             <p
               style={{

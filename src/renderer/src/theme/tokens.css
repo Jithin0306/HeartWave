@@ -218,3 +218,38 @@
   --hw-shadow-lg: 0 12px 32px rgba(153, 101, 21, 0.16);
   --hw-shadow-accent: 0 4px 20px rgba(197, 155, 39, 0.28);
 }
+
+/* =========================================================================
+   Theme 6: Black & Gold (Obsidian Noir & 24K Royal Gold Luxury)
+   ========================================================================= */
+[data-theme="blackgold"] {
+  --hw-bg-primary: #0A0A0D;
+  --hw-bg-secondary: #121217;
+  --hw-surface-elevated: #181820;
+  --hw-surface-subtle: #20202A;
+  --hw-surface-active: #2C2C3A;
+  --hw-surface-hover: #1D1D26;
+
+  --hw-accent-primary: #D4AF37;
+  --hw-accent-primary-hover: #E5BE48;
+  --hw-accent-burgundy: #8A6414;
+  --hw-accent-rose: #D4AF37;
+  --hw-accent-rose-soft: rgba(212, 175, 55, 0.16);
+  --hw-accent-champagne: #F3E5AB;
+  --hw-accent-champagne-soft: rgba(243, 229, 171, 0.14);
+
+  --hw-text-primary: #FAF7EE;
+  --hw-text-secondary: #D4C9B0;
+  --hw-text-muted: #8E846F;
+  --hw-text-highlight: #FFFFFF;
+
+  --hw-border-subtle: #2A251B;
+  --hw-border-medium: #473B25;
+  --hw-border-focus: #D4AF37;
+  --hw-border-active: #996515;
+
+  --hw-shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.6);
+  --hw-shadow-md: 0 6px 18px rgba(0, 0, 0, 0.7);
+  --hw-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.85);
+  --hw-shadow-accent: 0 4px 22px rgba(212, 175, 55, 0.32);
+}

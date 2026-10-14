@@ -1,23 +1,23 @@
 const fs = require('fs');
 const path = require('path');
 
-const VERSION = '1.3.6';
+const VERSION = '1.3.7';
 const TAG = `v${VERSION}`;
 const REPO = 'jithin0306/HeartWave';
 const TOKEN = process.env.GITHUB_TOKEN || '';
 
-const RELEASE_TITLE = `HeartWave v${VERSION} - Royal Ivory & Gold Luxury Theme & Privacy Updates`;
+const RELEASE_TITLE = `HeartWave v${VERSION} - Black & Gold Theme, Resolution Visibility & Clean Minimalist UI`;
 const RELEASE_NOTES = `## HeartWave v${VERSION} Release Notes
 
-### ✨ New Royal Ivory & Gold Luxury Theme
-- **First-Class Light Theme**: Introduced the prestigious **Royal Ivory & Gold** theme (\`gold\`), featuring luminous ivory porcelain backgrounds, radiant 24k polished gold accents, warm champagne highlights, and crisp obsidian typography.
-- **Bespoke 24K Gold Brand Assets**: High-contrast, metallic-embossed \`HEΛRT ♡-W ΛVE\` wordmark and 3D heart-lens emblem engineered specifically for light backgrounds.
-- **Theme-Adaptive Controls**: All dropdown selectors, viewport HUD badges, privacy overlays, and effect cards now adapt dynamically to the active palette.
-- **Instant Quick-Switching**: Switch between themes seamlessly from the top TitleBar quick picker or via **Settings & Preferences ➔ Appearance & Themes**.
+### 🖤 New Black & Gold Luxury Noir Theme
+- **Black & Gold Palette**: Added the all-new **Black & Gold** theme (\`blackgold\`), combining deep obsidian noir backgrounds (\`#0A0A0D\` / \`#121217\`) with gleaming 24k polished gold accents, golden glowing borders, and warm champagne typography.
+- **Bespoke Noir Gold Assets**: Custom metallic 24K gold heart emblem and master wordmark with radiant golden glowing drop shadows.
 
-### 🛡️ Privacy & Documentation Refinements
-- **Documentation Overhaul**: Cleaned up project documentation and removed camera feed screenshots from README.
-- **Zero-Lag In-App Auto-Updates**: Seamless cryptographic verification and auto-update delivery.
+### 🔍 Crystal-Clear Resolution Selector Visibility
+- **Contrast & Visibility Overhaul**: Completely redesigned the top-right resolution selector across all themes. Now uses high-contrast theme-adaptive backgrounds with bold typography, gold slider icon, and custom chevron indicators—ensuring resolution options are 100% visible and sharp in White & Gold, Black & Gold, and all palettes.
+
+### 🧹 Clean & Minimalist Interface (Tagline Removal)
+- **Tagline Removal**: Removed the theme tagline text from the TitleBar and the camera preview standby screen across all color themes for a clean, distraction-free broadcast experience.
 
 ---
 ### 📦 Downloads

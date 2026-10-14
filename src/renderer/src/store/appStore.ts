@@ -22,7 +22,7 @@ export const RESOLUTION_PRESETS: ResolutionProfile[] = [
   { id: '720p60', label: '720p 60fps', width: 1280, height: 720, fps: 60 },
 ];
 
-export type AppTheme = 'romantic' | 'studio' | 'cyber' | 'midnight' | 'gold';
+export type AppTheme = 'romantic' | 'studio' | 'cyber' | 'midnight' | 'gold' | 'blackgold';
 
 export interface ThemeConfig {
   id: AppTheme;
@@ -91,6 +91,17 @@ export const THEMES: ThemeConfig[] = [
     bgPreview: '#FAF8F5',
     description: 'Pristine porcelain white with polished 24k gold accents, champagne highlights, and obsidian typography.',
     badge: 'Luxe Gold',
+  },
+  {
+    id: 'blackgold',
+    name: 'Black & Gold',
+    tagline: 'Obsidian depth & 24k radiant gold',
+    category: 'Luxury Noir',
+    previewColor: '#D4AF37',
+    accentColor: '#F59E0B',
+    bgPreview: '#0A0A0D',
+    description: 'Deep obsidian black with polished 24k gold accents, golden glowing borders, and crisp champagne typography.',
+    badge: 'Luxe Noir',
   },
 ];
 
@@ -240,7 +251,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   currentTheme: (() => {
     try {
       const saved = localStorage.getItem('hw_theme') as AppTheme;
-      if (saved && ['romantic', 'studio', 'cyber', 'midnight', 'gold'].includes(saved)) {
+      if (saved && ['romantic', 'studio', 'cyber', 'midnight', 'gold', 'blackgold'].includes(saved)) {
         document.documentElement.setAttribute('data-theme', saved);
         return saved;
       }
