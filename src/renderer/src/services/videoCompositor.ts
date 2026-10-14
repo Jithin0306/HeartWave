@@ -42,7 +42,6 @@ export class VideoCompositor {
     });
     if (this.ctx) {
       this.ctx.imageSmoothingEnabled = true;
-      this.ctx.imageSmoothingQuality = 'high';
     }
 
     this.foregroundCanvas = document.createElement('canvas');
@@ -53,7 +52,6 @@ export class VideoCompositor {
     });
     if (this.fgCtx) {
       this.fgCtx.imageSmoothingEnabled = true;
-      this.fgCtx.imageSmoothingQuality = 'high';
     }
 
     try {
@@ -143,7 +141,6 @@ export class VideoCompositor {
         // Pass 1: Prepare foreground subject cutout in offscreen buffer
         if (this.fgCtx) {
           this.fgCtx.imageSmoothingEnabled = true;
-          this.fgCtx.imageSmoothingQuality = 'high';
           this.fgCtx.clearRect(0, 0, this.width, this.height);
           this.fgCtx.drawImage(video, 0, 0, this.width, this.height);
           this.fgCtx.globalCompositeOperation = 'destination-in';

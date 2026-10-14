@@ -661,7 +661,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch {}
     return '#00FF00';
   })(),
-  edgeFeather: 0.08,
+  edgeFeather: 0.10,
   temporalSmoothing: 0.75,
 
   setBackgroundMode: (mode: BackgroundMode) => {

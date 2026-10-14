@@ -19,28 +19,25 @@ function getGithubToken() {
   return '';
 }
 
-const VERSION = '1.3.10';
+const VERSION = '1.3.11';
 const TAG = `v${VERSION}`;
 const REPO = 'jithin0306/HeartWave';
 const TOKEN = getGithubToken();
 
-const RELEASE_TITLE = `HeartWave v${VERSION} - Studio-Grade Edge Anti-Aliasing, Halo Elimination & Backdrop Controls`;
+const RELEASE_TITLE = `HeartWave v${VERSION} - Segmentation Stability Fix & Enlarged Taskbar Icon`;
 const RELEASE_NOTES = `## HeartWave v${VERSION} Release Notes
 
-### ✨ Studio-Grade Edge Anti-Aliasing & Halo Elimination
-- **1-Pixel Morphological Min-Filter Erosion**: Eliminates the artificial white/light halo around hair, shoulders, and gaming chairs by contracting silhouette confidence contours inward by 1px (~5 screen pixels at 720p/1080p), cleanly excising unblurred room wall ghosting.
-- **Tightened Confidence Thresholding**: Default segmentation threshold optimized to \`0.65\` with \`0.08\` feather softness for razor-sharp subject isolation against both DSLR bokeh and virtual environments.
-- **High-Quality Bicubic Smoothing**: High-fidelity canvas anti-aliasing prevents staircasing or jagged pixelation when upscaling masks to full camera resolution.
+### 🛡️ Segmentation Stability & Scanline Artifact Elimination
+- **Complete Elimination of Green Scanline Stripes**: Removed the morphological filter that caused sensor noise row-banding and restored rock-solid 1D confidence processing.
+- **Balanced Studio Optical Thresholding**: Calibrated default threshold to \`0.50\` with a crisp \`0.10\` feather softness band ([0.40, 0.60]), perfectly protecting dark clothing, indoor lighting shadows, and hair texture while maintaining a clean, anti-aliased edge.
+- **Rock-Solid Pipeline Across All Modes**: Flawless foreground isolation with zero bleed or tearing across DSLR Bokeh Blur, Virtual Backdrops, and Chroma Key Green Screen.
+
+### 🌟 Enlarged High-DPI Windows Taskbar Icon
+- **Full-Bleed Icon Assets**: Cropped excess 40% transparent padding and regenerated all platform icons (\`icon.ico\`, \`icon.png\`, square app logos) with \`tauri icon\`.
+- **+60% Larger Glyph**: The HeartWave heart emblem now fills the Windows taskbar slot cleanly, appearing bold, crisp, and high-resolution on all display scalings.
 
 ### 🗑️ Quick-Remove Custom Backdrop HUD Button
-- **Split-Pill HUD Control**: The floating Optics HUD bar now features an integrated \`×\` remove button directly on the "My Photo" pill, allowing instant deletion of custom backdrop photos without opening settings.
-- **State Synchronization**: Automatically cleans up local storage cache and resets gracefully to the default luxury penthouse backdrop.
-
-### 🎬 AI Cinematic DSLR Background Blur & Virtual Backdrops
-- **Offline GPU-Accelerated Segmentation**: Powered by Google MediaPipe's official \`selfie_segmenter.tflite\` model running 100% locally on your machine with zero cloud dependency.
-- **Optical Aperture Depth Simulation**: Realistic camera lens bokeh simulation (\`f/1.4 Prime\`, \`f/2.8 Studio\`, \`f/4.0 Soft-Focus\`).
-- **Curated Studio Backdrops & Green Screen**: Luxury Penthouse, Acoustic Studio, Cyberpunk Neon, Cozy Evening Cafe, and DirectShow Chroma Green Screen.
-- **Global Hotkey**: Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>K</kbd> anywhere to toggle DSLR blur on/off.
+- **Split-Pill HUD Control**: Floating Optics HUD bar features an integrated \`×\` remove button directly on the "My Photo" pill for instant photo deletion without opening settings.
 
 ---
 ### 📦 Downloads
