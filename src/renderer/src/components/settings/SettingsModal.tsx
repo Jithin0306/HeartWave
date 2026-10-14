@@ -1769,13 +1769,7 @@ export const SettingsModal: React.FC = () => {
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <button
-                          onClick={() => {
-                            if (window.heartwaveApi?.relaunchApp) {
-                              window.heartwaveApi.relaunchApp();
-                            } else {
-                              handleInstallUpdate();
-                            }
-                          }}
+                          onClick={handleInstallUpdate}
                           style={{
                             display: 'flex',
                             alignItems: 'center',

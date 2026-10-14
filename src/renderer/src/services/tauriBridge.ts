@@ -147,7 +147,7 @@ export function initTauriBridge(): void {
     },
     relaunchApp: () => invoke<void>('relaunch_app'),
     downloadDirectInstaller: () => {
-      const version = currentStatus.version || '1.3.8';
+      const version = currentStatus.version || '1.3.14';
       window.open(
         `https://github.com/Jithin0306/HeartWave/releases/download/v${version}/HeartWave_${version}_x64-setup.exe`,
         '_blank'
@@ -166,7 +166,7 @@ export function initTauriBridge(): void {
       }
 
       if (!currentUpdate) {
-        const ver = currentStatus.version || '1.3.8';
+        const ver = currentStatus.version || '1.3.14';
         window.open(
           `https://github.com/Jithin0306/HeartWave/releases/download/v${ver}/HeartWave_${ver}_x64-setup.exe`,
           '_blank'

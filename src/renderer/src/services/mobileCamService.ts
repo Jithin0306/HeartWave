@@ -84,10 +84,18 @@ class MobileCamService {
       saved = localStorage.getItem('hw_mobile_room_id') || '';
     } catch {}
 
-    if (saved && saved.startsWith('hw-cam-')) {
+    if (saved && saved.startsWith('hw-cam-') && saved !== 'hw-cam-main') {
       this.roomId = saved;
     } else {
-      this.roomId = 'hw-cam-main';
+      const chars = '23456789abcdefghjkmnpqrstuvwxyz';
+      let code = '';
+      for (let i = 0; i < 6; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      this.roomId = `hw-cam-${code}`;
+      try {
+        localStorage.setItem('hw_mobile_room_id', this.roomId);
+      } catch {}
     }
     this.updatePortalUrls();
   }
@@ -319,6 +327,12 @@ class MobileCamService {
 
       this.peer.on('open', (id) => {
         console.log('[MobileCam] Desktop Peer waiting in room:', id);
+        this.roomId = id;
+        try {
+          localStorage.setItem('hw_mobile_room_id', id);
+        } catch {}
+        this.updatePortalUrls();
+        this.generateQrCodes();
         this.state = 'waiting';
         this.startKeepAlive();
         this.notify();
@@ -339,7 +353,9 @@ class MobileCamService {
           try {
             conn.send({ type: 'HANDSHAKE_ACK', timestamp: Date.now() });
           } catch {}
-          this.state = 'connected';
+          if (this.activeStream && this.activeStream.getVideoTracks().length > 0) {
+            this.state = 'connected';
+          }
           this.notify();
         });
 
@@ -355,7 +371,9 @@ class MobileCamService {
             if (typeof data.isTorchOn === 'boolean') this.isTorchOn = data.isTorchOn;
             if (typeof data.isTorchSupported === 'boolean') this.isTorchSupported = data.isTorchSupported;
             if (data.facingMode === 'user' || data.facingMode === 'environment') this.facingMode = data.facingMode;
-            this.state = 'connected';
+            if (this.activeStream && this.activeStream.getVideoTracks().length > 0) {
+              this.state = 'connected';
+            }
             this.notify();
           }
         });
@@ -477,10 +495,10 @@ class MobileCamService {
       this.peer.on('error', (err: any) => {
         console.warn('[MobileCam] Peer error:', err);
         if (err.type === 'unavailable-id') {
-          console.log('[MobileCam] Room ID in use or socket lingering, retrying with same stable room ID in 1.5s...');
-          setTimeout(() => {
+          console.log('[MobileCam] Room ID in use or colliding, generating fresh room code...');
+          this.generateNewRoomId().then(() => {
             this.startServer();
-          }, 1500);
+          });
           return;
         }
         if (err.type !== 'network') {

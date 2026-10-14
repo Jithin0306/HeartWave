@@ -152,13 +152,19 @@ export const CameraPreviewViewport: React.FC = () => {
         });
       };
 
+      const handleReady = () => playVideo();
+      video.addEventListener('loadedmetadata', handleReady);
+      video.addEventListener('canplay', handleReady);
       if (video.readyState >= 1) {
         playVideo();
-      } else {
-        video.onloadedmetadata = () => {
-          playVideo();
-        };
       }
+      const retryTimer = setTimeout(playVideo, 350);
+
+      return () => {
+        video.removeEventListener('loadedmetadata', handleReady);
+        video.removeEventListener('canplay', handleReady);
+        clearTimeout(retryTimer);
+      };
     } else {
       video.srcObject = null;
     }

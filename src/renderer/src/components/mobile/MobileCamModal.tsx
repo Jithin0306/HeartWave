@@ -41,10 +41,8 @@ export const MobileCamModal: React.FC = () => {
 
     const unsub = mobileCamService.subscribe((data) => {
       setTelemetry(data);
-      if (data.state === 'connected') {
-        if (data.stream) {
-          attachMobileStream(data.stream, data.deviceName || 'Wireless Phone');
-        }
+      if (data.state === 'connected' && data.stream) {
+        attachMobileStream(data.stream, data.deviceName || 'Wireless Phone');
         setIsMobileCamModalOpen(false);
       }
     });
@@ -54,12 +52,10 @@ export const MobileCamModal: React.FC = () => {
     };
   }, [isMobileCamModalOpen, attachMobileStream, setIsMobileCamModalOpen]);
 
-  // Secondary guarantee: auto-close if telemetry state flips to connected while modal is open
+  // Secondary guarantee: auto-close if telemetry state flips to connected with valid stream
   useEffect(() => {
-    if (telemetry.state === 'connected' && isMobileCamModalOpen) {
-      if (telemetry.stream) {
-        attachMobileStream(telemetry.stream, telemetry.deviceName || 'Wireless Phone');
-      }
+    if (telemetry.state === 'connected' && telemetry.stream && isMobileCamModalOpen) {
+      attachMobileStream(telemetry.stream, telemetry.deviceName || 'Wireless Phone');
       setIsMobileCamModalOpen(false);
     }
   }, [telemetry.state, telemetry.stream, isMobileCamModalOpen, attachMobileStream, setIsMobileCamModalOpen]);

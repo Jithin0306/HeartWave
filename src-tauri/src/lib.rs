@@ -96,8 +96,18 @@ fn is_window_maximized(window: Window) -> bool {
 }
 
 #[tauri::command]
-fn close_window(window: Window) -> Result<(), String> {
-    window.hide().map_err(|e| e.to_string())
+fn close_window(
+    app: AppHandle,
+    window: Window,
+    state: State<SharedVcamBridge>,
+) -> Result<(), String> {
+    let bridge = state.lock();
+    if bridge.is_broadcasting() {
+        window.hide().map_err(|e| e.to_string())
+    } else {
+        app.exit(0);
+        Ok(())
+    }
 }
 
 #[tauri::command]

@@ -19,26 +19,28 @@ function getGithubToken() {
   return '';
 }
 
-const VERSION = '1.3.13';
+const VERSION = '1.3.14';
 const TAG = `v${VERSION}`;
 const REPO = 'jithin0306/HeartWave';
 const TOKEN = getGithubToken();
 
-const RELEASE_TITLE = `HeartWave v${VERSION} - Native Taskbar Icon Restoration & Rock-Solid Phone Connection`;
+const RELEASE_TITLE = `HeartWave v${VERSION} - Full-Bleed High-DPI Taskbar Icon & Rock-Solid Phone Connection`;
 const RELEASE_NOTES = `## HeartWave v${VERSION} Release Notes
 
-### 🌟 Native High-DPI Windows Taskbar Icon
-- **Restored Original Pristine Master Icon**: Fully restored original high-resolution icons across Windows, macOS, and Linux without artificial scaling or downsample blurring.
-- **Explicit Win32 Taskbar Binding**: Configured native Windows \`set_icon\` on window initialization to ensure the Taskbar icon displays full-size, crisp, and high-DPI across all Windows scaling settings.
+### 🌟 Prominent, High-DPI Full-Bleed Windows Taskbar & Titlebar Icon
+- **Tight Bounding-Box Scaling**: Cropped unused transparent margins (scaled to 980x877 inside 1024x1024) so the 3D heart-lens icon fills the entire Windows Taskbar tile without appearing small or shrunken.
+- **Enlarged Titlebar Icon & Typography**: Increased brand glyph container to 28px and wordmark to 16px with crisp drop-shadow for prominent on-screen branding.
+- **Native Win32 Taskbar Binding**: Main window explicitly applies high-DPI \`set_icon\` on initialization.
 
-### 📱 Flawless Phone-to-PC Camera Connection
-- **Stable Room ID Preservation**: Retained stable room architecture (\`hw-cam-main\` / saved code) so phones connect immediately upon QR scan or URL open without room ID mismatch.
-- **Graceful Lingering Socket Recovery**: Handled cloud signaling socket retries cleanly without regenerating new random room codes.
-- **Clean Disconnect & Stream Fallback Lifecycle**: Integrated clean store-level detach hook so desktop gracefully transitions back to physical camera if mobile disconnects, with instant re-attachment on reconnect.
-- **HTML5 WebRTC Auto-Play Optimization**: Added \`onloadedmetadata\` safety pipeline guaranteeing video playback starts without interruption.
+### 📱 Rock-Solid Phone-to-PC Camera Connection
+- **Unique Per-Machine Room Architecture**: Removed static default room collisions on public PeerJS cloud (\`hw-cam-main\`), generating unique machine codes stored persistently in localStorage.
+- **Auto-Healing Collision Recovery**: On \`unavailable-id\`, immediately regenerates a clean unique room ID and synchronizes QR codes synchronously so scanning phones always reach the live session.
+- **Reliable Stream Delivery**: Resolved auto-close race condition in connection modal; modal and viewport now wait for confirmed video stream delivery before transitioning.
+- **Multi-Event WebRTC Auto-Play**: Bound playback to \`loadedmetadata\`, \`canplay\`, and immediate retrying handlers ensuring remote mobile streams render instantly without stalling.
 
-### 🧹 Workspace Cleanup
-- Removed temporary build caches and obsolete bundles, reducing folder footprint from 8.8 GB down to under 2.9 GB.
+### ⚡ Clean Process Lifecycle & Update Installation
+- **Zero Zombie Processes**: Cleaned up background process lingering on window close when virtual camera is not actively broadcasting (\`app.exit(0)\`), preventing executable file locks during installation and updates.
+- **In-App Updater Reliability**: Direct "Restart & Apply" updater pipeline properly executes the downloaded installer.
 
 ---
 ### 📦 Downloads

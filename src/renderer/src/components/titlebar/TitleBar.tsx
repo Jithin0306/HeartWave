@@ -117,8 +117,8 @@ export const TitleBar: React.FC = () => {
         {/* Heartwave Bespoke 3D Heart-Lens Icon (Theme Adaptive & Transparent) */}
         <div
           style={{
-            width: '24px',
-            height: '24px',
+            width: '28px',
+            height: '28px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -147,7 +147,7 @@ export const TitleBar: React.FC = () => {
         {/* Master Stylized Wordmark: HEΛRT ♡-W ΛVE (Authentic Master Typography in every theme) */}
         <div
           style={{
-            height: '20px',
+            height: '22px',
             display: 'flex',
             alignItems: 'center',
             userSelect: 'none',
@@ -157,7 +157,7 @@ export const TitleBar: React.FC = () => {
             src={THEME_WORDMARKS[currentTheme] || wordmarkRomantic}
             alt="HEΛRTWAVE"
             style={{
-              height: '14px',
+              height: '16px',
               width: 'auto',
               objectFit: 'contain',
               display: 'block',
