@@ -83,7 +83,7 @@ export const VirtualOutputBar: React.FC = () => {
             minWidth: '155px',
             flexShrink: 0,
             borderRadius: 'var(--hw-radius-xs)',
-            backgroundColor: 'rgba(20, 18, 17, 0.75)',
+            backgroundColor: 'var(--hw-surface-subtle)',
             border: '1px solid var(--hw-border-subtle)',
             fontSize: '11px',
             color: isBroadcasting ? 'var(--hw-status-active)' : 'var(--hw-text-muted)',
@@ -121,8 +121,8 @@ export const VirtualOutputBar: React.FC = () => {
             flexShrink: 0,
             borderRadius: 'var(--hw-radius-xs)',
             backgroundColor: isPrivacyShutterActive
-              ? 'rgba(184, 92, 112, 0.25)'
-              : 'rgba(38, 32, 31, 0.7)',
+              ? 'var(--hw-accent-rose-soft)'
+              : 'var(--hw-surface-subtle)',
             border: `1px solid ${
               isPrivacyShutterActive ? 'var(--hw-accent-primary)' : 'var(--hw-border-subtle)'
             }`,
@@ -160,8 +160,8 @@ export const VirtualOutputBar: React.FC = () => {
             flexShrink: 0,
             borderRadius: 'var(--hw-radius-xs)',
             backgroundColor: isBypassActive
-              ? 'rgba(214, 189, 145, 0.2)'
-              : 'rgba(38, 32, 31, 0.7)',
+              ? 'var(--hw-accent-champagne-soft)'
+              : 'var(--hw-surface-subtle)',
             border: `1px solid ${
               isBypassActive ? 'var(--hw-accent-champagne)' : 'var(--hw-border-subtle)'
             }`,
@@ -188,7 +188,7 @@ export const VirtualOutputBar: React.FC = () => {
               gap: '6px',
               padding: '5px 10px',
               borderRadius: 'var(--hw-radius-xs)',
-              backgroundColor: 'rgba(20, 18, 17, 0.9)',
+              backgroundColor: 'var(--hw-surface-subtle)',
               border: '1px solid var(--hw-border-subtle)',
               fontSize: '10px',
               fontFamily: 'monospace',

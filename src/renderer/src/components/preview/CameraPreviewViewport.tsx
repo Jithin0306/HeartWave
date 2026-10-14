@@ -603,12 +603,12 @@ export const CameraPreviewViewport: React.FC = () => {
             >
               {availableDevices.length > 0 ? (
                 availableDevices.map((d) => (
-                  <option key={d.id} value={d.id} style={{ background: '#1D1918' }}>
+                  <option key={d.id} value={d.id} style={{ backgroundColor: 'var(--hw-bg-secondary)', color: 'var(--hw-text-primary)' }}>
                     {d.label}
                   </option>
                 ))
               ) : (
-                <option value="" style={{ background: '#1D1918' }}>
+                <option value="" style={{ backgroundColor: 'var(--hw-bg-secondary)', color: 'var(--hw-text-primary)' }}>
                   No Cameras Detected
                 </option>
               )}
@@ -738,7 +738,7 @@ export const CameraPreviewViewport: React.FC = () => {
             style={{
               position: 'absolute',
               inset: 0,
-              backgroundColor: '#141211',
+              backgroundColor: 'var(--hw-bg-primary)',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -1038,7 +1038,7 @@ export const CameraPreviewViewport: React.FC = () => {
             }}
           >
             {RESOLUTION_PRESETS.map((res) => (
-              <option key={res.id} value={res.id} style={{ background: '#1D1918' }}>
+              <option key={res.id} value={res.id} style={{ backgroundColor: 'var(--hw-bg-secondary)', color: 'var(--hw-text-primary)' }}>
                 {res.label}
               </option>
             ))}
@@ -1082,7 +1082,7 @@ export const CameraPreviewViewport: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: activeGestureEvent.isTriggered ? '#141211' : 'var(--hw-accent-rose)',
+                color: activeGestureEvent.isTriggered ? 'var(--hw-bg-primary)' : 'var(--hw-accent-rose)',
               }}
             >
               {activeGestureEvent.isTriggered ? (

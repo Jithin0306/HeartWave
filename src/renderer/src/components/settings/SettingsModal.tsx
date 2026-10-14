@@ -349,7 +349,7 @@ export const SettingsModal: React.FC = () => {
                                   height: '8px',
                                   borderRadius: '50%',
                                   backgroundColor: theme.bgPreview,
-                                  border: '1px solid rgba(255,255,255,0.2)',
+                                  border: '1px solid var(--hw-border-medium)',
                                   display: 'inline-block',
                                 }}
                               />
@@ -363,7 +363,7 @@ export const SettingsModal: React.FC = () => {
                                     fontWeight: 600,
                                     padding: '2px 6px',
                                     borderRadius: 'var(--hw-radius-xs)',
-                                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                    backgroundColor: 'var(--hw-surface-subtle)',
                                     color: 'var(--hw-text-secondary)',
                                   }}
                                 >
@@ -536,12 +536,12 @@ export const SettingsModal: React.FC = () => {
                     }}
                   >
                     {availableDevices.map((d) => (
-                      <option key={d.id} value={d.id} style={{ background: '#1D1918' }}>
+                      <option key={d.id} value={d.id} style={{ backgroundColor: 'var(--hw-bg-secondary)', color: 'var(--hw-text-primary)' }}>
                         {d.label}
                       </option>
                     ))}
                     {availableDevices.length === 0 && (
-                      <option value="" style={{ background: '#1D1918' }}>
+                      <option value="" style={{ backgroundColor: 'var(--hw-bg-secondary)', color: 'var(--hw-text-primary)' }}>
                         No cameras detected
                       </option>
                     )}
@@ -572,7 +572,7 @@ export const SettingsModal: React.FC = () => {
                     }}
                   >
                     {RESOLUTION_PRESETS.map((res) => (
-                      <option key={res.id} value={res.id} style={{ background: '#1D1918' }}>
+                      <option key={res.id} value={res.id} style={{ backgroundColor: 'var(--hw-bg-secondary)', color: 'var(--hw-text-primary)' }}>
                         {res.label} ({res.width}x{res.height} @ {res.fps}fps)
                       </option>
                     ))}

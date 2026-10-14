@@ -5,17 +5,20 @@ import logoIconRomantic from '../../assets/logo-icon-romantic.png';
 import logoIconStudio from '../../assets/logo-icon-studio.png';
 import logoIconCyber from '../../assets/logo-icon-cyber.png';
 import logoIconMidnight from '../../assets/logo-icon-midnight.png';
+import logoIconGold from '../../assets/logo-icon-gold.png';
 
 import wordmarkRomantic from '../../assets/wordmark-romantic.png';
 import wordmarkStudio from '../../assets/wordmark-studio.png';
 import wordmarkCyber from '../../assets/wordmark-cyber.png';
 import wordmarkMidnight from '../../assets/wordmark-midnight.png';
+import wordmarkGold from '../../assets/wordmark-gold.png';
 
 const THEME_ICONS: Record<AppTheme, string> = {
   romantic: logoIconRomantic,
   studio: logoIconStudio,
   cyber: logoIconCyber,
   midnight: logoIconMidnight,
+  gold: logoIconGold,
 };
 
 const THEME_WORDMARKS: Record<AppTheme, string> = {
@@ -23,6 +26,7 @@ const THEME_WORDMARKS: Record<AppTheme, string> = {
   studio: wordmarkStudio,
   cyber: wordmarkCyber,
   midnight: wordmarkMidnight,
+  gold: wordmarkGold,
 };
 
 export const TitleBar: React.FC = () => {
@@ -122,7 +126,9 @@ export const TitleBar: React.FC = () => {
                 ? 'drop-shadow(0 0 6px rgba(229, 168, 59, 0.4))'
                 : currentTheme === 'cyber'
                 ? 'drop-shadow(0 0 6px rgba(0, 229, 255, 0.5))'
-                : 'drop-shadow(0 0 6px rgba(16, 185, 129, 0.45))',
+                : currentTheme === 'midnight'
+                ? 'drop-shadow(0 0 6px rgba(16, 185, 129, 0.45))'
+                : 'drop-shadow(0 1px 3px rgba(180, 130, 20, 0.45))',
           }}
         >
           <img
@@ -156,7 +162,9 @@ export const TitleBar: React.FC = () => {
                   ? 'drop-shadow(0 0 5px rgba(229, 168, 59, 0.35))'
                   : currentTheme === 'cyber'
                   ? 'drop-shadow(0 0 5px rgba(0, 229, 255, 0.45))'
-                  : 'drop-shadow(0 0 5px rgba(16, 185, 129, 0.4))',
+                  : currentTheme === 'midnight'
+                  ? 'drop-shadow(0 0 5px rgba(16, 185, 129, 0.4))'
+                  : 'drop-shadow(0 1px 2px rgba(153, 101, 21, 0.35))',
             }}
           />
         </div>
@@ -292,7 +300,7 @@ export const TitleBar: React.FC = () => {
                           height: '12px',
                           borderRadius: '50%',
                           backgroundColor: theme.previewColor,
-                          border: '2px solid rgba(255, 255, 255, 0.2)',
+                          border: '1.5px solid var(--hw-border-subtle)',
                           boxShadow: `0 0 8px ${theme.previewColor}88`,
                           flexShrink: 0,
                         }}
@@ -308,7 +316,7 @@ export const TitleBar: React.FC = () => {
                                 fontSize: '9px',
                                 padding: '1px 5px',
                                 borderRadius: 'var(--hw-radius-full)',
-                                backgroundColor: isCurrent ? 'var(--hw-accent-rose-soft)' : 'rgba(255, 255, 255, 0.06)',
+                                backgroundColor: isCurrent ? 'var(--hw-accent-rose-soft)' : 'var(--hw-surface-subtle)',
                                 color: isCurrent ? 'var(--hw-accent-rose)' : 'var(--hw-text-muted)',
                                 fontWeight: 500,
                               }}

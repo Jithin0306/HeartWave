@@ -167,7 +167,7 @@ export const EffectCard: React.FC<EffectCardProps> = ({
         display: 'flex',
         flexDirection: 'column',
         gap: '8px',
-        boxShadow: isSelected ? '0 0 14px rgba(184, 92, 112, 0.18)' : 'none',
+        boxShadow: isSelected ? 'var(--hw-shadow-accent)' : 'none',
       }}
       onMouseEnter={(e) => {
         if (!isSelected) {

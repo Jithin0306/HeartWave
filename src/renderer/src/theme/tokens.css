@@ -183,3 +183,38 @@
 
   --hw-shadow-accent: 0 4px 20px rgba(16, 185, 129, 0.22);
 }
+
+/* =========================================================================
+   Theme 5: Royal Ivory & Gold (White Porcelain & 24K Royal Gold Luxury)
+   ========================================================================= */
+[data-theme="gold"] {
+  --hw-bg-primary: #FAF8F5;
+  --hw-bg-secondary: #FFFFFF;
+  --hw-surface-elevated: #FFFFFF;
+  --hw-surface-subtle: #F4EFE6;
+  --hw-surface-active: #E5DAC5;
+  --hw-surface-hover: #EFE8DA;
+
+  --hw-accent-primary: #C59B27;
+  --hw-accent-primary-hover: #D4AF37;
+  --hw-accent-burgundy: #996515;
+  --hw-accent-rose: #C59B27;
+  --hw-accent-rose-soft: rgba(197, 155, 39, 0.12);
+  --hw-accent-champagne: #D4AF37;
+  --hw-accent-champagne-soft: rgba(212, 175, 55, 0.12);
+
+  --hw-text-primary: #1C1917;
+  --hw-text-secondary: #57534E;
+  --hw-text-muted: #8C827A;
+  --hw-text-highlight: #000000;
+
+  --hw-border-subtle: #E8E2D5;
+  --hw-border-medium: #D8CEB8;
+  --hw-border-focus: #C59B27;
+  --hw-border-active: #996515;
+
+  --hw-shadow-sm: 0 2px 6px rgba(153, 101, 21, 0.08);
+  --hw-shadow-md: 0 6px 18px rgba(153, 101, 21, 0.12);
+  --hw-shadow-lg: 0 12px 32px rgba(153, 101, 21, 0.16);
+  --hw-shadow-accent: 0 4px 20px rgba(197, 155, 39, 0.28);
+}

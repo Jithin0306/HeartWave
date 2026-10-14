@@ -22,7 +22,7 @@ export const RESOLUTION_PRESETS: ResolutionProfile[] = [
   { id: '720p60', label: '720p 60fps', width: 1280, height: 720, fps: 60 },
 ];
 
-export type AppTheme = 'romantic' | 'studio' | 'cyber' | 'midnight';
+export type AppTheme = 'romantic' | 'studio' | 'cyber' | 'midnight' | 'gold';
 
 export interface ThemeConfig {
   id: AppTheme;
@@ -80,6 +80,17 @@ export const THEMES: ThemeConfig[] = [
     bgPreview: '#090E0F',
     description: 'Deep midnight emerald with glacier mint highlights. Crisp, modern, and easy on the eyes.',
     badge: 'Minimal',
+  },
+  {
+    id: 'gold',
+    name: 'Royal Ivory & Gold',
+    tagline: 'Pristine ivory prestige & radiant 24k gold',
+    category: 'Luxury & Elegance',
+    previewColor: '#D4AF37',
+    accentColor: '#C59B27',
+    bgPreview: '#FAF8F5',
+    description: 'Pristine porcelain white with polished 24k gold accents, champagne highlights, and obsidian typography.',
+    badge: 'Luxe Gold',
   },
 ];
 
@@ -229,7 +240,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   currentTheme: (() => {
     try {
       const saved = localStorage.getItem('hw_theme') as AppTheme;
-      if (saved && ['romantic', 'studio', 'cyber', 'midnight'].includes(saved)) {
+      if (saved && ['romantic', 'studio', 'cyber', 'midnight', 'gold'].includes(saved)) {
         document.documentElement.setAttribute('data-theme', saved);
         return saved;
       }
