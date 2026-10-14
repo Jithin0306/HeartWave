@@ -22,6 +22,7 @@ import {
   PanelRightOpen,
   Focus,
   Upload,
+  X,
 } from 'lucide-react';
 import { useAppStore, RESOLUTION_PRESETS } from '../../store/appStore';
 import { cameraManager } from '../../services/cameraManager';
@@ -217,6 +218,7 @@ export const CameraPreviewViewport: React.FC = () => {
       }
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   // Sync active effect with selectedEffectId
@@ -1545,26 +1547,61 @@ export const CameraPreviewViewport: React.FC = () => {
                 ))}
 
                 {customBackdropUrl && (
-                  <button
-                    onClick={() => setSelectedBackdropId('custom')}
+                  <div
                     style={{
-                      padding: '2px 7px',
-                      borderRadius: 'var(--hw-radius-xs)',
-                      backgroundColor: selectedBackdropId === 'custom' ? 'var(--hw-accent-rose)' : 'rgba(255, 255, 255, 0.06)',
-                      color: selectedBackdropId === 'custom' ? '#FFFFFF' : 'var(--hw-text-secondary)',
-                      border: 'none',
-                      fontSize: '10px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      display: 'flex',
+                      display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '4px',
+                      borderRadius: 'var(--hw-radius-xs)',
+                      backgroundColor: selectedBackdropId === 'custom' ? 'var(--hw-accent-rose)' : 'rgba(255, 255, 255, 0.08)',
+                      overflow: 'hidden',
+                      border: selectedBackdropId === 'custom' ? '1px solid rgba(255, 255, 255, 0.25)' : '1px solid rgba(255, 255, 255, 0.06)',
                     }}
                   >
-                    <img src={customBackdropUrl} alt="" style={{ width: '12px', height: '12px', borderRadius: '2px', objectFit: 'cover' }} />
-                    <span>My Photo</span>
-                  </button>
+                    <button
+                      onClick={() => setSelectedBackdropId('custom')}
+                      title="Select uploaded photo backdrop"
+                      style={{
+                        padding: '2px 6px',
+                        background: 'transparent',
+                        color: selectedBackdropId === 'custom' ? '#FFFFFF' : 'var(--hw-text-secondary)',
+                        border: 'none',
+                        fontSize: '10px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <img src={customBackdropUrl} alt="" style={{ width: '12px', height: '12px', borderRadius: '2px', objectFit: 'cover' }} />
+                      <span>My Photo</span>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCustomBackdropUrl(null);
+                        if (selectedBackdropId === 'custom') {
+                          setSelectedBackdropId('penthouse');
+                        }
+                      }}
+                      title="Remove uploaded backdrop photo"
+                      style={{
+                        padding: '2px 5px',
+                        background: selectedBackdropId === 'custom' ? 'rgba(0, 0, 0, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                        color: selectedBackdropId === 'custom' ? '#FFFFFF' : 'var(--hw-text-muted)',
+                        border: 'none',
+                        borderLeft: '1px solid rgba(255, 255, 255, 0.15)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        lineHeight: 1,
+                      }}
+                    >
+                      <X size={10} />
+                    </button>
+                  </div>
                 )}
 
                 <button

@@ -40,6 +40,10 @@ export class VideoCompositor {
       desynchronized: true, // Low-latency pipeline hint
       willReadFrequently: true, // Eliminates synchronous GPU readback stalls
     });
+    if (this.ctx) {
+      this.ctx.imageSmoothingEnabled = true;
+      this.ctx.imageSmoothingQuality = 'high';
+    }
 
     this.foregroundCanvas = document.createElement('canvas');
     this.foregroundCanvas.width = this.width;
@@ -47,6 +51,10 @@ export class VideoCompositor {
     this.fgCtx = this.foregroundCanvas.getContext('2d', {
       willReadFrequently: false,
     });
+    if (this.fgCtx) {
+      this.fgCtx.imageSmoothingEnabled = true;
+      this.fgCtx.imageSmoothingQuality = 'high';
+    }
 
     try {
       this.logoFullImg = new Image();
@@ -134,6 +142,8 @@ export class VideoCompositor {
         // Dual-pass compositing:
         // Pass 1: Prepare foreground subject cutout in offscreen buffer
         if (this.fgCtx) {
+          this.fgCtx.imageSmoothingEnabled = true;
+          this.fgCtx.imageSmoothingQuality = 'high';
           this.fgCtx.clearRect(0, 0, this.width, this.height);
           this.fgCtx.drawImage(video, 0, 0, this.width, this.height);
           this.fgCtx.globalCompositeOperation = 'destination-in';

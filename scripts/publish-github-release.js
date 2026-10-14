@@ -19,38 +19,28 @@ function getGithubToken() {
   return '';
 }
 
-const VERSION = '1.3.9';
+const VERSION = '1.3.10';
 const TAG = `v${VERSION}`;
 const REPO = 'jithin0306/HeartWave';
 const TOKEN = getGithubToken();
 
-const RELEASE_TITLE = `HeartWave v${VERSION} - AI Cinematic DSLR Background Blur, Virtual Backdrops & Chroma Green Screen`;
+const RELEASE_TITLE = `HeartWave v${VERSION} - Studio-Grade Edge Anti-Aliasing, Halo Elimination & Backdrop Controls`;
 const RELEASE_NOTES = `## HeartWave v${VERSION} Release Notes
 
-### 🎬 AI Cinematic DSLR Background Blur (GPU Accelerated)
+### ✨ Studio-Grade Edge Anti-Aliasing & Halo Elimination
+- **1-Pixel Morphological Min-Filter Erosion**: Eliminates the artificial white/light halo around hair, shoulders, and gaming chairs by contracting silhouette confidence contours inward by 1px (~5 screen pixels at 720p/1080p), cleanly excising unblurred room wall ghosting.
+- **Tightened Confidence Thresholding**: Default segmentation threshold optimized to \`0.65\` with \`0.08\` feather softness for razor-sharp subject isolation against both DSLR bokeh and virtual environments.
+- **High-Quality Bicubic Smoothing**: High-fidelity canvas anti-aliasing prevents staircasing or jagged pixelation when upscaling masks to full camera resolution.
+
+### 🗑️ Quick-Remove Custom Backdrop HUD Button
+- **Split-Pill HUD Control**: The floating Optics HUD bar now features an integrated \`×\` remove button directly on the "My Photo" pill, allowing instant deletion of custom backdrop photos without opening settings.
+- **State Synchronization**: Automatically cleans up local storage cache and resets gracefully to the default luxury penthouse backdrop.
+
+### 🎬 AI Cinematic DSLR Background Blur & Virtual Backdrops
 - **Offline GPU-Accelerated Segmentation**: Powered by Google MediaPipe's official \`selfie_segmenter.tflite\` model running 100% locally on your machine with zero cloud dependency.
-- **Optical Aperture Depth Simulation**: Realistic camera lens bokeh simulation:
-  - **\`f/1.4 Prime\`** (85% blur) — Dreamy portrait bokeh with deep room defocus.
-  - **\`f/2.8 Studio\`** (50% blur, default) — Balanced cinematic depth of field.
-  - **\`f/4.0 Soft-Focus\`** (25% blur) — Subtle background softening.
-- **Silky Temporal Smoothing**: Exponential temporal filtering eliminates edge fluttering, silhouette flickering, and hair shimmer.
-- **Smoothstep Edge Feathering**: Natural optical transitions along subject contours without harsh cutout borders.
-
-### 🏛️ Virtual Studio Backdrops & Custom Photo Upload
-- **4 Curated Built-In Studio Backdrops**:
-  - *Luxury Penthouse* (panoramic floor-to-ceiling glass & evening city bokeh lights)
-  - *Modern Acoustic Studio* (walnut acoustic slat wall & warm architectural sconces)
-  - *Cyberpunk Neon* (high-energy futuristic skyline with cyan & magenta holographic glows)
-  - *Cozy Evening Cafe* (warm espresso brick & glowing fairy light garlands)
-- **Personal Photo Upload**: Import custom \`.jpg\`, \`.png\`, or \`.webp\` room photos with persistent local storage.
-
-### 🟩 Chroma Key Green Screen
-- **DirectShow Chroma Output**: Output pure solid green (\`#00FF00\`), blue (\`#0000FF\`), or magenta screen directly to OBS Studio, Zoom, and Discord for high-precision chroma keying.
-
-### 🎛️ Viewport Optics HUD & Settings Control Center
-- **Floating Optics HUD Bar**: Quick-switch pill bar directly in the viewport: \`[Off]\`, \`[DSLR Blur]\`, \`[Backdrop]\`, and \`[Chroma Key]\` with aperture presets and sliders.
-- **Global Hotkey**: Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>K</kbd> anywhere to toggle DSLR blur on/off on the fly.
-- **Settings Modal "Optics & AI Blur" Tab**: Complete control center with mode cards, aperture presets, backdrop gallery with custom upload/delete, chroma color picker, and silhouette tuning sliders (*Temporal Smoothing* & *Edge Feather Softness*).
+- **Optical Aperture Depth Simulation**: Realistic camera lens bokeh simulation (\`f/1.4 Prime\`, \`f/2.8 Studio\`, \`f/4.0 Soft-Focus\`).
+- **Curated Studio Backdrops & Green Screen**: Luxury Penthouse, Acoustic Studio, Cyberpunk Neon, Cozy Evening Cafe, and DirectShow Chroma Green Screen.
+- **Global Hotkey**: Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>K</kbd> anywhere to toggle DSLR blur on/off.
 
 ---
 ### 📦 Downloads

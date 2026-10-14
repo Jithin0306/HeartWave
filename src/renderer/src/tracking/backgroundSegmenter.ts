@@ -11,10 +11,11 @@ export class BackgroundSegmenter {
 
   // Smoothing & Feathering buffers
   private smoothedBuffer: Float32Array | null = null;
+  private erodedBuffer: Float32Array | null = null;
   private hasHistory: boolean = false;
   private temporalAlpha: number = 0.75; // 0.75 = crisp reaction + zero edge jitter
-  private edgeThreshold: number = 0.5;
-  private edgeFeather: number = 0.18; // Soft optical transition band
+  private edgeThreshold: number = 0.65; // Inset threshold eliminates room wall ghosting
+  private edgeFeather: number = 0.08; // Crisp optical feathering band
 
   // Output Mask Canvas (Hardware-accelerated bilinear scaling)
   private maskCanvas: HTMLCanvasElement;
@@ -120,6 +121,7 @@ export class BackgroundSegmenter {
         const totalPixels = width * height;
         if (!this.smoothedBuffer || this.smoothedBuffer.length !== totalPixels) {
           this.smoothedBuffer = new Float32Array(totalPixels);
+          this.erodedBuffer = new Float32Array(totalPixels);
           this.hasHistory = false;
           this.maskWidth = width;
           this.maskHeight = height;
@@ -136,6 +138,7 @@ export class BackgroundSegmenter {
 
         const rawFloats = mask.getAsFloat32Array();
         const smoothed = this.smoothedBuffer;
+        const eroded = this.erodedBuffer!;
         const imgData = this.maskImageData!;
         const data = imgData.data;
 
@@ -145,28 +148,54 @@ export class BackgroundSegmenter {
         const upperBound = Math.min(0.99, this.edgeThreshold + this.edgeFeather);
         const invRange = 1.0 / (upperBound - lowerBound);
 
+        // Pass 1: Temporal smoothing filter (suppresses jitter and flicker)
         if (!this.hasHistory) {
-          for (let i = 0; i < totalPixels; i++) {
-            const raw = rawFloats[i];
-            smoothed[i] = raw;
-
-            // Smoothstep curve for soft edge feathering
-            const t = Math.max(0, Math.min(1, (raw - lowerBound) * invRange));
-            const smoothVal = t * t * (3.0 - 2.0 * t);
-            data[i * 4 + 3] = (smoothVal * 255) | 0;
-          }
+          smoothed.set(rawFloats);
           this.hasHistory = true;
         } else {
           for (let i = 0; i < totalPixels; i++) {
-            const raw = rawFloats[i];
-            const s = alpha * raw + oneMinusAlpha * smoothed[i];
-            smoothed[i] = s;
-
-            // Smoothstep curve
-            const t = Math.max(0, Math.min(1, (s - lowerBound) * invRange));
-            const smoothVal = t * t * (3.0 - 2.0 * t);
-            data[i * 4 + 3] = (smoothVal * 255) | 0;
+            smoothed[i] = alpha * rawFloats[i] + oneMinusAlpha * smoothed[i];
           }
+        }
+
+        // Pass 2: Fast 1-pixel morphological erosion (Min-Filter)
+        // Contracts silhouette boundary inward by 1px (~5 screen pixels at 720p/1080p),
+        // completely excising the unblurred room wall halo around hair, shoulders, and chair.
+        for (let y = 1; y < height - 1; y++) {
+          const rowOffset = y * width;
+          for (let x = 1; x < width - 1; x++) {
+            const idx = rowOffset + x;
+            let m = smoothed[idx];
+            const up = smoothed[idx - width];
+            const down = smoothed[idx + width];
+            const left = smoothed[idx - 1];
+            const right = smoothed[idx + 1];
+
+            if (up < m) m = up;
+            if (down < m) m = down;
+            if (left < m) m = left;
+            if (right < m) m = right;
+
+            eroded[idx] = m;
+          }
+        }
+
+        // Copy boundary edges
+        for (let x = 0; x < width; x++) {
+          eroded[x] = smoothed[x];
+          eroded[(height - 1) * width + x] = smoothed[(height - 1) * width + x];
+        }
+        for (let y = 0; y < height; y++) {
+          eroded[y * width] = smoothed[y * width];
+          eroded[y * width + (width - 1)] = smoothed[y * width + (width - 1)];
+        }
+
+        // Pass 3: Optical smoothstep feathering for natural bicubic blend
+        for (let i = 0; i < totalPixels; i++) {
+          const s = eroded[i];
+          const t = Math.max(0, Math.min(1, (s - lowerBound) * invRange));
+          const smoothVal = t * t * (3.0 - 2.0 * t);
+          data[i * 4 + 3] = (smoothVal * 255) | 0;
         }
 
         hasExtracted = true;
@@ -191,6 +220,10 @@ export class BackgroundSegmenter {
     this.edgeFeather = Math.max(0.02, Math.min(0.4, feather));
   }
 
+  setEdgeThreshold(threshold: number): void {
+    this.edgeThreshold = Math.max(0.1, Math.min(0.95, threshold));
+  }
+
   isInitialized(): boolean {
     return this.isReady;
   }
@@ -199,6 +232,9 @@ export class BackgroundSegmenter {
     this.hasHistory = false;
     if (this.smoothedBuffer) {
       this.smoothedBuffer.fill(0);
+    }
+    if (this.erodedBuffer) {
+      this.erodedBuffer.fill(0);
     }
   }
 
@@ -213,6 +249,8 @@ export class BackgroundSegmenter {
     }
     this.isReady = false;
     this.hasHistory = false;
+    this.smoothedBuffer = null;
+    this.erodedBuffer = null;
   }
 }
 

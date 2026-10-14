@@ -1062,8 +1062,8 @@ export const SettingsModal: React.FC = () => {
                         </div>
                         <input
                           type="range"
-                          min={0.05}
-                          max={0.35}
+                          min={0.02}
+                          max={0.20}
                           step={0.01}
                           value={edgeFeather}
                           onChange={(e) => setEdgeFeather(parseFloat(e.target.value))}
