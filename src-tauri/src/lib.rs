@@ -195,7 +195,7 @@ fn relaunch_app(app: AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // 1. Windows EcoQoS, unthrottled WebView2 backgrounding & thread priority safeguard
+    // 1. Windows EcoQoS & thread priority safeguard
     #[cfg(windows)]
     {
         use windows_sys::Win32::System::Power::{
@@ -205,10 +205,6 @@ pub fn run() {
             ABOVE_NORMAL_PRIORITY_CLASS, GetCurrentProcess, SetPriorityClass,
         };
         unsafe {
-            std::env::set_var(
-                "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
-                "--disable-renderer-backgrounding --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-features=CalculateNativeWinOcclusion --autoplay-policy=no-user-gesture",
-            );
             SetPriorityClass(GetCurrentProcess(), ABOVE_NORMAL_PRIORITY_CLASS);
             SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
         }
