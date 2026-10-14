@@ -170,17 +170,13 @@ fn is_window_maximized(window: Window) -> bool {
 
 #[tauri::command]
 fn close_window(
-    app: AppHandle,
+    _app: AppHandle,
     window: Window,
-    state: State<SharedVcamBridge>,
+    _state: State<SharedVcamBridge>,
 ) -> Result<(), String> {
-    let bridge = state.lock();
-    if bridge.is_broadcasting() {
-        window.hide().map_err(|e| e.to_string())
-    } else {
-        app.exit(0);
-        Ok(())
-    }
+    // Minimize to System Tray when close (X) is clicked so streaming continues in background!
+    // To quit completely, user right-clicks tray icon -> "Quit HeartWave".
+    window.hide().map_err(|e| e.to_string())
 }
 
 #[tauri::command]

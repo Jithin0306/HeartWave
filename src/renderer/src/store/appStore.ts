@@ -18,8 +18,8 @@ import { soundEngine } from '../services/soundEngine';
 import { mobileCamService } from '../services/mobileCamService';
 
 export const RESOLUTION_PRESETS: ResolutionProfile[] = [
-  { id: '720p30', label: '720p 30fps', width: 1280, height: 720, fps: 30 },
   { id: '1080p30', label: '1080p 30fps', width: 1920, height: 1080, fps: 30 },
+  { id: '720p30', label: '720p 30fps', width: 1280, height: 720, fps: 30 },
   { id: '720p60', label: '720p 60fps', width: 1280, height: 720, fps: 60 },
 ];
 
@@ -397,6 +397,15 @@ export const useAppStore = create<AppState>((set, get) => ({
         cameraError: null,
         availableDevices: updatedDevices.length > 0 ? updatedDevices : get().availableDevices,
       });
+
+      // Automatically broadcast to virtual camera so OBS immediately receives the video feed
+      if (get().virtualOutputStatus !== 'broadcasting') {
+        const res = get().selectedResolution;
+        if (typeof window !== 'undefined' && window.heartwaveApi?.startVirtualCamera) {
+          window.heartwaveApi.startVirtualCamera(res.width, res.height, res.fps || 30);
+        }
+        set({ virtualOutputStatus: 'broadcasting' });
+      }
     } catch (err) {
       const parsed = cameraManager.parseError(err);
       set({

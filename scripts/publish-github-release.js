@@ -19,28 +19,25 @@ function getGithubToken() {
   return '';
 }
 
-const VERSION = '1.3.21';
+const VERSION = '1.3.22';
 const TAG = `v${VERSION}`;
 const REPO = 'jithin0306/HeartWave';
 const TOKEN = getGithubToken();
 
-const RELEASE_TITLE = `HeartWave v${VERSION} - High FPS Multi-Mode Engine & Background GPU Optimization`;
+const RELEASE_TITLE = `HeartWave v${VERSION} - Auto-Broadcast, Tray Minimize on Close, and Low-Light Silhouette Fix`;
 const RELEASE_NOTES = `## HeartWave v${VERSION} Release Notes
 
-### ⚡ Rock-Solid 30+ FPS Across All Optics Modes (Blur, Backdrop & Green Screen)
-- **GPU 256x256 Pre-Downscaling Pipeline**: Eliminated the 35ms WASM CPU downscaling bottleneck when passing high-resolution camera feeds to MediaPipe. Added a dedicated hardware-accelerated 256x256 input canvas, reducing neural network inference time from 35ms down to **~8ms**.
-- **Precomputed Look-Up Table (LUT)**: Replaced 65,536 per-frame CPU floating-point calculations with an instant LUT for smooth edge feathering and alpha blending, dropping segmentation processing time from 15ms to **0.8ms**.
-- **Temporal Cadence Decoupling**: Segmenter now updates at 30 Hz and seamlessly caches the mask across microticks, eliminating frame stalls and maintaining a silky-smooth **30.0 FPS** in DSLR Blur, Virtual Backdrop, and Chroma Key modes.
+### 🎥 Instant Auto-Broadcast on Camera Start
+- Eliminated the requirement to manually click "Start Virtual Camera" after turning on your camera.
+- Starting your physical webcam or connecting your smartphone now automatically initiates the DirectShow virtual camera broadcast, ensuring OBS Studio, Zoom, and Discord receive your video feed immediately.
 
-### 🚀 Zero FPS Drop When Minimized
-- **Viewport Occlusion Optimization**: When HeartWave is minimized (\`document.hidden\`), on-screen viewport blits and skeleton diagnostic renders are automatically bypassed, dedicating 100% of GPU and CPU cycles directly to the virtual camera stream.
-- **Dedicated Web Worker Ticker**: Continuous independent background thread ticker keeps the frame broadcast running at 30 FPS without relying on throttled browser RAF loops.
+### 🛡️ Minimize to System Tray on Close (X)
+- Closing the window via the titlebar \`X\` button now gracefully parks HeartWave in the Windows System Tray rather than killing the process.
+- Virtual camera broadcasting continues streaming to OBS Studio uninterrupted in the background. To completely exit, right-click the system tray icon and select "Quit HeartWave".
 
----
-### 📦 Windows Downloads
-- **Setup Installer (NSIS)**: \`HeartWave_${VERSION}_x64-setup.exe\`
-- **Portable Edition**: \`HeartWave-Portable.exe\`
-- **Enterprise MSI**: \`HeartWave_${VERSION}_x64_en-US.msi\`
+### 💡 Sensitive Low-Light Segmentation
+- Lowered the person silhouette threshold to 0.30 with an expanded feathering curve, preventing the human silhouette from dropping out or turning into solid green screen in dark room environments.
+- 1080p is now the default resolution preset, perfectly matching standard 1920x1080 streaming canvases in OBS without letterboxing.
 `;
 
 async function main() {

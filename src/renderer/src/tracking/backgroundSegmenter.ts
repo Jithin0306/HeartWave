@@ -13,8 +13,8 @@ export class BackgroundSegmenter {
   private smoothedBuffer: Float32Array | null = null;
   private hasHistory: boolean = false;
   private temporalAlpha: number = 0.75; // 0.75 = crisp reaction + zero edge jitter
-  private edgeThreshold: number = 0.50; // Stable center threshold (protects indoor shadows and dark shirts)
-  private edgeFeather: number = 0.10; // Crisp optical feathering band (prevents artificial ghost halo)
+  private edgeThreshold: number = 0.30; // Sensitive low-light threshold (prevents human subject dropout in dim lighting)
+  private edgeFeather: number = 0.15; // Smooth natural feathering band
 
   // Output Mask Canvas (Hardware-accelerated bilinear scaling)
   private maskCanvas: HTMLCanvasElement;
