@@ -1,23 +1,26 @@
 const fs = require('fs');
 const path = require('path');
 
-const VERSION = '1.3.4';
+const VERSION = '1.3.5';
 const TAG = `v${VERSION}`;
 const REPO = 'jithin0306/HeartWave';
 const TOKEN = process.env.GITHUB_TOKEN || '';
 
-const RELEASE_TITLE = `HeartWave v${VERSION} - Zero-Blackout Resolution Switching & Enhanced WebRTC Stability`;
+const RELEASE_TITLE = `HeartWave v${VERSION} - Remote Camera Freedom Controls & Orientation Guidance`;
 const RELEASE_NOTES = `## HeartWave v${VERSION} Release Notes
 
-### 🎥 Zero-Blackout Resolution Switching
-- **Seamless Resolution Changes**: Switching between 720p and 1080p now uses dynamic in-place \`applyConstraints\` and WebRTC sender track replacement. No more blank or black screens when toggling resolution!
-- **Desktop-to-Mobile Command Channel**: Selecting a new resolution in the HeartWave desktop viewport automatically sends a command to the smartphone over WebRTC data channel without tearing down the active media session.
-- **Seamless Lens Flipping**: Switching between front and rear cameras seamlessly swaps video tracks without cutting or resetting the stream.
+### 🎛️ Full Remote Smartphone Camera Controls
+- **Remote Camera Freedom Controls**: Control your phone camera hardware directly from the PC desktop HUD or Settings panel.
+- **Remote Optical/Digital Zoom**: Smooth zoom slider (1.0x to 5.0x) with instant 1x, 2x, 3x presets communicated via WebRTC data channel.
+- **Remote Flashlight / Torch Toggle**: Turn your phone's camera flash on and off remotely from your PC with a single click.
+- **Rear Camera / Selfie Lens Switcher**: Effortlessly switch between rear back camera and front selfie camera from desktop with zero stream interruption.
+- **Mobile Zoom Shelf**: Added floating on-screen zoom slider and preset pills directly onto the smartphone web interface.
 
-### 🌐 Cross-Network Connectivity & Fast P2P
-- **WSS Signaling Permissions**: Updated Content Security Policy (CSP) to permit WebSocket signaling across all network topologies.
-- **PeerJS TURN Relay Fallbacks**: Integrated resilient TURN relay servers for guaranteed handshakes across Ethernet, Wi-Fi, and cellular networks.
-- **Auto-Closing QR Code**: Instant dismissal of the pairing modal upon successful media handshake.
+### 📱 16:9 Widescreen Landscape Guidance
+- **Orientation Lock Notice**: Prominent visual tips on both the mobile start screen and desktop QR pairing modal instructing users to turn **OFF Auto-Rotate Lock** for widescreen 16:9 landscape streaming.
+
+### ⚙️ Version Synchronization Fix
+- **Dynamic Version Reporting**: Resolved the static version display in Settings & Preferences dialog—now dynamically reads the live package and runtime version.
 
 ---
 ### 📦 Downloads

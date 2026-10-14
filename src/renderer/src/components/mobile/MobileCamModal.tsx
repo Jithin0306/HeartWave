@@ -455,6 +455,25 @@ export const MobileCamModal: React.FC = () => {
                       Tap the Safari/Chrome prompt and hit <strong style={{ color: 'var(--hw-accent-champagne)' }}>"Connect Camera"</strong>.
                     </div>
                   </div>
+
+                  {/* Widescreen Landscape Orientation Guidance */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 12px',
+                      borderRadius: 'var(--hw-radius-sm)',
+                      backgroundColor: 'rgba(255, 149, 0, 0.1)',
+                      border: '1px solid rgba(255, 149, 0, 0.28)',
+                      marginTop: '4px',
+                    }}
+                  >
+                    <span style={{ fontSize: '15px' }}>🔄</span>
+                    <span style={{ fontSize: '11px', color: '#ffb340', lineHeight: 1.4 }}>
+                      <strong>Widescreen Tip:</strong> Turn <strong>OFF Auto-Rotate Lock</strong> on your phone and hold horizontally to stream in 16:9 landscape!
+                    </span>
+                  </div>
                 </div>
               </div>
             ) : (

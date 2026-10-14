@@ -425,6 +425,56 @@
       text-align: center;
       letter-spacing: 1px;
     }
+    .rotation-notice-box {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(255, 149, 0, 0.12);
+      border: 1px solid rgba(255, 149, 0, 0.35);
+      font-size: 11px;
+      color: #E2E2E6;
+      line-height: 1.45;
+      max-width: 320px;
+      width: 100%;
+      text-align: left;
+    }
+    .zoom-shelf {
+      position: absolute;
+      bottom: 112px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(18, 16, 15, 0.88);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 30px;
+      padding: 5px 12px;
+      z-index: 50;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+    .btn-zoom-preset {
+      background: rgba(255, 255, 255, 0.08);
+      border: none;
+      color: var(--hw-text);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .btn-zoom-preset.active {
+      background: var(--hw-accent);
+      color: #FFF;
+    }
+    #zoomSlider {
+      width: 70px;
+      height: 4px;
+      accent-color: var(--hw-accent);
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -451,6 +501,17 @@
     <div class="notice-box" id="modeNoticeBox">
       <strong id="modeTitle" style="color: #FFF; display: block; margin-bottom: 2px;">📶 Local Wi-Fi Mode</strong>
       <span id="modeDesc">Point camera at desktop screen & tap below to stream.</span>
+    </div>
+
+    <!-- Orientation Lock Instruction for Widescreen Landscape -->
+    <div class="rotation-notice-box">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+        <span style="font-size: 16px;">🔄</span>
+        <strong style="color: #FFB340; font-size: 12px; letter-spacing: 0.3px;">Widescreen Landscape Tip</strong>
+      </div>
+      <p style="margin: 0; font-size: 11px; color: #E0E0E6; line-height: 1.45;">
+        Please turn <strong>OFF Auto-Rotate Lock</strong> on your phone and hold horizontally to stream in 16:9 widescreen landscape!
+      </p>
     </div>
 
     <button class="start-btn" id="btnStart">
@@ -484,6 +545,15 @@
           1080p
         </div>
       </div>
+    </div>
+
+    <!-- Floating Zoom Controls Shelf -->
+    <div class="zoom-shelf" id="zoomShelf">
+      <span style="font-size: 11px; font-weight: 700; color: var(--hw-champagne);" id="zoomLevelDisplay">1.0x</span>
+      <button class="btn-zoom-preset active" data-zoom="1">1x</button>
+      <button class="btn-zoom-preset" data-zoom="2">2x</button>
+      <button class="btn-zoom-preset" data-zoom="3">3x</button>
+      <input type="range" id="zoomSlider" min="1" max="5" step="0.1" value="1" title="Pinch or slide to zoom" />
     </div>
 
     <!-- Bottom Controls -->
@@ -600,6 +670,12 @@
     let facingMode = 'environment';
     let is1080p = false;
     let isTorchOn = false;
+    let currentZoom = 1.0;
+    let minZoom = 1.0;
+    let maxZoom = 5.0;
+    let stepZoom = 0.1;
+    let hasZoomSupport = false;
+    let hasTorchSupport = false;
     let desktopRoomId = '';
     let connectionMode = 'wifi';
     let streamStartTime = null;
@@ -628,6 +704,9 @@
     const saverOverlay = document.getElementById('saverOverlay');
     const btnWake = document.getElementById('btnWake');
     const roomInput = document.getElementById('roomInput');
+    const zoomShelf = document.getElementById('zoomShelf');
+    const zoomLevelDisplay = document.getElementById('zoomLevelDisplay');
+    const zoomSlider = document.getElementById('zoomSlider');
     const progressOverlay = document.getElementById('progressOverlay');
     const progressBar = document.getElementById('progressBar');
     const progressPercent = document.getElementById('progressPercent');
@@ -795,6 +874,23 @@
         const settings = track.getSettings();
         resBadge.innerText = `${settings.height || (is1080p ? 1080 : 720)}p`;
 
+        if (track.getCapabilities) {
+          const caps = track.getCapabilities();
+          if (caps.zoom) {
+            hasZoomSupport = true;
+            minZoom = caps.zoom.min || 1;
+            maxZoom = Math.min(caps.zoom.max || 5, 8);
+            stepZoom = caps.zoom.step || 0.1;
+            if (zoomSlider) {
+              zoomSlider.min = minZoom;
+              zoomSlider.max = maxZoom;
+              zoomSlider.step = stepZoom;
+            }
+          }
+          hasTorchSupport = Boolean(caps.torch || ('torch' in caps));
+          btnTorch.style.display = hasTorchSupport ? 'flex' : 'none';
+        }
+
         if (currentCall && currentCall.peerConnection) {
           const senders = currentCall.peerConnection.getSenders();
           const videoSender = senders.find(s => s.track && s.track.kind === 'video');
@@ -802,8 +898,62 @@
             videoSender.replaceTrack(track);
           }
         }
+        broadcastTelemetry();
       }
       return true;
+    }
+
+    function broadcastTelemetry() {
+      if (currentDataConn && currentDataConn.open) {
+        try {
+          currentDataConn.send({
+            type: 'TELEMETRY_UPDATE',
+            device: navigator.userAgent.includes('iPhone') ? 'iPhone' : 'Android Phone',
+            resolution: is1080p ? '1080p' : '720p',
+            mode: connectionMode,
+            zoom: currentZoom,
+            minZoom: minZoom,
+            maxZoom: maxZoom,
+            isTorchOn: isTorchOn,
+            isTorchSupported: hasTorchSupport,
+            facingMode: facingMode
+          });
+        } catch {}
+      }
+    }
+
+    async function applyZoom(val) {
+      val = Math.max(minZoom, Math.min(maxZoom, Number(val)));
+      currentZoom = val;
+      if (zoomLevelDisplay) zoomLevelDisplay.innerText = val.toFixed(1) + 'x';
+      if (zoomSlider) zoomSlider.value = val;
+      document.querySelectorAll('.btn-zoom-preset').forEach(btn => {
+        btn.classList.toggle('active', Math.abs(parseFloat(btn.dataset.zoom) - val) < 0.2);
+      });
+      const track = localStream ? localStream.getVideoTracks()[0] : null;
+      if (track) {
+        try {
+          await track.applyConstraints({ advanced: [{ zoom: val }] });
+        } catch (e) {
+          console.warn('[MobileCam] applyConstraints zoom failed:', e);
+        }
+      }
+      broadcastTelemetry();
+    }
+
+    async function setTorch(enable) {
+      if (!localStream) return;
+      const track = localStream.getVideoTracks()[0];
+      try {
+        isTorchOn = Boolean(enable);
+        await track.applyConstraints({
+          advanced: [{ torch: isTorchOn }]
+        });
+        btnTorch.classList.toggle('active', isTorchOn);
+      } catch (e) {
+        console.warn('[MobileCam] Torch constraint failed:', e);
+      }
+      broadcastTelemetry();
     }
 
     // Seamless in-place resolution switching (zero-blackout)
@@ -823,6 +973,7 @@
           const settings = track.getSettings();
           resBadge.innerText = `${settings.height || (is1080p ? 1080 : 720)}p`;
           console.log('[MobileCam] Resolution updated via applyConstraints:', settings.width, 'x', settings.height);
+          broadcastTelemetry();
           return true;
         } catch (e) {
           console.warn('[MobileCam] applyConstraints failed, falling back to seamless track replacement:', e);
@@ -857,6 +1008,7 @@
         videoPreview.srcObject = newStream;
         const settings = newTrack.getSettings();
         resBadge.innerText = `${settings.height || (is1080p ? 1080 : 720)}p`;
+        broadcastTelemetry();
         return true;
       } catch (err) {
         console.error('[MobileCam] Failed to switch resolution:', err);
@@ -864,8 +1016,8 @@
       }
     }
 
-    async function flipCamera() {
-      facingMode = facingMode === 'environment' ? 'user' : 'environment';
+    async function flipCamera(targetLens) {
+      facingMode = targetLens || (facingMode === 'environment' ? 'user' : 'environment');
       try {
         const newStream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -890,6 +1042,16 @@
         localStream = newStream;
         videoPreview.srcObject = newStream;
         videoPreview.className = facingMode === 'user' ? 'mirrored' : '';
+
+        // Reset torch state and detect capabilities for new lens
+        isTorchOn = false;
+        btnTorch.classList.remove('active');
+        if (newTrack.getCapabilities) {
+          const caps = newTrack.getCapabilities();
+          hasTorchSupport = Boolean(caps.torch || ('torch' in caps));
+          btnTorch.style.display = hasTorchSupport ? 'flex' : 'none';
+        }
+        broadcastTelemetry();
       } catch (e) {
         console.error('[MobileCam] Failed to flip camera:', e);
       }
@@ -1018,6 +1180,7 @@
           setStatus(connectionMode === 'usb' ? 'Live on PC (USB)' : 'Live on PC', 'live');
           setProgress(100, 'Streaming Live on PC', 'Ultra-low latency connection established!', true);
           startTimer();
+          broadcastTelemetry();
         });
 
         currentDataConn.on('data', async (d) => {
@@ -1026,9 +1189,21 @@
             setStatus(connectionMode === 'usb' ? 'Live on PC (USB)' : 'Live on PC', 'live');
             setProgress(100, 'Streaming Live on PC', 'Video received and rendering on PC!', true);
             startTimer();
+            broadcastTelemetry();
           } else if (d && d.type === 'CHANGE_RESOLUTION') {
             console.log('[MobileCam] Desktop requested resolution change:', d.resolution);
             await changeResolution(d.resolution === '1080p');
+          } else if (d && d.type === 'SET_ZOOM') {
+            console.log('[MobileCam] Desktop requested zoom level:', d.zoom);
+            await applyZoom(d.zoom);
+          } else if (d && d.type === 'SET_TORCH') {
+            console.log('[MobileCam] Desktop requested torch state:', d.enabled);
+            await setTorch(Boolean(d.enabled));
+          } else if (d && d.type === 'SET_LENS') {
+            console.log('[MobileCam] Desktop requested lens switch to:', d.lens);
+            if (facingMode !== d.lens) {
+              await flipCamera(d.lens);
+            }
           }
         });
       } catch (err) {
@@ -1124,17 +1299,20 @@
     });
 
     btnTorch.addEventListener('click', async () => {
-      if (!localStream) return;
-      const track = localStream.getVideoTracks()[0];
-      try {
-        isTorchOn = !isTorchOn;
-        await track.applyConstraints({
-          advanced: [{ torch: isTorchOn }]
-        });
-        btnTorch.classList.toggle('active', isTorchOn);
-      } catch (e) {
-        alert('Torch/Flashlight is not supported on this lens.');
-      }
+      await setTorch(!isTorchOn);
+    });
+
+    if (zoomSlider) {
+      zoomSlider.addEventListener('input', (e) => {
+        applyZoom(parseFloat(e.target.value));
+      });
+    }
+
+    document.querySelectorAll('.btn-zoom-preset').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const z = parseFloat(btn.dataset.zoom);
+        applyZoom(z);
+      });
     });
 
     btnDim.addEventListener('click', () => {

@@ -202,11 +202,20 @@ interface AppState {
   isMobileCamModalOpen: boolean;
   setIsMobileCamModalOpen: (open: boolean) => void;
 
-  // Wireless Mobile Camera
+  // Wireless Mobile Camera Remote Controls
   isMobileConnected: boolean;
   mobileDeviceName: string | null;
+  mobileZoom: number;
+  mobileMinZoom: number;
+  mobileMaxZoom: number;
+  mobileTorch: boolean;
+  mobileTorchSupported: boolean;
+  mobileLens: 'user' | 'environment';
   attachMobileStream: (stream: MediaStream, deviceName?: string) => void;
   detachMobileStream: () => void;
+  setMobileZoom: (zoom: number) => void;
+  toggleMobileTorch: () => void;
+  switchMobileLens: (lens?: 'user' | 'environment') => void;
 
   // Phase 7: Sound Feedback & Audio Engine
   isSoundEnabled: boolean;
@@ -504,6 +513,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   setIsMobileCamModalOpen: (open) => set({ isMobileCamModalOpen: open }),
   isMobileConnected: false,
   mobileDeviceName: null,
+  mobileZoom: 1.0,
+  mobileMinZoom: 1.0,
+  mobileMaxZoom: 5.0,
+  mobileTorch: false,
+  mobileTorchSupported: false,
+  mobileLens: 'environment',
   attachMobileStream: (stream, deviceName = '📱 Mobile Camera (Wireless)') => {
     const devices = get().availableDevices;
     const mobileId = 'mobile-wireless';
@@ -531,5 +546,19 @@ export const useAppStore = create<AppState>((set, get) => ({
       mobileDeviceName: null,
     });
     get().startCamera().catch(() => {});
+  },
+  setMobileZoom: (zoom: number) => {
+    set({ mobileZoom: zoom });
+    mobileCamService.sendZoomRequest(zoom);
+  },
+  toggleMobileTorch: () => {
+    const next = !get().mobileTorch;
+    set({ mobileTorch: next });
+    mobileCamService.sendTorchRequest(next);
+  },
+  switchMobileLens: (lens) => {
+    const next = lens || (get().mobileLens === 'environment' ? 'user' : 'environment');
+    set({ mobileLens: next });
+    mobileCamService.sendLensRequest(next);
   },
 }));

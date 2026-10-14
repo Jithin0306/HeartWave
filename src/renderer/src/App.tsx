@@ -19,6 +19,14 @@ export const App: React.FC = () => {
       if (data.state === 'connected' && data.stream) {
         attachMobileStream(data.stream, data.deviceName || 'Wireless Phone');
       }
+      useAppStore.setState({
+        mobileZoom: data.zoom ?? 1.0,
+        mobileTorch: data.isTorchOn ?? false,
+        mobileLens: data.facingMode ?? 'environment',
+        mobileTorchSupported: data.isTorchSupported ?? false,
+        mobileMaxZoom: data.maxZoom ?? 5.0,
+        mobileMinZoom: data.minZoom ?? 1.0,
+      });
     });
 
     if (!window.heartwaveApi) return () => unsubMobile();

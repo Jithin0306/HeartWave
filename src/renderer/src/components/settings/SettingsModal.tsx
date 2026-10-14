@@ -15,7 +15,11 @@ import {
   RefreshCw,
   Download,
   ArrowUpCircle,
-  AlertCircle
+  AlertCircle,
+  Smartphone,
+  SwitchCamera,
+  Zap,
+  ZoomIn,
 } from 'lucide-react';
 import { useAppStore, RESOLUTION_PRESETS, THEMES, FONTS } from '../../store/appStore';
 import { soundEngine } from '../../services/soundEngine';
@@ -47,9 +51,22 @@ export const SettingsModal: React.FC = () => {
     setGestureHoldDuration,
     gestureConfidence,
     setGestureConfidence,
+    isMobileConnected,
+    mobileDeviceName,
+    mobileZoom,
+    mobileTorch,
+    mobileLens,
+    mobileMaxZoom,
+    mobileMinZoom,
+    setMobileZoom,
+    toggleMobileTorch,
+    switchMobileLens,
   } = useAppStore();
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('appearance');
+  const [appVersion, setAppVersion] = useState<string>(
+    typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.3.4'
+  );
   const [updateStatus, setUpdateStatus] = useState<{
     state: 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error';
     version?: string;
@@ -57,6 +74,16 @@ export const SettingsModal: React.FC = () => {
     message?: string;
   }>({ state: 'idle' });
   const [isCheckingManual, setIsCheckingManual] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (window.heartwaveApi?.getAppInfo) {
+      window.heartwaveApi.getAppInfo().then((info) => {
+        if (info && info.version) {
+          setAppVersion(info.version);
+        }
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (window.heartwaveApi?.getUpdateStatus) {
@@ -155,7 +182,7 @@ export const SettingsModal: React.FC = () => {
                 color: 'var(--hw-accent-rose)',
               }}
             >
-              v1.0.0 • Production
+              v{appVersion} • Production
             </span>
           </div>
 
@@ -578,6 +605,199 @@ export const SettingsModal: React.FC = () => {
                     </button>
                   </div>
                 </div>
+
+                {/* Smartphone Wireless Camera Remote Freedom Controls */}
+                <div style={{ borderTop: '1px solid var(--hw-border-subtle)', paddingTop: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Smartphone size={16} color="var(--hw-accent-rose)" />
+                      <h4 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--hw-text-primary)' }}>
+                        Smartphone Camera Controls
+                      </h4>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: '10px',
+                        padding: '2px 8px',
+                        borderRadius: 'var(--hw-radius-full)',
+                        backgroundColor: isMobileConnected ? 'rgba(52, 199, 89, 0.15)' : 'var(--hw-surface-elevated)',
+                        color: isMobileConnected ? '#34c759' : 'var(--hw-text-muted)',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {isMobileConnected ? `📱 ${mobileDeviceName || 'Phone Active'}` : 'Standby / QR Ready'}
+                    </span>
+                  </div>
+
+                  <p style={{ fontSize: '11px', color: 'var(--hw-text-muted)', marginBottom: '12px' }}>
+                    Control your phone camera hardware remotely: switch between rear & selfie lens, toggle the flash, and adjust zoom.
+                  </p>
+
+                  {/* Orientation Lock Warning Banner */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 12px',
+                      borderRadius: 'var(--hw-radius-sm)',
+                      backgroundColor: 'rgba(255, 149, 0, 0.1)',
+                      border: '1px solid rgba(255, 149, 0, 0.25)',
+                      marginBottom: '12px',
+                    }}
+                  >
+                    <span style={{ fontSize: '15px' }}>🔄</span>
+                    <span style={{ fontSize: '11px', color: '#ffb340', lineHeight: 1.4 }}>
+                      <strong>Landscape Tip:</strong> Turn <strong>OFF Auto-Rotate Lock</strong> on your phone and hold it horizontally to stream in widescreen 16:9 landscape!
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '12px' }}>
+                    {/* Camera Lens Switcher */}
+                    <div
+                      style={{
+                        padding: '10px',
+                        borderRadius: 'var(--hw-radius-sm)',
+                        backgroundColor: 'var(--hw-surface-elevated)',
+                        border: '1px solid var(--hw-border-subtle)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--hw-text-primary)' }}>
+                          Camera Lens
+                        </span>
+                        <SwitchCamera size={13} color="var(--hw-accent-rose)" />
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          onClick={() => switchMobileLens('environment')}
+                          style={{
+                            flex: 1,
+                            padding: '6px 8px',
+                            borderRadius: 'var(--hw-radius-xs)',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            backgroundColor: mobileLens === 'environment' ? 'var(--hw-accent-rose)' : 'var(--hw-bg-primary)',
+                            color: mobileLens === 'environment' ? '#fff' : 'var(--hw-text-secondary)',
+                            border: 'none',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          📸 Rear
+                        </button>
+                        <button
+                          onClick={() => switchMobileLens('user')}
+                          style={{
+                            flex: 1,
+                            padding: '6px 8px',
+                            borderRadius: 'var(--hw-radius-xs)',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            backgroundColor: mobileLens === 'user' ? 'var(--hw-accent-rose)' : 'var(--hw-bg-primary)',
+                            color: mobileLens === 'user' ? '#fff' : 'var(--hw-text-secondary)',
+                            border: 'none',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          🤳 Selfie
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Flashlight / Torch Toggle */}
+                    <div
+                      style={{
+                        padding: '10px',
+                        borderRadius: 'var(--hw-radius-sm)',
+                        backgroundColor: 'var(--hw-surface-elevated)',
+                        border: '1px solid var(--hw-border-subtle)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--hw-text-primary)' }}>
+                          Flash / Torch
+                        </span>
+                        <Zap size={13} fill={mobileTorch ? '#FFCC00' : 'none'} color={mobileTorch ? '#FFCC00' : 'var(--hw-text-muted)'} />
+                      </div>
+                      <button
+                        onClick={toggleMobileTorch}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: 'var(--hw-radius-xs)',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          backgroundColor: mobileTorch ? 'rgba(255, 204, 0, 0.25)' : 'var(--hw-bg-primary)',
+                          color: mobileTorch ? '#FFCC00' : 'var(--hw-text-secondary)',
+                          border: mobileTorch ? '1px solid #FFCC00' : '1px solid var(--hw-border-subtle)',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {mobileTorch ? '⚡ Flashlight ON' : 'Turn Flashlight ON'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Hardware Zoom Control */}
+                  <div
+                    style={{
+                      padding: '10px',
+                      borderRadius: 'var(--hw-radius-sm)',
+                      backgroundColor: 'var(--hw-surface-elevated)',
+                      border: '1px solid var(--hw-border-subtle)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <ZoomIn size={13} color="var(--hw-accent-rose)" />
+                        <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--hw-text-primary)' }}>
+                          Camera Zoom: <strong style={{ color: 'var(--hw-accent-rose)' }}>{mobileZoom.toFixed(1)}x</strong>
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        {[1, 1.5, 2, 3].map((z) => (
+                          <button
+                            key={z}
+                            onClick={() => setMobileZoom(z)}
+                            style={{
+                              padding: '2px 8px',
+                              borderRadius: 'var(--hw-radius-xs)',
+                              backgroundColor: Math.abs(mobileZoom - z) < 0.1 ? 'var(--hw-accent-rose)' : 'var(--hw-bg-primary)',
+                              color: Math.abs(mobileZoom - z) < 0.1 ? '#fff' : 'var(--hw-text-secondary)',
+                              border: 'none',
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {z}x
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <input
+                      type="range"
+                      min={mobileMinZoom || 1}
+                      max={mobileMaxZoom || 5}
+                      step={0.1}
+                      value={mobileZoom}
+                      onChange={(e) => setMobileZoom(parseFloat(e.target.value))}
+                      style={{
+                        width: '100%',
+                        accentColor: 'var(--hw-accent-rose)',
+                        cursor: 'pointer',
+                      }}
+                    />
+                  </div>
+                </div>
               </>
             )}
 
@@ -886,7 +1106,7 @@ export const SettingsModal: React.FC = () => {
                           HeartWave Virtual Camera
                         </h4>
                         <p style={{ fontSize: '11px', color: 'var(--hw-text-muted)' }}>
-                          Installed: <strong style={{ color: 'var(--hw-text-primary)' }}>v1.0.0</strong> • Windows 64-bit
+                          Installed: <strong style={{ color: 'var(--hw-text-primary)' }}>v{appVersion}</strong> • Windows 64-bit
                         </p>
                       </div>
                     </div>

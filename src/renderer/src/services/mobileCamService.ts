@@ -28,6 +28,12 @@ export interface MobileCamTelemetry {
   qrDataUrl: string;
   deviceName?: string;
   resolution?: string;
+  zoom?: number;
+  minZoom?: number;
+  maxZoom?: number;
+  isTorchOn?: boolean;
+  isTorchSupported?: boolean;
+  facingMode?: 'user' | 'environment';
   isDirect?: boolean;
   connectionType?: string;
   stream: MediaStream | null;
@@ -49,7 +55,13 @@ class MobileCamService {
   private activeMode: MobileConnectionMode = 'wifi';
   private state: MobileConnectionState = 'idle';
   private deviceName: string = '';
-  private resolution: string = '';
+  private resolution: string = '1080p';
+  private zoom: number = 1.0;
+  private minZoom: number = 1.0;
+  private maxZoom: number = 5.0;
+  private isTorchOn: boolean = false;
+  private isTorchSupported: boolean = false;
+  private facingMode: 'user' | 'environment' = 'environment';
   private isDirect: boolean = false;
   private connectionType: string = 'Local Network';
   private errorMessage: string = '';
@@ -98,6 +110,7 @@ class MobileCamService {
   }
 
   public sendResolutionRequest(resolution: '720p' | '1080p'): void {
+    this.resolution = resolution;
     if (this.currentDataConn && this.currentDataConn.open) {
       try {
         console.log('[MobileCam] Requesting mobile resolution change to:', resolution);
@@ -109,6 +122,55 @@ class MobileCamService {
         console.warn('Failed to send resolution request to phone:', err);
       }
     }
+    this.notify();
+  }
+
+  public sendZoomRequest(zoom: number): void {
+    this.zoom = zoom;
+    if (this.currentDataConn && this.currentDataConn.open) {
+      try {
+        console.log('[MobileCam] Requesting mobile zoom:', zoom);
+        this.currentDataConn.send({
+          type: 'SET_ZOOM',
+          zoom,
+        });
+      } catch (err) {
+        console.warn('Failed to send zoom request to phone:', err);
+      }
+    }
+    this.notify();
+  }
+
+  public sendTorchRequest(enabled: boolean): void {
+    this.isTorchOn = enabled;
+    if (this.currentDataConn && this.currentDataConn.open) {
+      try {
+        console.log('[MobileCam] Requesting mobile torch state:', enabled);
+        this.currentDataConn.send({
+          type: 'SET_TORCH',
+          enabled,
+        });
+      } catch (err) {
+        console.warn('Failed to send torch request to phone:', err);
+      }
+    }
+    this.notify();
+  }
+
+  public sendLensRequest(lens: 'user' | 'environment'): void {
+    this.facingMode = lens;
+    if (this.currentDataConn && this.currentDataConn.open) {
+      try {
+        console.log('[MobileCam] Requesting mobile lens switch to:', lens);
+        this.currentDataConn.send({
+          type: 'SET_LENS',
+          lens,
+        });
+      } catch (err) {
+        console.warn('Failed to send lens request to phone:', err);
+      }
+    }
+    this.notify();
   }
 
   public getTelemetry(): MobileCamTelemetry {
@@ -125,6 +187,12 @@ class MobileCamService {
       qrDataUrl: isUsb ? this.usbQrDataUrl : this.wifiQrDataUrl,
       deviceName: this.deviceName,
       resolution: this.resolution,
+      zoom: this.zoom,
+      minZoom: this.minZoom,
+      maxZoom: this.maxZoom,
+      isTorchOn: this.isTorchOn,
+      isTorchSupported: this.isTorchSupported,
+      facingMode: this.facingMode,
       isDirect: this.isDirect,
       connectionType: this.connectionType,
       stream: this.activeStream,
@@ -263,6 +331,12 @@ class MobileCamService {
             if (data.device) this.deviceName = data.device;
             if (data.resolution) this.resolution = data.resolution;
             if (data.mode === 'usb') this.activeMode = 'usb';
+            if (typeof data.zoom === 'number') this.zoom = data.zoom;
+            if (typeof data.minZoom === 'number') this.minZoom = data.minZoom;
+            if (typeof data.maxZoom === 'number') this.maxZoom = data.maxZoom;
+            if (typeof data.isTorchOn === 'boolean') this.isTorchOn = data.isTorchOn;
+            if (typeof data.isTorchSupported === 'boolean') this.isTorchSupported = data.isTorchSupported;
+            if (data.facingMode === 'user' || data.facingMode === 'environment') this.facingMode = data.facingMode;
             this.state = 'connected';
             this.notify();
           }

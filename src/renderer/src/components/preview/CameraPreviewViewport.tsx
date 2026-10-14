@@ -14,6 +14,9 @@ import {
   Heart,
   Star,
   Smartphone,
+  SwitchCamera,
+  Zap,
+  ZoomIn,
 } from 'lucide-react';
 import { useAppStore, RESOLUTION_PRESETS, THEMES } from '../../store/appStore';
 import { cameraManager } from '../../services/cameraManager';
@@ -79,6 +82,14 @@ export const CameraPreviewViewport: React.FC = () => {
     isMobileConnected,
     mobileDeviceName,
     setIsMobileCamModalOpen,
+    mobileZoom,
+    mobileTorch,
+    mobileLens,
+    mobileMaxZoom,
+    mobileMinZoom,
+    setMobileZoom,
+    toggleMobileTorch,
+    switchMobileLens,
   } = useAppStore();
 
   // Initialize hardware enumeration and device change listeners
@@ -878,6 +889,123 @@ export const CameraPreviewViewport: React.FC = () => {
             </span>
           )}
         </div>
+
+        {/* Floating Mobile Camera Freedom Controls (Zoom, Flash, Lens Switch) */}
+        {selectedDeviceId === 'mobile-wireless' && cameraStatus === 'active' && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '16px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 25,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 10px',
+              borderRadius: 'var(--hw-radius-full)',
+              backgroundColor: 'rgba(20, 18, 18, 0.9)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid var(--hw-border-subtle)',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
+            }}
+          >
+            {/* Camera Lens Switcher */}
+            <button
+              onClick={() => switchMobileLens()}
+              title={`Switch camera lens (Current: ${mobileLens === 'environment' ? 'Rear Camera' : 'Front Selfie'})`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '4px 10px',
+                borderRadius: 'var(--hw-radius-full)',
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                color: 'var(--hw-text-primary)',
+                fontSize: '11px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <SwitchCamera size={13} color="var(--hw-accent-rose)" />
+              <span>{mobileLens === 'environment' ? 'Rear Cam' : 'Selfie'}</span>
+            </button>
+
+            {/* Flash / Torch Toggle */}
+            <button
+              onClick={() => toggleMobileTorch()}
+              title={mobileTorch ? 'Turn Off Phone Flash' : 'Turn On Phone Flash'}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '4px 10px',
+                borderRadius: 'var(--hw-radius-full)',
+                backgroundColor: mobileTorch ? 'rgba(255, 204, 0, 0.25)' : 'rgba(255, 255, 255, 0.08)',
+                border: mobileTorch ? '1px solid #FFCC00' : '1px solid rgba(255, 255, 255, 0.12)',
+                color: mobileTorch ? '#FFCC00' : 'var(--hw-text-primary)',
+                fontSize: '11px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <Zap size={13} fill={mobileTorch ? '#FFCC00' : 'none'} color={mobileTorch ? '#FFCC00' : 'currentColor'} />
+              <span>Flash {mobileTorch ? 'ON' : 'OFF'}</span>
+            </button>
+
+            {/* Zoom Controls */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                borderLeft: '1px solid rgba(255, 255, 255, 0.12)',
+                paddingLeft: '8px',
+              }}
+            >
+              <ZoomIn size={12} color="var(--hw-text-muted)" />
+              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--hw-accent-rose)', minWidth: '26px' }}>
+                {mobileZoom.toFixed(1)}x
+              </span>
+              {[1, 2, 3].map((z) => (
+                <button
+                  key={z}
+                  onClick={() => setMobileZoom(z)}
+                  style={{
+                    padding: '2px 6px',
+                    borderRadius: 'var(--hw-radius-xs)',
+                    backgroundColor: Math.abs(mobileZoom - z) < 0.2 ? 'var(--hw-accent-rose)' : 'rgba(255, 255, 255, 0.06)',
+                    color: Math.abs(mobileZoom - z) < 0.2 ? '#FFFFFF' : 'var(--hw-text-secondary)',
+                    border: 'none',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {z}x
+                </button>
+              ))}
+              <input
+                type="range"
+                min={mobileMinZoom || 1}
+                max={mobileMaxZoom || 5}
+                step={0.1}
+                value={mobileZoom}
+                onChange={(e) => setMobileZoom(parseFloat(e.target.value))}
+                style={{
+                  width: '55px',
+                  height: '4px',
+                  accentColor: 'var(--hw-accent-rose)',
+                  cursor: 'pointer',
+                }}
+                title={`Zoom Slider (${mobileZoom.toFixed(1)}x)`}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Top-right Resolution Selector Badge */}
         <div
