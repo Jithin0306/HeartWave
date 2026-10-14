@@ -414,9 +414,7 @@ export const CameraPreviewViewport: React.FC = () => {
 
         if (liveVcamStatus === 'broadcasting' && !isSendingFrameRef.current && (now - lastFrameSendTimeRef.current >= 28)) {
           lastFrameSendTimeRef.current = now;
-          const targetW = liveResolution?.width || 1280;
-          const targetH = liveResolution?.height || 720;
-          const frame = videoCompositor.extractFrameBuffer(targetW, targetH);
+          const frame = videoCompositor.extractFrameBuffer();
           if (frame && window.heartwaveApi?.sendFrame) {
             isSendingFrameRef.current = true;
             const sendPromise: any = window.heartwaveApi.sendFrame(frame.data, frame.width, frame.height, livePrivacyActive);

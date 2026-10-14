@@ -87,6 +87,8 @@ private:
     FILTER_STATE m_state;
     IFilterGraph* m_pGraph;
     IReferenceClock* m_pClock;
+    REFERENCE_TIME m_tStart;
+    ULONGLONG m_startTick;
     HeartWavePin* m_pPin;
 
     HANDLE m_hThread;
@@ -582,7 +584,7 @@ STDMETHODIMP HeartWavePin::QuerySupported(REFGUID guidPropSet, DWORD dwPropID, D
 // =========================================================================
 
 HeartWaveFilter::HeartWaveFilter()
-    : m_cRef(1), m_state(State_Stopped), m_pGraph(NULL), m_pClock(NULL),
+    : m_cRef(1), m_state(State_Stopped), m_pGraph(NULL), m_pClock(NULL), m_tStart(0), m_startTick(0),
       m_hThread(NULL), m_hStopEvent(NULL), m_hNewFrameEvent(NULL), m_bStreaming(false),
       m_hMMF(NULL), m_pSharedHeader(NULL), m_pSharedData(NULL) {
     timeBeginPeriod(1);
@@ -679,6 +681,8 @@ STDMETHODIMP HeartWaveFilter::Run(REFERENCE_TIME tStart) {
     if (m_state == State_Stopped) {
         Pause();
     }
+    m_tStart = tStart;
+    m_startTick = GetTickCount64();
     m_state = State_Running;
     return S_OK;
 }
@@ -859,6 +863,7 @@ void HeartWaveFilter::DoStream() {
     uint64_t frameIndex = 0;
     uint32_t lastReadIndex = 0;
     ULONGLONG lastFreshTick = 0;
+    REFERENCE_TIME lastRtStart = -1;
 
     while (m_bStreaming) {
         if (!m_hNewFrameEvent) {
@@ -939,10 +944,35 @@ void HeartWaveFilter::DoStream() {
                     RenderDefaultFrame(pData, width, height, subType);
                 }
 
-                // For live virtual camera sources, setting timestamps to NULL forces immediate unbuffered delivery
-                // in downstream DirectShow clients (OBS Studio, Zoom, Teams, Meet) with 0ms buffering delay.
-                pSample->SetTime(NULL, NULL);
-                pSample->SetMediaTime(NULL, NULL);
+                // Monotonic real-time stream timestamps for downstream DirectShow capture sinks (OBS Studio, Zoom, Teams)
+                // OBS Studio requires non-null PTS timestamps. Using graph reference clock or elapsed wall-clock
+                // ensures 0.00s queueing delay while guaranteeing frame acceptance without dropping or blanking.
+                REFERENCE_TIME rtStart = 0;
+                REFERENCE_TIME rtEnd = 0;
+
+                if (m_state == State_Running && m_pClock) {
+                    REFERENCE_TIME rtNow = 0;
+                    if (SUCCEEDED(m_pClock->GetTime(&rtNow))) {
+                        rtStart = (rtNow > m_tStart) ? (rtNow - m_tStart) : 0;
+                    } else {
+                        rtStart = (REFERENCE_TIME)(GetTickCount64() - m_startTick) * 10000;
+                    }
+                } else if (m_state == State_Running) {
+                    rtStart = (REFERENCE_TIME)(GetTickCount64() - m_startTick) * 10000;
+                } else {
+                    rtStart = (REFERENCE_TIME)frameIndex * interval;
+                }
+
+                if (rtStart <= lastRtStart) {
+                    rtStart = lastRtStart + 10000;
+                }
+                lastRtStart = rtStart;
+                rtEnd = rtStart + interval;
+
+                pSample->SetTime(&rtStart, &rtEnd);
+                LONGLONG llMediaStart = (LONGLONG)frameIndex;
+                LONGLONG llMediaEnd = llMediaStart + 1;
+                pSample->SetMediaTime(&llMediaStart, &llMediaEnd);
                 pSample->SetSyncPoint(TRUE);
                 pSample->SetActualDataLength(frameSize);
 

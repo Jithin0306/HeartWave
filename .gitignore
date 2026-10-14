@@ -6,6 +6,8 @@ release/
 *.log
 resources/bin/*_old*.dll
 resources/bin/*.old.dll
+resources/bin/*.dll.old
+resources/bin/*.old
 *.obj
 *.lib
 *.exp

@@ -19,23 +19,21 @@ function getGithubToken() {
   return '';
 }
 
-const VERSION = '1.3.17';
+const VERSION = '1.3.18';
 const TAG = `v${VERSION}`;
 const REPO = 'jithin0306/HeartWave';
 const TOKEN = getGithubToken();
 
-const RELEASE_TITLE = `HeartWave v${VERSION} - Zero-Latency OBS DirectShow Engine & 30 FPS Performance Fix`;
+const RELEASE_TITLE = `HeartWave v${VERSION} - OBS DirectShow Monotonic Timestamps & Preview Raster Fix`;
 const RELEASE_NOTES = `## HeartWave v${VERSION} Release Notes
 
-### ⚡ DirectShow Real-Time Zero-Latency Stream (0s Delay in OBS)
-- **Immediate Push Mode**: Switched DirectShow sample timestamps (\`SetTime(NULL, NULL)\` and \`SetMediaTime(NULL, NULL)\`) to live unbuffered presentation mode in \`HeartWaveCam.dll\`. This completely eliminates the 1–2 second queueing/buffering delay in OBS Studio, Zoom, Google Meet, and Microsoft Teams.
-- **Header Synchronization**: Real-time writeIndex, dimensions, and frameSize updates in shared memory guarantee instant sample availability across process boundaries.
+### 🎥 OBS Studio DirectShow Monotonic Presentation Timestamps Fix
+- **Eliminated Blank/Black Screen in OBS Studio**: OBS's DirectShow capture pin (\`libdshowcapture\` / \`win-dshow\`) requires non-null presentation timestamps to accept incoming video frames. Replaced unassigned sample timestamps with monotonic real-time stream timestamps computed from the DirectShow reference clock (\`m_pClock\`) and elapsed wall-clock time.
+- **Strictly Monotonic Time Progression**: Guaranteed sequential timestamp increments even across variable sender frame rates, preventing OBS jitter filter frame drops while maintaining **0.00s queueing delay**.
 
-### 🚀 Rock-Solid 30 FPS Frame Pipeline (Zero-Copy Raw IPC)
-- **Eliminated Base64 JavaScript Bottleneck**: Migrated frame transmission from CPU-heavy \`toBase64\` chunked string concatenation to Tauri v2's native \`vcam_push_frame_raw\` zero-copy binary IPC.
-- **Rayon Multi-Threaded NV12 Conversion**: Rust parallelizes RGBA-to-NV12 color conversion in sub-millisecond execution time.
-- **Hardware-Accelerated Frame Extraction**: Added GPU downscaling in \`videoCompositor\` to extract optimal broadcast frame buffers without CPU stalls.
-- **Calibrated Pacing**: Adjusted frame cadence to 28ms to perfectly synchronize with 60Hz and high-refresh displays for a stutter-free 30.0 FPS.
+### 🖥️ In-App Preview Scanline & Interlacing Elimination
+- **Double-Buffered Hardware Rasterization**: Removed \`desynchronized: true\` from offscreen composite canvas context, completely eliminating the horizontal scanline / venetian blind raster tearing in the camera viewport.
+- **Direct Frame Extraction**: Streamlined \`extractFrameBuffer()\` to read cleanly without secondary canvas downscaling collisions.
 
 ---
 ### 📦 Windows Downloads
