@@ -50,9 +50,15 @@ export function initTauriBridge(): void {
         isBroadcasting: res.is_broadcasting,
       };
     },
-    sendFrame: (buffer: ArrayBuffer, width: number, height: number) => {
-      const rgba = Array.from(new Uint8Array(buffer));
-      invoke('vcam_push_frame', { rgba, width, height, isPrivacy: false }).catch(() => {});
+    sendFrame: (buffer: ArrayBuffer | Uint8Array, width: number, height: number, isPrivacy?: boolean) => {
+      const u8 = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+      invoke('vcam_push_frame_raw', u8, {
+        headers: {
+          'x-width': String(width),
+          'x-height': String(height),
+          'x-privacy': isPrivacy ? 'true' : 'false',
+        },
+      }).catch(() => {});
     },
     sendTrayState: (_state) => {},
     onHotkeyPrivacy: (callback: () => void) => {

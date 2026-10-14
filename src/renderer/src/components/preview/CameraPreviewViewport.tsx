@@ -413,7 +413,7 @@ export const CameraPreviewViewport: React.FC = () => {
         if (liveVcamStatus === 'broadcasting') {
           const frame = videoCompositor.extractFrameBuffer();
           if (frame && window.heartwaveApi?.sendFrame) {
-            window.heartwaveApi.sendFrame(frame.data.buffer, frame.width, frame.height);
+            window.heartwaveApi.sendFrame(new Uint8Array(frame.data.buffer), frame.width, frame.height, livePrivacyActive);
             framesSentCountRef.current++;
           }
         }

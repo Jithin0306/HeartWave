@@ -29,8 +29,8 @@ fn get_app_info() -> AppInfo {
     AppInfo {
         version: env!("CARGO_PKG_VERSION").into(),
         name: "HeartWave".into(),
-        platform: "win32".into(),
-        arch: "x64".into(),
+        platform: std::env::consts::OS.into(),
+        arch: std::env::consts::ARCH.into(),
     }
 }
 
@@ -71,6 +71,38 @@ fn vcam_push_frame(
 ) {
     let bridge = state.lock();
     bridge.push_rgba_frame(&rgba, width, height, is_privacy.unwrap_or(false));
+}
+
+#[tauri::command]
+fn vcam_push_frame_raw(
+    request: tauri::ipc::Request<'_>,
+    state: State<SharedVcamBridge>,
+) -> Result<(), String> {
+    let tauri::ipc::InvokeBody::Raw(bytes) = request.body() else {
+        return Err("expected raw binary body".into());
+    };
+    let width = request
+        .headers()
+        .get("x-width")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.parse::<u32>().ok())
+        .unwrap_or(1280);
+    let height = request
+        .headers()
+        .get("x-height")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.parse::<u32>().ok())
+        .unwrap_or(720);
+    let is_privacy = request
+        .headers()
+        .get("x-privacy")
+        .and_then(|v| v.to_str().ok())
+        .map(|v| v == "true")
+        .unwrap_or(false);
+
+    let bridge = state.lock();
+    bridge.push_rgba_frame(bytes, width, height, is_privacy);
+    Ok(())
 }
 
 #[tauri::command]
@@ -222,6 +254,7 @@ pub fn run() {
             vcam_stop,
             vcam_status,
             vcam_push_frame,
+            vcam_push_frame_raw,
             minimize_window,
             maximize_window,
             is_window_maximized,

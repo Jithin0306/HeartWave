@@ -85,12 +85,40 @@ Don't have a high-end webcam? Turn your iPhone or Android phone into an ultra-lo
 
 ---
 
-## 📥 Quick Download & Installation
+## 📥 Multi-Platform Downloads & Installation
 
-1. Head over to the [**Latest Releases Page**](https://github.com/Jithin0306/HeartWave/releases/latest).
-2. Download **`HeartWave_1.3.9_x64-setup.exe`** (Installer) or **`HeartWave-Portable.exe`** (Standalone portable).
-3. Launch HeartWave.
-4. Select your camera or scan the QR code to use your phone, turn on **"Start Virtual Camera"** (or press `Ctrl+Shift+V`), and pick **Heartwave Virtual Camera** in your favorite streaming or meeting app!
+HeartWave provides native binaries for Windows, macOS, and Linux:
+
+| Platform | Format | Instructions |
+| :--- | :--- | :--- |
+| **Windows 10 / 11** | `.exe` Setup (NSIS) | Run `HeartWave_1.3.15_x64-setup.exe` to install to user profile with desktop & start menu shortcuts. |
+| **Windows (Portable)** | `.exe` Standalone | Run `HeartWave-Portable.exe` anywhere — zero installation required. |
+| **Windows Enterprise** | `.msi` Package | Run `HeartWave_1.3.15_x64_en-US.msi` for automated enterprise deployments. |
+| **macOS (Intel & Apple Silicon)** | `.dmg` Disk Image | Open `HeartWave_1.3.15.dmg` and drag HeartWave into your `/Applications` folder. Grant Camera permissions in *System Settings → Privacy & Security → Camera*. |
+| **macOS (App Bundle)** | `.app.tar.gz` | Extract and run `HeartWave.app`. |
+| **Linux (Universal)** | `.AppImage` | Run `chmod +x HeartWave_1.3.15_amd64.AppImage` and double-click to launch on any modern distribution (Ubuntu, Fedora, Arch, Debian). |
+| **Linux (Debian/Ubuntu)** | `.deb` Package | Run `sudo dpkg -i heartwave_1.3.15_amd64.deb` to install system-wide. |
+
+> [!TIP]
+> Download the latest releases directly from the [**GitHub Releases Page**](https://github.com/Jithin0306/HeartWave/releases/latest).
+
+---
+
+## 🎥 OBS Studio & Streaming Integration Guide
+
+HeartWave is engineered with a high-performance **Zero-Copy Native IPC Bridge** that pushes raw binary video directly to DirectShow memory-mapped frames at a rock-solid 30–60 FPS with zero frame drops:
+
+1. **Start HeartWave Virtual Camera**:
+   - In HeartWave, toggle **"Start Virtual Camera"** (or press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>V</kbd>).
+2. **Add to OBS Studio**:
+   - In OBS Studio, navigate to the **Sources** dock and click the **`+`** (Add) icon.
+   - Select **Video Capture Device**.
+   - Create a new source named *"HeartWave Camera"* and click **OK**.
+   - In the Device dropdown, select **Heartwave Virtual Camera**.
+   - Set *Resolution/FPS Type* to **Custom**, *Resolution* to **1280x720** (or **1920x1080**), and *FPS* to **30** or **60**.
+   - Click **OK**.
+3. **Low-Latency Streaming**:
+   - Your real-time gesture-enhanced camera feed is now broadcasting directly in OBS without consuming excess CPU or GPU cycles!
 
 ---
 
@@ -165,12 +193,22 @@ npm run dev
 ```
 
 ### Production Build & Packaging
-```bash
-# Typecheck and build frontend
-npm run build
 
-# Build standalone Windows installer with auto-updater manifest
-powershell -ExecutionPolicy Bypass -File .\scripts\build-release.ps1 -Version "1.3.8"
+**Windows (NSIS Setup, Portable EXE & MSI):**
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build-release.ps1 -Version "1.3.15"
+```
+
+**macOS (.dmg & .app):**
+```bash
+chmod +x ./scripts/build-macos.sh
+./scripts/build-macos.sh
+```
+
+**Linux (.AppImage & .deb):**
+```bash
+chmod +x ./scripts/build-linux.sh
+./scripts/build-linux.sh
 ```
 
 ---

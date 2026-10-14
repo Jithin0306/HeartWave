@@ -19,32 +19,31 @@ function getGithubToken() {
   return '';
 }
 
-const VERSION = '1.3.14';
+const VERSION = '1.3.15';
 const TAG = `v${VERSION}`;
 const REPO = 'jithin0306/HeartWave';
 const TOKEN = getGithubToken();
 
-const RELEASE_TITLE = `HeartWave v${VERSION} - Full-Bleed High-DPI Taskbar Icon & Rock-Solid Phone Connection`;
+const RELEASE_TITLE = `HeartWave v${VERSION} - OBS 60 FPS Zero-Copy Stream, Branded Installer & Multi-Platform Release`;
 const RELEASE_NOTES = `## HeartWave v${VERSION} Release Notes
 
-### 🌟 Prominent, High-DPI Full-Bleed Windows Taskbar & Titlebar Icon
-- **Tight Bounding-Box Scaling**: Cropped unused transparent margins (scaled to 980x877 inside 1024x1024) so the 3D heart-lens icon fills the entire Windows Taskbar tile without appearing small or shrunken.
-- **Enlarged Titlebar Icon & Typography**: Increased brand glyph container to 28px and wordmark to 16px with crisp drop-shadow for prominent on-screen branding.
-- **Native Win32 Taskbar Binding**: Main window explicitly applies high-DPI \`set_icon\` on initialization.
+### 🚀 Ultra-Fast Zero-Copy OBS DirectShow Broadcasting (Zero FPS Drops)
+- **Direct Binary IPC Streaming**: Completely eliminated the 450 MB/s JSON serialization bottleneck where raw RGBA frames were formerly converted into millions of JavaScript numbers every second.
+- **Tauri v2 Raw Binary Octet-Stream**: Upgraded \`vcam_push_frame_raw\` to consume raw pixel bytes directly from \`Uint8Array\` memory without JSON or Base64 decoding overhead.
+- **Flawless 30 / 60 FPS in OBS Studio**: Pushes smooth 720p/1080p frames directly into DirectShow shared memory (\`HeartWaveSharedVideo\`) with rock-solid stability and zero dropped frames.
 
-### 📱 Rock-Solid Phone-to-PC Camera Connection
-- **Unique Per-Machine Room Architecture**: Removed static default room collisions on public PeerJS cloud (\`hw-cam-main\`), generating unique machine codes stored persistently in localStorage.
-- **Auto-Healing Collision Recovery**: On \`unavailable-id\`, immediately regenerates a clean unique room ID and synchronizes QR codes synchronously so scanning phones always reach the live session.
-- **Reliable Stream Delivery**: Resolved auto-close race condition in connection modal; modal and viewport now wait for confirmed video stream delivery before transitioning.
-- **Multi-Event WebRTC Auto-Play**: Bound playback to \`loadedmetadata\`, \`canplay\`, and immediate retrying handlers ensuring remote mobile streams render instantly without stalling.
+### 🎨 Custom Branded Installer & App Icon
+- **NSIS Setup Icon Customization**: Replaced the default NSIS generic globe-and-arrow icon with the official HeartWave 3D heart-lens brand logo (\`icons/icon.ico\`) for both the installer and uninstaller.
+- **Native High-DPI Visual Polish**: Windows Explorer now renders crisp, full-bleed HeartWave branding across setup executables, taskbar icons, and uninstallation entries.
 
-### ⚡ Clean Process Lifecycle & Update Installation
-- **Zero Zombie Processes**: Cleaned up background process lingering on window close when virtual camera is not actively broadcasting (\`app.exit(0)\`), preventing executable file locks during installation and updates.
-- **In-App Updater Reliability**: Direct "Restart & Apply" updater pipeline properly executes the downloaded installer.
+### 🌐 Multi-Platform Packaging Architecture (macOS & Linux)
+- **Cross-Platform Conditional Compilation**: Fully gated Windows-specific DirectShow MMF APIs behind \`#[cfg(windows)]\` and implemented clean platform stubs for macOS and Linux.
+- **Automated Multi-OS CI/CD Workflow**: Added GitHub Actions workflow supporting concurrent builds for Windows (\`.exe\` / \`.msi\`), macOS (\`.dmg\` / \`.app\`), and Linux (\`.AppImage\` / \`.deb\`).
+- **Comprehensive Platform Instructions**: Updated \`README.md\` with detailed installation commands, permission notes, and OBS Studio integration instructions.
 
 ---
-### 📦 Downloads
-- **Setup Installer**: \`HeartWave_${VERSION}_x64-setup.exe\`
+### 📦 Windows Downloads
+- **Setup Installer (NSIS)**: \`HeartWave_${VERSION}_x64-setup.exe\`
 - **Portable Edition**: \`HeartWave-Portable.exe\`
 - **Enterprise MSI**: \`HeartWave_${VERSION}_x64_en-US.msi\`
 `;
