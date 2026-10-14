@@ -20,11 +20,16 @@ import {
   SwitchCamera,
   Zap,
   ZoomIn,
+  Focus,
+  Upload,
+  Trash2,
 } from 'lucide-react';
 import { useAppStore, RESOLUTION_PRESETS, THEMES, FONTS } from '../../store/appStore';
 import { soundEngine } from '../../services/soundEngine';
+import { BACKDROP_PRESETS, GREENSCREEN_PRESETS } from '../../data/initialBackdrops';
+import { BackgroundMode } from '../../types/background';
 
-type SettingsTab = 'appearance' | 'camera' | 'gesture' | 'virtualCam' | 'privacy' | 'updates';
+type SettingsTab = 'appearance' | 'optics' | 'camera' | 'gesture' | 'virtualCam' | 'privacy' | 'updates';
 
 export const SettingsModal: React.FC = () => {
   const {
@@ -61,6 +66,20 @@ export const SettingsModal: React.FC = () => {
     setMobileZoom,
     toggleMobileTorch,
     switchMobileLens,
+    backgroundMode,
+    setBackgroundMode,
+    bokehIntensity,
+    setBokehIntensity,
+    selectedBackdropId,
+    setSelectedBackdropId,
+    customBackdropUrl,
+    setCustomBackdropUrl,
+    greenscreenColor,
+    setGreenscreenColor,
+    edgeFeather,
+    setEdgeFeather,
+    temporalSmoothing,
+    setTemporalSmoothing,
   } = useAppStore();
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('appearance');
@@ -74,6 +93,22 @@ export const SettingsModal: React.FC = () => {
     message?: string;
   }>({ state: 'idle' });
   const [isCheckingManual, setIsCheckingManual] = useState<boolean>(false);
+  const modalFileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleModalBackdropUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (result) {
+        setCustomBackdropUrl(result);
+        setSelectedBackdropId('custom');
+        setBackgroundMode('backdrop');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     if (window.heartwaveApi?.getAppInfo) {
@@ -228,6 +263,7 @@ export const SettingsModal: React.FC = () => {
           >
             {[
               { id: 'appearance' as SettingsTab, label: 'Appearance & Themes', icon: Palette },
+              { id: 'optics' as SettingsTab, label: 'Optics & AI Blur', icon: Focus },
               { id: 'camera' as SettingsTab, label: 'Physical Camera', icon: Camera },
               { id: 'gesture' as SettingsTab, label: 'Gesture Tracking', icon: Hand },
               { id: 'virtualCam' as SettingsTab, label: 'Virtual Camera', icon: Layers },
@@ -512,6 +548,569 @@ export const SettingsModal: React.FC = () => {
                   >
                     <Sparkles size={12} color="var(--hw-accent-rose)" />
                     Hardware-Accelerated
+                  </div>
+                </div>
+              </>
+            )}
+
+            {activeTab === 'optics' && (
+              <>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <h4 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--hw-text-primary)' }}>
+                      AI Background Optics & Virtual Green Screen
+                    </h4>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        color: 'var(--hw-accent-champagne)',
+                        fontWeight: 600,
+                      }}
+                    >
+                      GPU-Accelerated • 60 FPS
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '11px', color: 'var(--hw-text-muted)', marginBottom: '14px', lineHeight: 1.5 }}>
+                    Real-time human silhouette segmentation powered by Google MediaPipe. Simulate cinema prime lens depth of field, switch to virtual studio environments, or output pure chroma key for OBS Studio and Discord.
+                  </p>
+
+                  {/* Mode Selector Cards (4-Grid) */}
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(4, 1fr)',
+                      gap: '10px',
+                      marginBottom: '18px',
+                    }}
+                  >
+                    {[
+                      {
+                        id: 'off' as BackgroundMode,
+                        title: 'Direct Feed',
+                        badge: 'Off',
+                        desc: 'Native webcam feed without background processing.',
+                        icon: Sparkles,
+                      },
+                      {
+                        id: 'blur' as BackgroundMode,
+                        title: 'DSLR Bokeh Blur',
+                        badge: 'Cinematic',
+                        desc: 'Realistic optical depth with f/1.4, f/2.8 & f/4.0 presets.',
+                        icon: Focus,
+                      },
+                      {
+                        id: 'backdrop' as BackgroundMode,
+                        title: 'Virtual Backdrop',
+                        badge: 'Studio',
+                        desc: 'Luxury architectural backdrops or custom room photo.',
+                        icon: Upload,
+                      },
+                      {
+                        id: 'greenscreen' as BackgroundMode,
+                        title: 'Chroma Key',
+                        badge: 'Broadcast',
+                        desc: 'Pure #00FF00 green screen for OBS / Discord filters.',
+                        icon: CheckCircle2,
+                      },
+                    ].map((modeItem) => {
+                      const isSelected = backgroundMode === modeItem.id;
+                      const Icon = modeItem.icon;
+                      return (
+                        <div
+                          key={modeItem.id}
+                          onClick={() => setBackgroundMode(modeItem.id)}
+                          style={{
+                            padding: '12px 10px',
+                            borderRadius: 'var(--hw-radius-md)',
+                            backgroundColor: isSelected ? 'var(--hw-surface-elevated)' : 'var(--hw-bg-primary)',
+                            border: isSelected ? '1.5px solid var(--hw-accent-primary)' : '1px solid var(--hw-border-subtle)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '6px',
+                            transition: 'all var(--hw-transition-fast)',
+                            boxShadow: isSelected ? 'var(--hw-shadow-accent)' : 'none',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <Icon size={16} color={isSelected ? 'var(--hw-accent-rose)' : 'var(--hw-text-muted)'} />
+                            <span
+                              style={{
+                                fontSize: '9px',
+                                fontWeight: 700,
+                                padding: '1px 5px',
+                                borderRadius: 'var(--hw-radius-full)',
+                                backgroundColor: isSelected ? 'var(--hw-accent-primary)' : 'rgba(255, 255, 255, 0.06)',
+                                color: isSelected ? '#FFFFFF' : 'var(--hw-text-muted)',
+                              }}
+                            >
+                              {modeItem.badge}
+                            </span>
+                          </div>
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--hw-text-primary)' }}>
+                            {modeItem.title}
+                          </span>
+                          <span style={{ fontSize: '10px', color: 'var(--hw-text-muted)', lineHeight: 1.3 }}>
+                            {modeItem.desc}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Mode A: DSLR Bokeh Blur Controls */}
+                  {backgroundMode === 'blur' && (
+                    <div
+                      style={{
+                        padding: '16px',
+                        borderRadius: 'var(--hw-radius-md)',
+                        backgroundColor: 'var(--hw-surface-elevated)',
+                        border: '1px solid var(--hw-border-subtle)',
+                        marginBottom: '18px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                        <div>
+                          <h5 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--hw-text-primary)' }}>
+                            Optical Aperture Depth & Bokeh Simulation
+                          </h5>
+                          <p style={{ fontSize: '11px', color: 'var(--hw-text-muted)' }}>
+                            Select a photographic prime lens aperture preset or fine-tune bokeh radius.
+                          </p>
+                        </div>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--hw-accent-rose)' }}>
+                          {bokehIntensity >= 70 ? 'f/1.4 (Dreamy)' : bokehIntensity >= 40 ? 'f/2.8 (Natural)' : 'f/4.0 (Subtle)'} • {bokehIntensity}%
+                        </span>
+                      </div>
+
+                      {/* Aperture Preset Cards */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '14px' }}>
+                        {[
+                          { label: 'f/1.4 Prime', desc: 'Deep room defocus, creamy portrait bokeh', val: 85 },
+                          { label: 'f/2.8 Studio', desc: 'Balanced cinematic focus (Recommended)', val: 50 },
+                          { label: 'f/4.0 Soft-Focus', desc: 'Subtle background softening', val: 25 },
+                        ].map((ap) => {
+                          const isCur = Math.abs(bokehIntensity - ap.val) < 12;
+                          return (
+                            <button
+                              key={ap.val}
+                              onClick={() => setBokehIntensity(ap.val)}
+                              style={{
+                                padding: '10px 12px',
+                                borderRadius: 'var(--hw-radius-sm)',
+                                backgroundColor: isCur ? 'rgba(232, 44, 85, 0.15)' : 'var(--hw-bg-primary)',
+                                border: isCur ? '1.5px solid var(--hw-accent-rose)' : '1px solid var(--hw-border-subtle)',
+                                textAlign: 'left',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              <div style={{ fontSize: '12px', fontWeight: 700, color: isCur ? 'var(--hw-accent-rose)' : 'var(--hw-text-primary)', marginBottom: '3px' }}>
+                                {ap.label}
+                              </div>
+                              <div style={{ fontSize: '10px', color: 'var(--hw-text-muted)', lineHeight: 1.3 }}>
+                                {ap.desc}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Bokeh Depth Fine-Tuning Slider */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--hw-text-secondary)', minWidth: '85px', fontWeight: 600 }}>
+                          Blur Radius:
+                        </span>
+                        <input
+                          type="range"
+                          min={10}
+                          max={100}
+                          value={bokehIntensity}
+                          onChange={(e) => setBokehIntensity(Number(e.target.value))}
+                          style={{
+                            flex: 1,
+                            accentColor: 'var(--hw-accent-rose)',
+                            cursor: 'pointer',
+                          }}
+                        />
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--hw-text-primary)', minWidth: '40px', textAlign: 'right' }}>
+                          {bokehIntensity}%
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mode B: Virtual Backdrop Gallery & Upload */}
+                  {backgroundMode === 'backdrop' && (
+                    <div
+                      style={{
+                        padding: '16px',
+                        borderRadius: 'var(--hw-radius-md)',
+                        backgroundColor: 'var(--hw-surface-elevated)',
+                        border: '1px solid var(--hw-border-subtle)',
+                        marginBottom: '18px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                        <div>
+                          <h5 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--hw-text-primary)' }}>
+                            Virtual Studio Environments & Custom Photo Upload
+                          </h5>
+                          <p style={{ fontSize: '11px', color: 'var(--hw-text-muted)' }}>
+                            Select high-resolution studio artwork or import your personal room photo.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Backdrop Gallery Cards */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '14px' }}>
+                        {BACKDROP_PRESETS.map((bp) => {
+                          const isSel = selectedBackdropId === bp.id;
+                          return (
+                            <div
+                              key={bp.id}
+                              onClick={() => setSelectedBackdropId(bp.id)}
+                              style={{
+                                padding: '10px',
+                                borderRadius: 'var(--hw-radius-sm)',
+                                backgroundColor: isSel ? 'rgba(214, 189, 145, 0.12)' : 'var(--hw-bg-primary)',
+                                border: isSel ? '1.5px solid var(--hw-accent-champagne)' : '1px solid var(--hw-border-subtle)',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                gap: '10px',
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: '56px',
+                                  height: '42px',
+                                  borderRadius: 'var(--hw-radius-xs)',
+                                  background: bp.previewGradient,
+                                  flexShrink: 0,
+                                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                                }}
+                              />
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
+                                <div style={{ fontSize: '12px', fontWeight: 700, color: isSel ? 'var(--hw-accent-champagne)' : 'var(--hw-text-primary)' }}>
+                                  {bp.name}
+                                </div>
+                                <div style={{ fontSize: '10px', color: 'var(--hw-accent-rose)' }}>{bp.category}</div>
+                                <div style={{ fontSize: '10px', color: 'var(--hw-text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {bp.description}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Custom Backdrop Upload & Preview Box */}
+                      <div
+                        style={{
+                          borderTop: '1px solid var(--hw-border-subtle)',
+                          paddingTop: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          {customBackdropUrl && (
+                            <img
+                              src={customBackdropUrl}
+                              alt="Custom Backdrop"
+                              style={{
+                                width: '48px',
+                                height: '32px',
+                                objectFit: 'cover',
+                                borderRadius: 'var(--hw-radius-xs)',
+                                border: selectedBackdropId === 'custom' ? '1.5px solid var(--hw-accent-rose)' : '1px solid var(--hw-border-subtle)',
+                              }}
+                            />
+                          )}
+                          <div>
+                            <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--hw-text-primary)' }}>
+                              {customBackdropUrl ? 'Custom Image Loaded' : 'Import Custom Background Photo'}
+                            </div>
+                            <div style={{ fontSize: '10px', color: 'var(--hw-text-muted)' }}>
+                              Supports .jpg, .png, .webp (Saved locally on your machine)
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {customBackdropUrl && (
+                            <>
+                              <button
+                                onClick={() => setSelectedBackdropId('custom')}
+                                style={{
+                                  padding: '5px 10px',
+                                  borderRadius: 'var(--hw-radius-xs)',
+                                  backgroundColor: selectedBackdropId === 'custom' ? 'var(--hw-accent-rose)' : 'transparent',
+                                  color: selectedBackdropId === 'custom' ? '#FFFFFF' : 'var(--hw-text-secondary)',
+                                  border: '1px solid var(--hw-border-subtle)',
+                                  fontSize: '11px',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {selectedBackdropId === 'custom' ? 'Selected' : 'Use Photo'}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setCustomBackdropUrl(null);
+                                  if (selectedBackdropId === 'custom') setSelectedBackdropId('penthouse');
+                                }}
+                                title="Remove custom background"
+                                style={{
+                                  padding: '5px 8px',
+                                  borderRadius: 'var(--hw-radius-xs)',
+                                  backgroundColor: 'transparent',
+                                  color: 'var(--hw-status-error)',
+                                  border: '1px solid var(--hw-border-subtle)',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </>
+                          )}
+                          <button
+                            onClick={() => modalFileInputRef.current?.click()}
+                            style={{
+                              padding: '5px 12px',
+                              borderRadius: 'var(--hw-radius-xs)',
+                              backgroundColor: 'var(--hw-surface-elevated)',
+                              border: '1px solid var(--hw-border-focus)',
+                              color: 'var(--hw-text-primary)',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                            }}
+                          >
+                            <Upload size={12} />
+                            <span>{customBackdropUrl ? 'Replace Photo' : 'Upload Image'}</span>
+                          </button>
+                          <input
+                            ref={modalFileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleModalBackdropUpload}
+                            style={{ display: 'none' }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mode C: Virtual Green Screen Chroma Key Controls */}
+                  {backgroundMode === 'greenscreen' && (
+                    <div
+                      style={{
+                        padding: '16px',
+                        borderRadius: 'var(--hw-radius-md)',
+                        backgroundColor: 'var(--hw-surface-elevated)',
+                        border: '1px solid var(--hw-border-subtle)',
+                        marginBottom: '18px',
+                      }}
+                    >
+                      <div style={{ marginBottom: '12px' }}>
+                        <h5 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--hw-text-primary)', marginBottom: '2px' }}>
+                          Broadcast Chroma Key Screen
+                        </h5>
+                        <p style={{ fontSize: '11px', color: 'var(--hw-text-muted)' }}>
+                          Replaces room background with pure solid keying color for OBS Studio, Zoom, or Discord chroma key filters.
+                        </p>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '14px' }}>
+                        {GREENSCREEN_PRESETS.map((gp) => {
+                          const isSel = greenscreenColor.toLowerCase() === gp.hex.toLowerCase();
+                          return (
+                            <button
+                              key={gp.id}
+                              onClick={() => setGreenscreenColor(gp.hex)}
+                              style={{
+                                padding: '10px 12px',
+                                borderRadius: 'var(--hw-radius-sm)',
+                                backgroundColor: isSel ? 'rgba(255, 255, 255, 0.1)' : 'var(--hw-bg-primary)',
+                                border: isSel ? '1.5px solid var(--hw-border-focus)' : '1px solid var(--hw-border-subtle)',
+                                textAlign: 'left',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: '20px',
+                                  height: '20px',
+                                  borderRadius: '50%',
+                                  backgroundColor: gp.hex,
+                                  boxShadow: `0 0 10px ${gp.hex}`,
+                                  flexShrink: 0,
+                                }}
+                              />
+                              <div>
+                                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--hw-text-primary)' }}>
+                                  {gp.name}
+                                </div>
+                                <div style={{ fontSize: '10px', color: 'var(--hw-text-muted)' }}>{gp.hex}</div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Custom Hex Color Picker */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--hw-text-secondary)', fontWeight: 600 }}>
+                          Custom Chroma Hex:
+                        </span>
+                        <input
+                          type="color"
+                          value={greenscreenColor}
+                          onChange={(e) => setGreenscreenColor(e.target.value)}
+                          style={{
+                            width: '28px',
+                            height: '24px',
+                            border: 'none',
+                            borderRadius: 'var(--hw-radius-xs)',
+                            cursor: 'pointer',
+                            backgroundColor: 'transparent',
+                          }}
+                        />
+                        <input
+                          type="text"
+                          value={greenscreenColor}
+                          onChange={(e) => setGreenscreenColor(e.target.value)}
+                          style={{
+                            width: '90px',
+                            padding: '4px 8px',
+                            borderRadius: 'var(--hw-radius-xs)',
+                            backgroundColor: 'var(--hw-bg-primary)',
+                            border: '1px solid var(--hw-border-subtle)',
+                            color: 'var(--hw-text-primary)',
+                            fontSize: '11px',
+                            fontFamily: 'monospace',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* AI Segmentation Edge Refinement & Temporal Tuning */}
+                  <div
+                    style={{
+                      padding: '16px',
+                      borderRadius: 'var(--hw-radius-md)',
+                      backgroundColor: 'var(--hw-surface-elevated)',
+                      border: '1px solid var(--hw-border-subtle)',
+                      marginBottom: '16px',
+                    }}
+                  >
+                    <h5 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--hw-text-primary)', marginBottom: '2px' }}>
+                      AI Segmentation Silhouette Tuning
+                    </h5>
+                    <p style={{ fontSize: '11px', color: 'var(--hw-text-muted)', marginBottom: '14px' }}>
+                      Fine-tune temporal smoothing to eliminate edge fluttering and adjust smoothstep feathering for natural hair and contour blending.
+                    </p>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                      {/* Temporal Smoothing Slider */}
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--hw-text-secondary)' }}>
+                            Temporal Smoothing:
+                          </span>
+                          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--hw-accent-rose)' }}>
+                            {Math.round(temporalSmoothing * 100)}%
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0.5}
+                          max={0.95}
+                          step={0.05}
+                          value={temporalSmoothing}
+                          onChange={(e) => setTemporalSmoothing(parseFloat(e.target.value))}
+                          style={{
+                            width: '100%',
+                            accentColor: 'var(--hw-accent-rose)',
+                            cursor: 'pointer',
+                          }}
+                        />
+                        <span style={{ fontSize: '10px', color: 'var(--hw-text-muted)', marginTop: '4px', display: 'block' }}>
+                          Higher values prevent hair jitter; lower values react faster to quick hand gestures.
+                        </span>
+                      </div>
+
+                      {/* Edge Feathering Softness Slider */}
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--hw-text-secondary)' }}>
+                            Edge Feather Softness:
+                          </span>
+                          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--hw-accent-champagne)' }}>
+                            {Math.round(edgeFeather * 100)}%
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0.05}
+                          max={0.35}
+                          step={0.01}
+                          value={edgeFeather}
+                          onChange={(e) => setEdgeFeather(parseFloat(e.target.value))}
+                          style={{
+                            width: '100%',
+                            accentColor: 'var(--hw-accent-champagne)',
+                            cursor: 'pointer',
+                          }}
+                        />
+                        <span style={{ fontSize: '10px', color: 'var(--hw-text-muted)', marginTop: '4px', display: 'block' }}>
+                          Controls smoothstep transition width between subject and background.
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Hotkey Reminder Banner */}
+                  <div
+                    style={{
+                      borderTop: '1px solid var(--hw-border-subtle)',
+                      paddingTop: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <div>
+                      <h5 style={{ fontSize: '12px', fontWeight: 600, color: 'var(--hw-text-primary)', marginBottom: '2px' }}>
+                        Global Streamer Hotkey
+                      </h5>
+                      <p style={{ fontSize: '11px', color: 'var(--hw-text-muted)' }}>
+                        Press <kbd style={{ padding: '2px 6px', borderRadius: '3px', backgroundColor: 'var(--hw-surface-subtle)', border: '1px solid var(--hw-border-subtle)', fontSize: '10px', color: 'var(--hw-text-primary)' }}>Ctrl</kbd> + <kbd style={{ padding: '2px 6px', borderRadius: '3px', backgroundColor: 'var(--hw-surface-subtle)', border: '1px solid var(--hw-border-subtle)', fontSize: '10px', color: 'var(--hw-text-primary)' }}>Shift</kbd> + <kbd style={{ padding: '2px 6px', borderRadius: '3px', backgroundColor: 'var(--hw-surface-subtle)', border: '1px solid var(--hw-border-subtle)', fontSize: '10px', color: 'var(--hw-text-primary)' }}>K</kbd> to toggle DSLR Blur on/off on the fly.
+                      </p>
+                    </div>
+                    <div
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: 'var(--hw-radius-sm)',
+                        backgroundColor: backgroundMode === 'blur' ? 'rgba(232, 44, 85, 0.15)' : 'var(--hw-surface-elevated)',
+                        border: `1px solid ${backgroundMode === 'blur' ? 'var(--hw-accent-rose)' : 'var(--hw-border-subtle)'}`,
+                        fontSize: '11px',
+                        color: backgroundMode === 'blur' ? 'var(--hw-accent-rose)' : 'var(--hw-text-secondary)',
+                        fontWeight: 600,
+                      }}
+                    >
+                      DSLR Blur: {backgroundMode === 'blur' ? 'ACTIVE' : 'OFF'}
+                    </div>
                   </div>
                 </div>
               </>

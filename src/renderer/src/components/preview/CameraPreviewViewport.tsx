@@ -20,10 +20,14 @@ import {
   Sliders,
   PanelRightClose,
   PanelRightOpen,
+  Focus,
+  Upload,
 } from 'lucide-react';
 import { useAppStore, RESOLUTION_PRESETS } from '../../store/appStore';
 import { cameraManager } from '../../services/cameraManager';
 import { handTracker } from '../../tracking/handTracker';
+import { backgroundSegmenter } from '../../tracking/backgroundSegmenter';
+import { BACKDROP_PRESETS, GREENSCREEN_PRESETS } from '../../data/initialBackdrops';
 import { DiagnosticsRenderer } from '../../tracking/diagnosticsRenderer';
 import { effectManager } from '../../effects/effectManager';
 import { videoCompositor } from '../../services/videoCompositor';
@@ -37,6 +41,8 @@ export const CameraPreviewViewport: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const effectsCanvasRef = useRef<HTMLCanvasElement>(null);
+  const outputCanvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const diagnosticsRendererRef = useRef<DiagnosticsRenderer>(new DiagnosticsRenderer());
   const rafIdRef = useRef<number | null>(null);
   const fallbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -95,6 +101,19 @@ export const CameraPreviewViewport: React.FC = () => {
     switchMobileLens,
     isRightPanelCollapsed,
     toggleRightPanel,
+    backgroundMode,
+    bokehIntensity,
+    selectedBackdropId,
+    customBackdropUrl,
+    greenscreenColor,
+    edgeFeather,
+    temporalSmoothing,
+    setBackgroundMode,
+    setBokehIntensity,
+    setSelectedBackdropId,
+    setCustomBackdropUrl,
+    setGreenscreenColor,
+    toggleDSLRBlur,
   } = useAppStore();
 
   // Initialize hardware enumeration and device change listeners
@@ -152,6 +171,54 @@ export const CameraPreviewViewport: React.FC = () => {
     };
   }, []);
 
+  // Pre-initialize MediaPipe Background Segmenter with GPU acceleration
+  useEffect(() => {
+    backgroundSegmenter.initialize().catch((err) => {
+      console.warn('[BackgroundSegmenter] Initialization warning:', err);
+    });
+
+    return () => {
+      backgroundSegmenter.close();
+    };
+  }, []);
+
+  // Sync temporal smoothing & feathering with background segmenter
+  useEffect(() => {
+    backgroundSegmenter.setTemporalSmoothing(temporalSmoothing);
+  }, [temporalSmoothing]);
+
+  useEffect(() => {
+    backgroundSegmenter.setEdgeFeather(edgeFeather);
+  }, [edgeFeather]);
+
+  // Global hotkey Ctrl+Shift+K to toggle AI DSLR Blur on the fly
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'K' || e.key === 'k')) {
+        e.preventDefault();
+        toggleDSLRBlur();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [toggleDSLRBlur]);
+
+  // Custom Backdrop Upload Handler
+  const handleCustomBackdropUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (result) {
+        setCustomBackdropUrl(result);
+        setSelectedBackdropId('custom');
+        setBackgroundMode('backdrop');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Sync active effect with selectedEffectId
   useEffect(() => {
     effectManager.setActiveEffect(selectedEffectId);
@@ -180,6 +247,11 @@ export const CameraPreviewViewport: React.FC = () => {
       const liveDiagnostics = store.showSkeletonDiagnostics;
       const liveIntensity = store.activeIntensity;
       const liveResolution = store.selectedResolution;
+      const liveBackgroundMode = store.backgroundMode;
+      const liveBokehIntensity = store.bokehIntensity;
+      const liveSelectedBackdropId = store.selectedBackdropId;
+      const liveCustomBackdropUrl = store.customBackdropUrl;
+      const liveGreenscreenColor = store.greenscreenColor;
 
       const video = videoRef.current;
       const hasValidFrame = livePrivacyActive || (video && video.readyState >= 2 && video.videoWidth > 0);
@@ -270,7 +342,17 @@ export const CameraPreviewViewport: React.FC = () => {
           video.play().catch(() => {});
         }
 
-        // 3. Composite physical video + effect overlay and stream to Virtual Camera
+        // 3. AI Background Segmentation (only when DSLR Blur, Backdrop, or Green Screen is active)
+        let maskCanvas: HTMLCanvasElement | null = null;
+        if (liveBackgroundMode !== 'off' && !livePrivacyActive && video && video.readyState >= 2) {
+          try {
+            maskCanvas = backgroundSegmenter.segmentVideoFrame(video, now);
+          } catch (segErr) {
+            console.warn('[BackgroundSegmenter] Segmentation error:', segErr);
+          }
+        }
+
+        // 4. Composite physical video + optics + effect overlay and stream to Virtual Camera
         const frameW = (video && video.videoWidth) || liveResolution?.width || 1280;
         const frameH = (video && video.videoHeight) || liveResolution?.height || 720;
 
@@ -280,8 +362,27 @@ export const CameraPreviewViewport: React.FC = () => {
           effectsCanvasRef.current,
           liveMirrored,
           liveBypassActive,
-          livePrivacyActive
+          livePrivacyActive,
+          liveBackgroundMode,
+          liveBokehIntensity,
+          maskCanvas,
+          liveSelectedBackdropId,
+          liveCustomBackdropUrl,
+          liveGreenscreenColor
         );
+
+        // Blit to output canvas for on-screen viewport preview when background optics is active
+        if (outputCanvasRef.current && liveBackgroundMode !== 'off' && !livePrivacyActive) {
+          const outCanvas = outputCanvasRef.current;
+          if (outCanvas.width !== frameW || outCanvas.height !== frameH) {
+            outCanvas.width = frameW;
+            outCanvas.height = frameH;
+          }
+          const outCtx = outCanvas.getContext('2d');
+          if (outCtx) {
+            outCtx.drawImage(videoCompositor.getCanvas(), 0, 0);
+          }
+        }
 
         if (now - lastMetricsTimeRef.current >= 600) {
           lastMetricsTimeRef.current = now;
@@ -690,9 +791,24 @@ export const CameraPreviewViewport: React.FC = () => {
             width: '100%',
             height: '100%',
             objectFit: 'contain',
-            display: cameraStatus === 'active' ? 'block' : 'none',
+            display: cameraStatus === 'active' && backgroundMode === 'off' ? 'block' : 'none',
             transform: isMirrored ? 'scaleX(-1)' : 'none',
             transition: 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+          }}
+        />
+
+        {/* Hardware-accelerated Dual-Pass Optics Canvas (DSLR Blur / Backdrop / Green Screen) */}
+        <canvas
+          ref={outputCanvasRef}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            pointerEvents: 'none',
+            zIndex: 11,
+            display: cameraStatus === 'active' && backgroundMode !== 'off' ? 'block' : 'none',
           }}
         />
 
@@ -707,7 +823,7 @@ export const CameraPreviewViewport: React.FC = () => {
             objectFit: 'contain',
             pointerEvents: 'none',
             zIndex: 12,
-            display: cameraStatus === 'active' ? 'block' : 'none',
+            display: cameraStatus === 'active' && backgroundMode === 'off' ? 'block' : 'none',
           }}
         />
 
@@ -1209,6 +1325,325 @@ export const CameraPreviewViewport: React.FC = () => {
           </div>
         )}
 
+        {/* Floating Viewport Optics HUD Control Bar */}
+        {cameraStatus === 'active' && !isPrivacyShutterActive && (
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '16px',
+              left: '16px',
+              zIndex: 25,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+              padding: '6px 8px',
+              borderRadius: 'var(--hw-radius-md)',
+              backgroundColor: 'rgba(16, 14, 14, 0.88)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid var(--hw-border-medium)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6)',
+              maxWidth: '460px',
+            }}
+          >
+            {/* Primary Mode Selector */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  paddingRight: '6px',
+                  borderRight: '1px solid var(--hw-border-subtle)',
+                  marginRight: '2px',
+                }}
+              >
+                <Focus size={13} color="var(--hw-accent-champagne)" />
+                <span
+                  style={{
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    letterSpacing: '0.06em',
+                    color: 'var(--hw-text-secondary)',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Optics
+                </span>
+              </div>
+
+              {/* Off Mode */}
+              <button
+                onClick={() => setBackgroundMode('off')}
+                style={{
+                  padding: '3px 8px',
+                  borderRadius: 'var(--hw-radius-xs)',
+                  backgroundColor: backgroundMode === 'off' ? 'var(--hw-surface-elevated)' : 'transparent',
+                  border: backgroundMode === 'off' ? '1px solid var(--hw-border-focus)' : '1px solid transparent',
+                  color: backgroundMode === 'off' ? 'var(--hw-text-primary)' : 'var(--hw-text-muted)',
+                  fontSize: '11px',
+                  fontWeight: backgroundMode === 'off' ? 600 : 400,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                Off
+              </button>
+
+              {/* DSLR Bokeh Blur */}
+              <button
+                onClick={() => setBackgroundMode('blur')}
+                style={{
+                  padding: '3px 9px',
+                  borderRadius: 'var(--hw-radius-xs)',
+                  backgroundColor: backgroundMode === 'blur' ? 'var(--hw-accent-rose-soft)' : 'transparent',
+                  border: backgroundMode === 'blur' ? '1px solid var(--hw-accent-rose)' : '1px solid transparent',
+                  color: backgroundMode === 'blur' ? 'var(--hw-accent-rose)' : 'var(--hw-text-muted)',
+                  fontSize: '11px',
+                  fontWeight: backgroundMode === 'blur' ? 600 : 400,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <span>DSLR Blur</span>
+                {backgroundMode === 'blur' && (
+                  <span
+                    style={{
+                      fontSize: '9px',
+                      padding: '1px 4px',
+                      borderRadius: '3px',
+                      backgroundColor: 'rgba(232, 44, 85, 0.3)',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {bokehIntensity >= 70 ? 'f/1.4' : bokehIntensity >= 40 ? 'f/2.8' : 'f/4.0'}
+                  </span>
+                )}
+              </button>
+
+              {/* Virtual Studio Backdrop */}
+              <button
+                onClick={() => setBackgroundMode('backdrop')}
+                style={{
+                  padding: '3px 9px',
+                  borderRadius: 'var(--hw-radius-xs)',
+                  backgroundColor: backgroundMode === 'backdrop' ? 'rgba(214, 189, 145, 0.15)' : 'transparent',
+                  border: backgroundMode === 'backdrop' ? '1px solid var(--hw-accent-champagne)' : '1px solid transparent',
+                  color: backgroundMode === 'backdrop' ? 'var(--hw-accent-champagne)' : 'var(--hw-text-muted)',
+                  fontSize: '11px',
+                  fontWeight: backgroundMode === 'backdrop' ? 600 : 400,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                Backdrop
+              </button>
+
+              {/* Chroma Green Screen */}
+              <button
+                onClick={() => setBackgroundMode('greenscreen')}
+                style={{
+                  padding: '3px 9px',
+                  borderRadius: 'var(--hw-radius-xs)',
+                  backgroundColor: backgroundMode === 'greenscreen' ? 'rgba(52, 199, 89, 0.15)' : 'transparent',
+                  border: backgroundMode === 'greenscreen' ? '1px solid #34c759' : '1px solid transparent',
+                  color: backgroundMode === 'greenscreen' ? '#34c759' : 'var(--hw-text-muted)',
+                  fontSize: '11px',
+                  fontWeight: backgroundMode === 'greenscreen' ? 600 : 400,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                Chroma Key
+              </button>
+            </div>
+
+            {/* Mode-Specific Sub-Controls: DSLR Aperture Presets */}
+            {backgroundMode === 'blur' && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  paddingTop: '4px',
+                  borderTop: '1px solid var(--hw-border-subtle)',
+                }}
+              >
+                <span style={{ fontSize: '10px', color: 'var(--hw-text-muted)', fontWeight: 600 }}>Aperture:</span>
+                {[
+                  { label: 'f/1.4 Dreamy', val: 85 },
+                  { label: 'f/2.8 Studio', val: 50 },
+                  { label: 'f/4.0 Subtle', val: 25 },
+                ].map((ap) => (
+                  <button
+                    key={ap.val}
+                    onClick={() => setBokehIntensity(ap.val)}
+                    style={{
+                      padding: '2px 6px',
+                      borderRadius: 'var(--hw-radius-xs)',
+                      backgroundColor: Math.abs(bokehIntensity - ap.val) < 12 ? 'var(--hw-accent-rose)' : 'rgba(255, 255, 255, 0.06)',
+                      color: Math.abs(bokehIntensity - ap.val) < 12 ? '#FFFFFF' : 'var(--hw-text-secondary)',
+                      border: 'none',
+                      fontSize: '10px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {ap.label}
+                  </button>
+                ))}
+                <input
+                  type="range"
+                  min={10}
+                  max={100}
+                  value={bokehIntensity}
+                  onChange={(e) => setBokehIntensity(Number(e.target.value))}
+                  style={{
+                    width: '60px',
+                    height: '4px',
+                    accentColor: 'var(--hw-accent-rose)',
+                    cursor: 'pointer',
+                    marginLeft: 'auto',
+                  }}
+                  title={`Blur Depth (${bokehIntensity}%)`}
+                />
+              </div>
+            )}
+
+            {/* Mode-Specific Sub-Controls: Backdrop Gallery */}
+            {backgroundMode === 'backdrop' && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  paddingTop: '4px',
+                  borderTop: '1px solid var(--hw-border-subtle)',
+                  overflowX: 'auto',
+                }}
+              >
+                {BACKDROP_PRESETS.map((bp) => (
+                  <button
+                    key={bp.id}
+                    onClick={() => setSelectedBackdropId(bp.id)}
+                    style={{
+                      padding: '2px 7px',
+                      borderRadius: 'var(--hw-radius-xs)',
+                      backgroundColor: selectedBackdropId === bp.id ? 'var(--hw-accent-champagne)' : 'rgba(255, 255, 255, 0.06)',
+                      color: selectedBackdropId === bp.id ? '#141211' : 'var(--hw-text-secondary)',
+                      border: 'none',
+                      fontSize: '10px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {bp.name.split(' ')[0]}
+                  </button>
+                ))}
+
+                {customBackdropUrl && (
+                  <button
+                    onClick={() => setSelectedBackdropId('custom')}
+                    style={{
+                      padding: '2px 7px',
+                      borderRadius: 'var(--hw-radius-xs)',
+                      backgroundColor: selectedBackdropId === 'custom' ? 'var(--hw-accent-rose)' : 'rgba(255, 255, 255, 0.06)',
+                      color: selectedBackdropId === 'custom' ? '#FFFFFF' : 'var(--hw-text-secondary)',
+                      border: 'none',
+                      fontSize: '10px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <img src={customBackdropUrl} alt="" style={{ width: '12px', height: '12px', borderRadius: '2px', objectFit: 'cover' }} />
+                    <span>My Photo</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    padding: '2px 7px',
+                    borderRadius: 'var(--hw-radius-xs)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                    color: 'var(--hw-text-secondary)',
+                    border: 'none',
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                  }}
+                >
+                  <Upload size={10} />
+                  <span>Upload</span>
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleCustomBackdropUpload}
+                  style={{ display: 'none' }}
+                />
+              </div>
+            )}
+
+            {/* Mode-Specific Sub-Controls: Chroma Key Presets */}
+            {backgroundMode === 'greenscreen' && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  paddingTop: '4px',
+                  borderTop: '1px solid var(--hw-border-subtle)',
+                }}
+              >
+                <span style={{ fontSize: '10px', color: 'var(--hw-text-muted)', fontWeight: 600 }}>Chroma Color:</span>
+                {GREENSCREEN_PRESETS.map((gp) => (
+                  <button
+                    key={gp.id}
+                    onClick={() => setGreenscreenColor(gp.hex)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '2px 7px',
+                      borderRadius: 'var(--hw-radius-xs)',
+                      backgroundColor: greenscreenColor === gp.hex ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                      border: greenscreenColor === gp.hex ? '1px solid var(--hw-border-focus)' : '1px solid transparent',
+                      color: 'var(--hw-text-primary)',
+                      fontSize: '10px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: gp.hex,
+                        boxShadow: `0 0 6px ${gp.hex}`,
+                      }}
+                    />
+                    <span>{gp.name.split(' ')[0]}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Center Overlay: Standby State */}
         {cameraStatus === 'standby' && (
           <div
@@ -1470,6 +1905,26 @@ export const CameraPreviewViewport: React.FC = () => {
           >
             <Sparkles size={13} strokeWidth={1.8} />
             Skeleton: {showSkeletonDiagnostics ? 'On' : 'Off'}
+          </button>
+
+          <button
+            onClick={toggleDSLRBlur}
+            title="Toggle AI DSLR Blur (Ctrl + Shift + K)"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: 'var(--hw-radius-sm)',
+              backgroundColor: backgroundMode === 'blur' ? 'var(--hw-surface-elevated)' : 'transparent',
+              border: `1px solid ${backgroundMode === 'blur' ? 'var(--hw-accent-rose)' : 'var(--hw-border-subtle)'}`,
+              color: backgroundMode === 'blur' ? 'var(--hw-accent-rose)' : 'var(--hw-text-muted)',
+              fontSize: '11px',
+              transition: 'all var(--hw-transition-fast)',
+            }}
+          >
+            <Focus size={13} strokeWidth={1.8} />
+            <span>AI Blur: {backgroundMode === 'blur' ? 'On' : 'Off'}</span>
           </button>
         </div>
 

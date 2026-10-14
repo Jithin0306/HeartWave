@@ -12,6 +12,7 @@ import { GestureEvent } from '../types/gesture';
 import { INITIAL_EFFECTS } from '../data/initialEffects';
 import { cameraManager } from '../services/cameraManager';
 import { CompositorMetrics, VirtualOutputStatus } from '../types/compositor';
+import { BackgroundMode } from '../types/background';
 import { videoCompositor } from '../services/videoCompositor';
 import { soundEngine } from '../services/soundEngine';
 import { mobileCamService } from '../services/mobileCamService';
@@ -247,6 +248,23 @@ interface AppState {
   soundVolume: number;
   setSoundEnabled: (enabled: boolean) => void;
   setSoundVolume: (volume: number) => void;
+
+  // AI Background Optics & Virtual Green Screen
+  backgroundMode: BackgroundMode;
+  bokehIntensity: number;
+  selectedBackdropId: string;
+  customBackdropUrl: string | null;
+  greenscreenColor: string;
+  edgeFeather: number;
+  temporalSmoothing: number;
+  setBackgroundMode: (mode: BackgroundMode) => void;
+  setBokehIntensity: (intensity: number) => void;
+  setSelectedBackdropId: (id: string) => void;
+  setCustomBackdropUrl: (url: string | null) => void;
+  setGreenscreenColor: (color: string) => void;
+  setEdgeFeather: (val: number) => void;
+  setTemporalSmoothing: (val: number) => void;
+  toggleDSLRBlur: () => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -606,5 +624,86 @@ export const useAppStore = create<AppState>((set, get) => ({
     const next = lens || (get().mobileLens === 'environment' ? 'user' : 'environment');
     set({ mobileLens: next });
     mobileCamService.sendLensRequest(next);
+  },
+
+  // AI Background Optics & Virtual Green Screen Implementation
+  backgroundMode: (() => {
+    try {
+      const saved = localStorage.getItem('hw_bg_mode') as BackgroundMode;
+      if (['off', 'blur', 'backdrop', 'greenscreen'].includes(saved)) return saved;
+    } catch {}
+    return 'off';
+  })(),
+  bokehIntensity: (() => {
+    try {
+      const saved = localStorage.getItem('hw_bokeh_intensity');
+      if (saved) return Number(saved);
+    } catch {}
+    return 50; // f/2.8 default cinematic aperture
+  })(),
+  selectedBackdropId: (() => {
+    try {
+      const saved = localStorage.getItem('hw_backdrop_id');
+      if (saved) return saved;
+    } catch {}
+    return 'penthouse';
+  })(),
+  customBackdropUrl: (() => {
+    try {
+      return localStorage.getItem('hw_custom_backdrop');
+    } catch {}
+    return null;
+  })(),
+  greenscreenColor: (() => {
+    try {
+      const saved = localStorage.getItem('hw_greenscreen_color');
+      if (saved) return saved;
+    } catch {}
+    return '#00FF00';
+  })(),
+  edgeFeather: 0.18,
+  temporalSmoothing: 0.75,
+
+  setBackgroundMode: (mode: BackgroundMode) => {
+    try {
+      localStorage.setItem('hw_bg_mode', mode);
+    } catch {}
+    set({ backgroundMode: mode });
+  },
+  setBokehIntensity: (intensity: number) => {
+    try {
+      localStorage.setItem('hw_bokeh_intensity', String(intensity));
+    } catch {}
+    set({ bokehIntensity: intensity });
+  },
+  setSelectedBackdropId: (id: string) => {
+    try {
+      localStorage.setItem('hw_backdrop_id', id);
+    } catch {}
+    set({ selectedBackdropId: id });
+  },
+  setCustomBackdropUrl: (url: string | null) => {
+    try {
+      if (url) localStorage.setItem('hw_custom_backdrop', url);
+      else localStorage.removeItem('hw_custom_backdrop');
+    } catch {}
+    set({ customBackdropUrl: url });
+  },
+  setGreenscreenColor: (color: string) => {
+    try {
+      localStorage.setItem('hw_greenscreen_color', color);
+    } catch {}
+    set({ greenscreenColor: color });
+  },
+  setEdgeFeather: (val: number) => {
+    set({ edgeFeather: val });
+  },
+  setTemporalSmoothing: (val: number) => {
+    set({ temporalSmoothing: val });
+  },
+  toggleDSLRBlur: () => {
+    const cur = get().backgroundMode;
+    const next = cur === 'blur' ? 'off' : 'blur';
+    get().setBackgroundMode(next);
   },
 }));

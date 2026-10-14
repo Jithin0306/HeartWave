@@ -1,4 +1,6 @@
 import { CompositorMetrics } from '../types/compositor';
+import { BackgroundMode } from '../types/background';
+import { BACKDROP_PRESETS } from '../data/initialBackdrops';
 import logoFullUrl from '../assets/logo-full.jpg';
 import logoIconUrl from '../assets/logo-icon.png';
 
@@ -9,6 +11,15 @@ export class VideoCompositor {
   private height: number = 720;
   private logoFullImg: HTMLImageElement | null = null;
   private logoIconImg: HTMLImageElement | null = null;
+
+  // Dual-pass segmentation foreground buffer
+  private foregroundCanvas: HTMLCanvasElement;
+  private fgCtx: CanvasRenderingContext2D | null;
+
+  // Cached Backdrop Image Elements
+  private backdropCache: Map<string, HTMLImageElement> = new Map();
+  private customBackdropImg: HTMLImageElement | null = null;
+  private lastCustomUrl: string | null = null;
 
   // Performance telemetry
   private frameCount: number = 0;
@@ -29,19 +40,39 @@ export class VideoCompositor {
       desynchronized: true, // Low-latency pipeline hint
       willReadFrequently: true, // Eliminates synchronous GPU readback stalls
     });
+
+    this.foregroundCanvas = document.createElement('canvas');
+    this.foregroundCanvas.width = this.width;
+    this.foregroundCanvas.height = this.height;
+    this.fgCtx = this.foregroundCanvas.getContext('2d', {
+      willReadFrequently: false,
+    });
+
     try {
       this.logoFullImg = new Image();
       this.logoFullImg.src = logoFullUrl;
       this.logoIconImg = new Image();
       this.logoIconImg.src = logoIconUrl;
     } catch {}
+
+    // Pre-cache built-in studio backdrop SVGs
+    this.preloadBackdrops();
+
     try {
       this.outputStream = this.canvas.captureStream(30);
     } catch {}
   }
 
+  private preloadBackdrops(): void {
+    BACKDROP_PRESETS.forEach((preset) => {
+      const img = new Image();
+      img.src = preset.imageUrl;
+      this.backdropCache.set(preset.id, img);
+    });
+  }
+
   /**
-   * Resize offscreen composition buffer to match active video resolution.
+   * Resize offscreen composition buffers to match active video resolution.
    */
   setResolution(width: number, height: number): void {
     if (this.width !== width || this.height !== height) {
@@ -49,18 +80,27 @@ export class VideoCompositor {
       this.height = height;
       this.canvas.width = width;
       this.canvas.height = height;
+      this.foregroundCanvas.width = width;
+      this.foregroundCanvas.height = height;
     }
   }
 
   /**
-   * Render composite video frame with physical camera, effects overlay, or privacy slate.
+   * Render composite video frame with physical camera, background optics (DSLR blur,
+   * virtual backdrops, chroma green screen), effects overlay, or privacy slate.
    */
   compositeFrame(
     video: CanvasImageSource,
     effectsCanvas: HTMLCanvasElement | null,
     isMirrored: boolean,
     bypassEffects: boolean,
-    isPrivacyShutterActive: boolean
+    isPrivacyShutterActive: boolean,
+    backgroundMode: BackgroundMode = 'off',
+    bokehIntensity: number = 50,
+    maskCanvas: HTMLCanvasElement | null = null,
+    selectedBackdropId: string = 'penthouse',
+    customBackdropUrl: string | null = null,
+    greenscreenColor: string = '#00FF00'
   ): CompositorMetrics {
     const startTime = performance.now();
     const ctx = this.ctx;
@@ -79,15 +119,74 @@ export class VideoCompositor {
     if (isPrivacyShutterActive) {
       this.renderPrivacySlate(ctx);
     } else {
-      // 2. Draw physical webcam video
-      ctx.save();
-      if (isMirrored) {
-        ctx.translate(this.width, 0);
-        ctx.scale(-1, 1);
-      }
+      const isOpticsActive = backgroundMode !== 'off' && maskCanvas !== null;
 
-      ctx.drawImage(video, 0, 0, this.width, this.height);
-      ctx.restore();
+      if (!isOpticsActive) {
+        // Standard single-pass rendering when background optics are off or initializing
+        ctx.save();
+        if (isMirrored) {
+          ctx.translate(this.width, 0);
+          ctx.scale(-1, 1);
+        }
+        ctx.drawImage(video, 0, 0, this.width, this.height);
+        ctx.restore();
+      } else {
+        // Dual-pass compositing:
+        // Pass 1: Prepare foreground subject cutout in offscreen buffer
+        if (this.fgCtx) {
+          this.fgCtx.clearRect(0, 0, this.width, this.height);
+          this.fgCtx.drawImage(video, 0, 0, this.width, this.height);
+          this.fgCtx.globalCompositeOperation = 'destination-in';
+          this.fgCtx.drawImage(maskCanvas, 0, 0, this.width, this.height);
+          this.fgCtx.globalCompositeOperation = 'source-over';
+        }
+
+        // Pass 2: Render background layer based on active mode
+        if (backgroundMode === 'blur') {
+          // Mode A: Cinematic DSLR Bokeh Blur (5px to 35px)
+          const blurPx = Math.max(4, Math.round(5 + (bokehIntensity / 100) * 30));
+          const pad = blurPx * 1.5; // Bleed padding prevents dark canvas edges
+
+          ctx.save();
+          if (isMirrored) {
+            ctx.translate(this.width, 0);
+            ctx.scale(-1, 1);
+          }
+          ctx.filter = `blur(${blurPx}px)`;
+          ctx.drawImage(video, -pad, -pad, this.width + pad * 2, this.height + pad * 2);
+          ctx.filter = 'none';
+
+          // Draw cutout foreground subject over blurred background
+          ctx.drawImage(this.foregroundCanvas, 0, 0, this.width, this.height);
+          ctx.restore();
+        } else if (backgroundMode === 'backdrop') {
+          // Mode B: Virtual Studio Backdrop
+          // Draw backdrop unmirrored so environment details/text remain natural
+          this.renderBackdrop(ctx, selectedBackdropId, customBackdropUrl);
+
+          // Draw foreground subject mirrored to match camera perspective
+          ctx.save();
+          if (isMirrored) {
+            ctx.translate(this.width, 0);
+            ctx.scale(-1, 1);
+          }
+          ctx.drawImage(this.foregroundCanvas, 0, 0, this.width, this.height);
+          ctx.restore();
+        } else if (backgroundMode === 'greenscreen') {
+          // Mode C: Virtual Green Screen Chroma Key
+          ctx.fillStyle = greenscreenColor || '#00FF00';
+          ctx.fillRect(0, 0, this.width, this.height);
+
+          // Draw foreground subject mirrored
+          ctx.save();
+          if (isMirrored) {
+            ctx.translate(this.width, 0);
+            ctx.scale(-1, 1);
+          }
+          ctx.drawImage(this.foregroundCanvas, 0, 0, this.width, this.height);
+          ctx.restore();
+        }
+      }
 
       // 3. Overlay procedural effects canvas (unless user activated bypass)
       if (!bypassEffects && effectsCanvas && effectsCanvas.width > 0 && effectsCanvas.height > 0) {
@@ -114,6 +213,44 @@ export class VideoCompositor {
       width: this.width,
       height: this.height,
     };
+  }
+
+  /**
+   * Renders the selected backdrop (cached preset or custom upload) onto target context.
+   */
+  private renderBackdrop(
+    ctx: CanvasRenderingContext2D,
+    backdropId: string,
+    customUrl: string | null
+  ): void {
+    const w = this.width;
+    const h = this.height;
+
+    if (backdropId === 'custom' && customUrl) {
+      if (this.lastCustomUrl !== customUrl || !this.customBackdropImg) {
+        this.lastCustomUrl = customUrl;
+        this.customBackdropImg = new Image();
+        this.customBackdropImg.src = customUrl;
+      }
+
+      if (this.customBackdropImg.complete && this.customBackdropImg.naturalWidth > 0) {
+        ctx.drawImage(this.customBackdropImg, 0, 0, w, h);
+        return;
+      }
+    }
+
+    // Check cached presets
+    const cached = this.backdropCache.get(backdropId) || this.backdropCache.get('penthouse');
+    if (cached && cached.complete && cached.naturalWidth > 0) {
+      ctx.drawImage(cached, 0, 0, w, h);
+    } else {
+      // Fallback dark studio gradient if image is still loading
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, '#1a1817');
+      grad.addColorStop(1, '#0e0d0c');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+    }
   }
 
   /**
