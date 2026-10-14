@@ -1,23 +1,46 @@
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
-const VERSION = '1.3.7';
+function getGithubToken() {
+  if (process.env.GITHUB_TOKEN) return process.env.GITHUB_TOKEN;
+  try {
+    const output = execSync('git credential fill', {
+      input: 'protocol=https\nhost=github.com\n',
+      encoding: 'utf-8'
+    });
+    const match = output.match(/password=(.+)/);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+  } catch (err) {
+    console.warn('Could not read token from git credential helper:', err.message);
+  }
+  return '';
+}
+
+const VERSION = '1.3.8';
 const TAG = `v${VERSION}`;
 const REPO = 'jithin0306/HeartWave';
-const TOKEN = process.env.GITHUB_TOKEN || '';
+const TOKEN = getGithubToken();
 
-const RELEASE_TITLE = `HeartWave v${VERSION} - Black & Gold Theme, Resolution Visibility & Clean Minimalist UI`;
+const RELEASE_TITLE = `HeartWave v${VERSION} - Collapsible Effects Studio, Default Home Mode & Studio Command Center`;
 const RELEASE_NOTES = `## HeartWave v${VERSION} Release Notes
 
-### 🖤 New Black & Gold Luxury Noir Theme
-- **Black & Gold Palette**: Added the all-new **Black & Gold** theme (\`blackgold\`), combining deep obsidian noir backgrounds (\`#0A0A0D\` / \`#121217\`) with gleaming 24k polished gold accents, golden glowing borders, and warm champagne typography.
-- **Bespoke Noir Gold Assets**: Custom metallic 24K gold heart emblem and master wordmark with radiant golden glowing drop shadows.
+### 🎛️ Collapsible Effects Studio (With 1-Click Restore)
+- **Collapsible Sidebar**: Easily collapse the Effects Studio (and Streamer Hub) with a single click using the new header collapse button (\`PanelRightClose\`).
+- **Panoramic 100% Viewport**: Collapsing the sidebar lets the camera preview expand to full screen width.
+- **Instant Restore**: Restore the studio anytime via the top-bar "Open Studio" button or the floating glassmorphic pill in the top-right corner of the viewport.
+- **Session Persistence**: Remembers your preferred layout via \`localStorage\` (\`hw_right_panel_collapsed\`).
 
-### 🔍 Crystal-Clear Resolution Selector Visibility
-- **Contrast & Visibility Overhaul**: Completely redesigned the top-right resolution selector across all themes. Now uses high-contrast theme-adaptive backgrounds with bold typography, gold slider icon, and custom chevron indicators—ensuring resolution options are 100% visible and sharp in White & Gold, Black & Gold, and all palettes.
+### 🏠 Default Home Studio Landing Mode
+- **Home by Default**: The software now automatically opens in **Home Studio** mode (\`activeNav: 'home'\`) on startup.
 
-### 🧹 Clean & Minimalist Interface (Tagline Removal)
-- **Tagline Removal**: Removed the theme tagline text from the TitleBar and the camera preview standby screen across all color themes for a clean, distraction-free broadcast experience.
+### 🚀 Distinctive & Unique Home Studio Experience
+- **Studio Command Center**: Dedicated command deck with live hardware & pipeline readiness chips (Camera feed with live FPS/resolution, MediaPipe 21-3D landmark tracker with quick toggle, DirectShow 60FPS broadcast pipe, and Wireless Mobile Cam).
+- **Quick-Fire Effects Shelf**: 6 instant 1-click effect trigger chips directly on the Home view with procedural harmonic sound feedback (Double Heart Glow, Rose Bloom Storm, Finger Heart Spark, Love Wave Ripple, Cupid's Golden Arrow, Angel Wings Aura).
+- **Interactive Studio Hub Launchpad**: 4 interactive visual cards below the viewport to instantly jump into **Couples Duo Mode**, **Romantic Visual FX**, **Streamer Broadcast Hub**, or **Wireless Mobile Camera**.
+- **Context-Specific Views**: When navigating to other tabs (\`couples\`, \`romantic\`, \`streamer\`, \`favorites\`), the launchpad cards tuck away to provide a focused workspace.
 
 ---
 ### 📦 Downloads

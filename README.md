@@ -164,7 +164,7 @@ npm run dev
 npm run build
 
 # Build standalone Windows installer with auto-updater manifest
-powershell -ExecutionPolicy Bypass -File .\scripts\build-release.ps1 -Version "1.3.7"
+powershell -ExecutionPolicy Bypass -File .\scripts\build-release.ps1 -Version "1.3.8"
 ```
 
 ---
