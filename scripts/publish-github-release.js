@@ -1,26 +1,23 @@
 const fs = require('fs');
 const path = require('path');
 
-const VERSION = '1.3.5';
+const VERSION = '1.3.6';
 const TAG = `v${VERSION}`;
 const REPO = 'jithin0306/HeartWave';
 const TOKEN = process.env.GITHUB_TOKEN || '';
 
-const RELEASE_TITLE = `HeartWave v${VERSION} - Remote Camera Freedom Controls & Orientation Guidance`;
+const RELEASE_TITLE = `HeartWave v${VERSION} - Royal Ivory & Gold Luxury Theme & Privacy Updates`;
 const RELEASE_NOTES = `## HeartWave v${VERSION} Release Notes
 
-### 🎛️ Full Remote Smartphone Camera Controls
-- **Remote Camera Freedom Controls**: Control your phone camera hardware directly from the PC desktop HUD or Settings panel.
-- **Remote Optical/Digital Zoom**: Smooth zoom slider (1.0x to 5.0x) with instant 1x, 2x, 3x presets communicated via WebRTC data channel.
-- **Remote Flashlight / Torch Toggle**: Turn your phone's camera flash on and off remotely from your PC with a single click.
-- **Rear Camera / Selfie Lens Switcher**: Effortlessly switch between rear back camera and front selfie camera from desktop with zero stream interruption.
-- **Mobile Zoom Shelf**: Added floating on-screen zoom slider and preset pills directly onto the smartphone web interface.
+### ✨ New Royal Ivory & Gold Luxury Theme
+- **First-Class Light Theme**: Introduced the prestigious **Royal Ivory & Gold** theme (\`gold\`), featuring luminous ivory porcelain backgrounds, radiant 24k polished gold accents, warm champagne highlights, and crisp obsidian typography.
+- **Bespoke 24K Gold Brand Assets**: High-contrast, metallic-embossed \`HEΛRT ♡-W ΛVE\` wordmark and 3D heart-lens emblem engineered specifically for light backgrounds.
+- **Theme-Adaptive Controls**: All dropdown selectors, viewport HUD badges, privacy overlays, and effect cards now adapt dynamically to the active palette.
+- **Instant Quick-Switching**: Switch between themes seamlessly from the top TitleBar quick picker or via **Settings & Preferences ➔ Appearance & Themes**.
 
-### 📱 16:9 Widescreen Landscape Guidance
-- **Orientation Lock Notice**: Prominent visual tips on both the mobile start screen and desktop QR pairing modal instructing users to turn **OFF Auto-Rotate Lock** for widescreen 16:9 landscape streaming.
-
-### ⚙️ Version Synchronization Fix
-- **Dynamic Version Reporting**: Resolved the static version display in Settings & Preferences dialog—now dynamically reads the live package and runtime version.
+### 🛡️ Privacy & Documentation Refinements
+- **Documentation Overhaul**: Cleaned up project documentation and removed camera feed screenshots from README.
+- **Zero-Lag In-App Auto-Updates**: Seamless cryptographic verification and auto-update delivery.
 
 ---
 ### 📦 Downloads
@@ -34,6 +31,15 @@ async function main() {
   const nsisDir = path.resolve('src-tauri/target/release/bundle/nsis');
   const msiDir = path.resolve('src-tauri/target/release/bundle/msi');
   const bundleDir = path.resolve('src-tauri/target/release/bundle');
+  const releaseDir = path.resolve('src-tauri/target/release');
+
+  // Copy standalone portable exe
+  const rawExe = path.join(releaseDir, 'heartwave.exe');
+  const portableExe = path.join(bundleDir, 'HeartWave-Portable.exe');
+  if (fs.existsSync(rawExe)) {
+    fs.copyFileSync(rawExe, portableExe);
+    console.log('✓ Prepared HeartWave-Portable.exe');
+  }
 
   const assetsToUpload = [
     {

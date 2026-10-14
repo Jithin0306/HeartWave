@@ -71,8 +71,8 @@ Don't have a high-end webcam? Turn your iPhone or Android phone into an ultra-lo
   - Control privacy, bypass mode, and virtual camera state even while gaming in full-screen.
 - **🎵 Procedural Audio Feedback**:
   - Zero-dependency Web Audio API synthesizer generates real-time harmonious acoustic chimes upon gesture triggers.
-- **🎨 4 Tailored Workspace Themes**:
-  - *Romantic Blush*, *Studio Neutral*, *Cyber Neon*, and *Midnight Slate* with authentic 3D typography.
+- **🎨 5 Tailored Workspace Themes**:
+  - *Royal Ivory & Gold*, *Romantic Blush*, *Studio Neutral*, *Cyber Neon*, and *Midnight Slate* with authentic 3D typography.
 - **🛡️ 100% Private & On-Device**:
   - Zero video frames or biometric data leave your computer. No cloud telemetry, no accounts required.
 - **🔄 Built-In Auto-Updates**:
@@ -83,7 +83,7 @@ Don't have a high-end webcam? Turn your iPhone or Android phone into an ultra-lo
 ## 📥 Quick Download & Installation
 
 1. Head over to the [**Latest Releases Page**](https://github.com/Jithin0306/HeartWave/releases/latest).
-2. Download **`HeartWave_1.3.3_x64-setup.exe`** (Installer) or **`HeartWave-Portable.exe`** (Standalone portable).
+2. Download **`HeartWave_1.3.6_x64-setup.exe`** (Installer) or **`HeartWave-Portable.exe`** (Standalone portable).
 3. Launch HeartWave.
 4. Select your camera or scan the QR code to use your phone, turn on **"Start Virtual Camera"** (or press `Ctrl+Shift+V`), and pick **Heartwave Virtual Camera** in your favorite streaming or meeting app!
 
@@ -164,7 +164,7 @@ npm run dev
 npm run build
 
 # Build standalone Windows installer with auto-updater manifest
-powershell -ExecutionPolicy Bypass -File .\scripts\build-release.ps1 -Version "1.3.3"
+powershell -ExecutionPolicy Bypass -File .\scripts\build-release.ps1 -Version "1.3.6"
 ```
 
 ---
