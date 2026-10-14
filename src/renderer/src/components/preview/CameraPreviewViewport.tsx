@@ -284,7 +284,7 @@ export const CameraPreviewViewport: React.FC = () => {
         // 1. Gesture Tracking (only when tracking active, not in bypass mode, and privacy shutter is off)
         let gestureResult = null;
         if (liveTrackingActive && !liveBypassActive && !livePrivacyActive && video && video.readyState >= 2) {
-          if (now - lastTrackingTimeRef.current >= 30) {
+          if (now - lastTrackingTimeRef.current >= 40) {
             lastTrackingTimeRef.current = now;
             try {
               lastGestureResultRef.current = handTracker.processVideoFrame(video, now);
@@ -310,7 +310,7 @@ export const CameraPreviewViewport: React.FC = () => {
         if (gestureResult) {
           effectManager.handleGestureEvent(gestureResult.gestureEvent);
 
-          if (liveDiagnostics && canvasRef.current && video) {
+          if (liveDiagnostics && canvasRef.current && video && !document.hidden) {
             const canvas = canvasRef.current;
             const targetW = video.videoWidth || liveResolution?.width || 1280;
             const targetH = video.videoHeight || liveResolution?.height || 720;
@@ -396,7 +396,7 @@ export const CameraPreviewViewport: React.FC = () => {
         );
 
         // Blit to output canvas for on-screen viewport preview when background optics is active
-        if (outputCanvasRef.current && liveBackgroundMode !== 'off' && !livePrivacyActive) {
+        if (outputCanvasRef.current && liveBackgroundMode !== 'off' && !livePrivacyActive && !document.hidden) {
           const outCanvas = outputCanvasRef.current;
           if (outCanvas.width !== frameW || outCanvas.height !== frameH) {
             outCanvas.width = frameW;
@@ -418,14 +418,24 @@ export const CameraPreviewViewport: React.FC = () => {
           const frame = videoCompositor.extractFrameBuffer();
           if (frame && window.heartwaveApi?.sendFrame) {
             isSendingFrameRef.current = true;
-            const sendPromise: any = window.heartwaveApi.sendFrame(frame.data, frame.width, frame.height, livePrivacyActive);
-            if (sendPromise && typeof sendPromise.finally === 'function') {
-              sendPromise
-                .catch(() => {})
-                .finally(() => {
-                  isSendingFrameRef.current = false;
-                });
-            } else {
+            const unlockTimeout = setTimeout(() => {
+              isSendingFrameRef.current = false;
+            }, 60);
+            try {
+              const sendPromise: any = window.heartwaveApi.sendFrame(frame.data, frame.width, frame.height, livePrivacyActive);
+              if (sendPromise && typeof sendPromise.finally === 'function') {
+                sendPromise
+                  .catch(() => {})
+                  .finally(() => {
+                    clearTimeout(unlockTimeout);
+                    isSendingFrameRef.current = false;
+                  });
+              } else {
+                clearTimeout(unlockTimeout);
+                isSendingFrameRef.current = false;
+              }
+            } catch {
+              clearTimeout(unlockTimeout);
               isSendingFrameRef.current = false;
             }
             framesSentCountRef.current++;
@@ -880,7 +890,7 @@ export const CameraPreviewViewport: React.FC = () => {
             height: '100%',
             objectFit: 'contain',
             display: cameraStatus === 'active' ? 'block' : 'none',
-            opacity: backgroundMode === 'off' ? 1 : 0.001,
+            opacity: 1,
             pointerEvents: 'none',
             zIndex: 1,
             transform: isMirrored ? 'scaleX(-1)' : 'none',

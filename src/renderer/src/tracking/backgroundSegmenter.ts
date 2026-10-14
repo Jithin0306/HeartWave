@@ -21,8 +21,16 @@ export class BackgroundSegmenter {
   private maskCtx: CanvasRenderingContext2D | null = null;
   private maskImageData: ImageData | null = null;
 
-  // Timestamp monotonicity safeguard
+  // Offscreen 256x256 GPU Downscaling Canvas (Bypasses WASM CPU Resizing)
+  private inputCanvas: HTMLCanvasElement;
+  private inputCtx: CanvasRenderingContext2D | null = null;
+
+  // Pre-computed Look-Up Table (LUT) for sub-millisecond edge feathering
+  private lut: Uint8Array = new Uint8Array(256);
+
+  // Cadence pacing & monotonicity safeguards
   private lastTimestamp: number = 0;
+  private lastInferTime: number = 0;
 
   constructor() {
     this.maskCanvas = document.createElement('canvas');
@@ -33,7 +41,6 @@ export class BackgroundSegmenter {
     });
     if (this.maskCtx) {
       this.maskImageData = this.maskCtx.createImageData(this.maskWidth, this.maskHeight);
-      // Pre-fill RGB channels with white (255)
       const data = this.maskImageData.data;
       for (let i = 0; i < data.length; i += 4) {
         data[i] = 255;     // R
@@ -41,6 +48,27 @@ export class BackgroundSegmenter {
         data[i + 2] = 255; // B
         data[i + 3] = 0;   // A (starts transparent)
       }
+    }
+
+    this.inputCanvas = document.createElement('canvas');
+    this.inputCanvas.width = this.maskWidth;
+    this.inputCanvas.height = this.maskHeight;
+    this.inputCtx = this.inputCanvas.getContext('2d', {
+      willReadFrequently: false,
+    });
+
+    this.updateLut();
+  }
+
+  private updateLut(): void {
+    const lowerBound = Math.max(0.01, this.edgeThreshold - this.edgeFeather);
+    const upperBound = Math.min(0.99, this.edgeThreshold + this.edgeFeather);
+    const invRange = 1.0 / (upperBound - lowerBound);
+    for (let i = 0; i < 256; i++) {
+      const val = i / 255.0;
+      const t = Math.max(0, Math.min(1, (val - lowerBound) * invRange));
+      const smoothVal = t * t * (3.0 - 2.0 * t);
+      this.lut[i] = (smoothVal * 255) | 0;
     }
   }
 
@@ -87,18 +115,30 @@ export class BackgroundSegmenter {
 
   /**
    * Perform real-time video frame segmentation and return the smoothed mask canvas.
+   * Leverages 256x256 GPU pre-scaling, LUT smoothing, and cached mask reuse.
    */
   segmentVideoFrame(
     videoSource: HTMLVideoElement | HTMLCanvasElement,
     timestamp: number = performance.now()
   ): HTMLCanvasElement | null {
     if (!this.isReady || !this.segmenter || !this.maskCtx || !this.maskImageData) {
-      return null;
+      return this.hasHistory ? this.maskCanvas : null;
     }
 
     const isVideo = videoSource instanceof HTMLVideoElement;
-    if (isVideo && (videoSource.readyState < 2 || videoSource.videoWidth === 0)) return null;
-    if (!isVideo && (videoSource.width === 0 || videoSource.height === 0)) return null;
+    if (isVideo && (videoSource.readyState < 2 || videoSource.videoWidth === 0)) {
+      return this.hasHistory ? this.maskCanvas : null;
+    }
+    if (!isVideo && (videoSource.width === 0 || videoSource.height === 0)) {
+      return this.hasHistory ? this.maskCanvas : null;
+    }
+
+    // High-cadence mask reuse: body silhouettes do not move significantly within 40ms.
+    // Reusing the cached mask between inference passes guarantees rock-solid 30-60 FPS.
+    if (this.hasHistory && timestamp - this.lastInferTime < 40) {
+      return this.maskCanvas;
+    }
+    this.lastInferTime = timestamp;
 
     // Guard monotonic timestamp progression for MediaPipe Video mode
     if (timestamp <= this.lastTimestamp) {
@@ -109,7 +149,13 @@ export class BackgroundSegmenter {
     let hasExtracted = false;
 
     try {
-      this.segmenter.segmentForVideo(videoSource, timestamp, (result) => {
+      // GPU Hardware pre-scale to 256x256 so MediaPipe doesn't waste CPU/WASM resizing 1080p frames
+      if (this.inputCtx) {
+        this.inputCtx.drawImage(videoSource, 0, 0, this.maskWidth, this.maskHeight);
+      }
+      const sourceForInference = this.inputCanvas || videoSource;
+
+      this.segmenter.segmentForVideo(sourceForInference, timestamp, (result) => {
         // MediaPipe SelfieSegmenter provides confidenceMasks where:
         // index 0: background confidence (1.0 = background, 0.0 = person)
         // index 1: person confidence (1.0 = person, 0.0 = background)
@@ -147,19 +193,14 @@ export class BackgroundSegmenter {
 
         const alpha = this.temporalAlpha;
         const oneMinusAlpha = 1.0 - alpha;
-        const lowerBound = Math.max(0.01, this.edgeThreshold - this.edgeFeather);
-        const upperBound = Math.min(0.99, this.edgeThreshold + this.edgeFeather);
-        const invRange = 1.0 / (upperBound - lowerBound);
+        const lut = this.lut;
 
         if (!this.hasHistory) {
           for (let i = 0; i < totalPixels; i++) {
             const raw = rawFloats[i];
             smoothed[i] = raw;
-
-            // Hermite smoothstep curve for natural edge feathering
-            const t = Math.max(0, Math.min(1, (raw - lowerBound) * invRange));
-            const smoothVal = t * t * (3.0 - 2.0 * t);
-            data[i * 4 + 3] = (smoothVal * 255) | 0;
+            const b = (raw * 255) | 0;
+            data[i * 4 + 3] = lut[b < 0 ? 0 : (b > 255 ? 255 : b)];
           }
           this.hasHistory = true;
         } else {
@@ -167,11 +208,8 @@ export class BackgroundSegmenter {
             const raw = rawFloats[i];
             const s = alpha * raw + oneMinusAlpha * smoothed[i];
             smoothed[i] = s;
-
-            // Hermite smoothstep curve
-            const t = Math.max(0, Math.min(1, (s - lowerBound) * invRange));
-            const smoothVal = t * t * (3.0 - 2.0 * t);
-            data[i * 4 + 3] = (smoothVal * 255) | 0;
+            const b = (s * 255) | 0;
+            data[i * 4 + 3] = lut[b < 0 ? 0 : (b > 255 ? 255 : b)];
           }
         }
 
@@ -186,7 +224,11 @@ export class BackgroundSegmenter {
       console.warn('[BackgroundSegmenter] Segmentation inference glitch:', err);
     }
 
-    return null;
+    return this.hasHistory ? this.maskCanvas : null;
+  }
+
+  getMaskCanvas(): HTMLCanvasElement | null {
+    return this.hasHistory ? this.maskCanvas : null;
   }
 
   setTemporalSmoothing(alpha: number): void {
@@ -195,10 +237,12 @@ export class BackgroundSegmenter {
 
   setEdgeFeather(feather: number): void {
     this.edgeFeather = Math.max(0.02, Math.min(0.4, feather));
+    this.updateLut();
   }
 
   setEdgeThreshold(threshold: number): void {
     this.edgeThreshold = Math.max(0.1, Math.min(0.95, threshold));
+    this.updateLut();
   }
 
   isInitialized(): boolean {
