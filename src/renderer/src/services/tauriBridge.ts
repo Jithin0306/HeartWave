@@ -23,6 +23,19 @@ function notifyStatus(status: typeof currentStatus) {
   });
 }
 
+function toBase64(u8: Uint8Array): string {
+  if (typeof (u8 as any).toBase64 === 'function') {
+    return (u8 as any).toBase64();
+  }
+  let binary = '';
+  const len = u8.byteLength;
+  const chunkSize = 0x8000;
+  for (let i = 0; i < len; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, u8.subarray(i, Math.min(i + chunkSize, len)) as any);
+  }
+  return btoa(binary);
+}
+
 export function initTauriBridge(): void {
   if (typeof window === 'undefined') return;
   if (!isTauri()) return;
@@ -50,15 +63,27 @@ export function initTauriBridge(): void {
         isBroadcasting: res.is_broadcasting,
       };
     },
-    sendFrame: (buffer: ArrayBuffer | Uint8Array, width: number, height: number, isPrivacy?: boolean) => {
-      const u8 = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
-      invoke('vcam_push_frame_raw', u8, {
-        headers: {
-          'x-width': String(width),
-          'x-height': String(height),
-          'x-privacy': isPrivacy ? 'true' : 'false',
+    sendFrame: async (buffer: ArrayBuffer | Uint8Array | Uint8ClampedArray, width: number, height: number, isPrivacy?: boolean) => {
+      let u8: Uint8Array;
+      if (buffer instanceof Uint8Array) {
+        u8 = buffer;
+      } else if (buffer instanceof ArrayBuffer) {
+        u8 = new Uint8Array(buffer);
+      } else {
+        u8 = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+      }
+
+      const b64 = toBase64(u8);
+      return invoke('vcam_push_frame', {
+        payload: {
+          base64: b64,
+          width,
+          height,
+          isPrivacy: isPrivacy || false,
         },
-      }).catch(() => {});
+      }).catch((e) => {
+        console.warn('[TauriBridge] vcam_push_frame error:', e);
+      });
     },
     sendTrayState: (_state) => {},
     onHotkeyPrivacy: (callback: () => void) => {

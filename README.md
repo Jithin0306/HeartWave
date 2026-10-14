@@ -91,13 +91,13 @@ HeartWave provides native binaries for Windows, macOS, and Linux:
 
 | Platform | Format | Instructions |
 | :--- | :--- | :--- |
-| **Windows 10 / 11** | `.exe` Setup (NSIS) | Run `HeartWave_1.3.15_x64-setup.exe` to install to user profile with desktop & start menu shortcuts. |
+| **Windows 10 / 11** | `.exe` Setup (NSIS) | Run `HeartWave_1.3.16_x64-setup.exe` to install to user profile with desktop & start menu shortcuts. |
 | **Windows (Portable)** | `.exe` Standalone | Run `HeartWave-Portable.exe` anywhere — zero installation required. |
-| **Windows Enterprise** | `.msi` Package | Run `HeartWave_1.3.15_x64_en-US.msi` for automated enterprise deployments. |
-| **macOS (Intel & Apple Silicon)** | `.dmg` Disk Image | Open `HeartWave_1.3.15.dmg` and drag HeartWave into your `/Applications` folder. Grant Camera permissions in *System Settings → Privacy & Security → Camera*. |
+| **Windows Enterprise** | `.msi` Package | Run `HeartWave_1.3.16_x64_en-US.msi` for automated enterprise deployments. |
+| **macOS (Intel & Apple Silicon)** | `.dmg` Disk Image | Open `HeartWave_1.3.16.dmg` and drag HeartWave into your `/Applications` folder. Grant Camera permissions in *System Settings → Privacy & Security → Camera*. |
 | **macOS (App Bundle)** | `.app.tar.gz` | Extract and run `HeartWave.app`. |
-| **Linux (Universal)** | `.AppImage` | Run `chmod +x HeartWave_1.3.15_amd64.AppImage` and double-click to launch on any modern distribution (Ubuntu, Fedora, Arch, Debian). |
-| **Linux (Debian/Ubuntu)** | `.deb` Package | Run `sudo dpkg -i heartwave_1.3.15_amd64.deb` to install system-wide. |
+| **Linux (Universal)** | `.AppImage` | Run `chmod +x HeartWave_1.3.16_amd64.AppImage` and double-click to launch on any modern distribution (Ubuntu, Fedora, Arch, Debian). |
+| **Linux (Debian/Ubuntu)** | `.deb` Package | Run `sudo dpkg -i heartwave_1.3.16_amd64.deb` to install system-wide. |
 
 > [!TIP]
 > Download the latest releases directly from the [**GitHub Releases Page**](https://github.com/Jithin0306/HeartWave/releases/latest).
@@ -196,7 +196,7 @@ npm run dev
 
 **Windows (NSIS Setup, Portable EXE & MSI):**
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\build-release.ps1 -Version "1.3.15"
+powershell -ExecutionPolicy Bypass -File .\scripts\build-release.ps1 -Version "1.3.16"
 ```
 
 **macOS (.dmg & .app):**

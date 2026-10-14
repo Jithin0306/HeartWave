@@ -61,16 +61,39 @@ fn vcam_status(state: State<SharedVcamBridge>) -> VcamStatus {
     }
 }
 
+#[derive(serde::Deserialize)]
+pub struct PushFramePayload {
+    pub base64: Option<String>,
+    pub rgba: Option<Vec<u8>>,
+    pub width: Option<u32>,
+    pub height: Option<u32>,
+    #[serde(rename = "isPrivacy")]
+    pub is_privacy: Option<bool>,
+}
+
 #[tauri::command]
 fn vcam_push_frame(
     state: State<SharedVcamBridge>,
-    rgba: Vec<u8>,
-    width: u32,
-    height: u32,
-    is_privacy: Option<bool>,
-) {
+    payload: PushFramePayload,
+) -> Result<(), String> {
+    let width = payload.width.unwrap_or(1280);
+    let height = payload.height.unwrap_or(720);
+    let is_privacy = payload.is_privacy.unwrap_or(false);
+
     let bridge = state.lock();
-    bridge.push_rgba_frame(&rgba, width, height, is_privacy.unwrap_or(false));
+
+    if let Some(b64) = payload.base64 {
+        use base64::Engine;
+        if let Ok(bytes) = base64::engine::general_purpose::STANDARD.decode(b64) {
+            bridge.push_rgba_frame(&bytes, width, height, is_privacy);
+            return Ok(());
+        }
+    } else if let Some(rgba) = payload.rgba {
+        bridge.push_rgba_frame(&rgba, width, height, is_privacy);
+        return Ok(());
+    }
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -78,9 +101,6 @@ fn vcam_push_frame_raw(
     request: tauri::ipc::Request<'_>,
     state: State<SharedVcamBridge>,
 ) -> Result<(), String> {
-    let tauri::ipc::InvokeBody::Raw(bytes) = request.body() else {
-        return Err("expected raw binary body".into());
-    };
     let width = request
         .headers()
         .get("x-width")
@@ -101,7 +121,28 @@ fn vcam_push_frame_raw(
         .unwrap_or(false);
 
     let bridge = state.lock();
-    bridge.push_rgba_frame(bytes, width, height, is_privacy);
+
+    match request.body() {
+        tauri::ipc::InvokeBody::Raw(bytes) => {
+            bridge.push_rgba_frame(bytes, width, height, is_privacy);
+        }
+        tauri::ipc::InvokeBody::Json(json) => {
+            if let Some(arr) = json.as_array() {
+                let bytes: Vec<u8> = arr.iter().filter_map(|v| v.as_u64().map(|n| n as u8)).collect();
+                bridge.push_rgba_frame(&bytes, width, height, is_privacy);
+            } else if let Some(obj) = json.as_object() {
+                if let Some(b64) = obj.get("base64").and_then(|v| v.as_str()) {
+                    use base64::Engine;
+                    if let Ok(bytes) = base64::engine::general_purpose::STANDARD.decode(b64) {
+                        bridge.push_rgba_frame(&bytes, width, height, is_privacy);
+                    }
+                } else if let Some(arr) = obj.get("rgba").and_then(|v| v.as_array()) {
+                    let bytes: Vec<u8> = arr.iter().filter_map(|v| v.as_u64().map(|n| n as u8)).collect();
+                    bridge.push_rgba_frame(&bytes, width, height, is_privacy);
+                }
+            }
+        }
+    }
     Ok(())
 }
 
@@ -265,3 +306,17 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while building tauri application");
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_vcam_bridge() {
+        let mut bridge = crate::vcam::VirtualCameraBridge::new();
+        let res = bridge.start(1280, 720);
+        assert!(res.is_ok());
+        let frame = vec![128u8; 1280 * 720 * 4];
+        bridge.push_rgba_frame(&frame, 1280, 720, false);
+        assert!(bridge.is_broadcasting());
+    }
+}
+

@@ -19,27 +19,25 @@ function getGithubToken() {
   return '';
 }
 
-const VERSION = '1.3.15';
+const VERSION = '1.3.16';
 const TAG = `v${VERSION}`;
 const REPO = 'jithin0306/HeartWave';
 const TOKEN = getGithubToken();
 
-const RELEASE_TITLE = `HeartWave v${VERSION} - OBS 60 FPS Zero-Copy Stream, Branded Installer & Multi-Platform Release`;
+const RELEASE_TITLE = `HeartWave v${VERSION} - OBS Virtual Camera Stream Fix & GitHub Multi-OS Actions CI/CD`;
 const RELEASE_NOTES = `## HeartWave v${VERSION} Release Notes
 
-### 🚀 Ultra-Fast Zero-Copy OBS DirectShow Broadcasting (Zero FPS Drops)
-- **Direct Binary IPC Streaming**: Completely eliminated the 450 MB/s JSON serialization bottleneck where raw RGBA frames were formerly converted into millions of JavaScript numbers every second.
-- **Tauri v2 Raw Binary Octet-Stream**: Upgraded \`vcam_push_frame_raw\` to consume raw pixel bytes directly from \`Uint8Array\` memory without JSON or Base64 decoding overhead.
-- **Flawless 30 / 60 FPS in OBS Studio**: Pushes smooth 720p/1080p frames directly into DirectShow shared memory (\`HeartWaveSharedVideo\`) with rock-solid stability and zero dropped frames.
+### 🎥 Fixed OBS Virtual Camera Output & Blinking Screen
+- **Universal Multi-Mode Frame Pipeline**: Resolved IPC communication barrier on Windows WebView2 by providing seamless Base64 decoding, direct buffer conversion, and legacy array handling in \`vcam_push_frame\`.
+- **Anti-Congestion Frame Throttling**: Added in-flight request lock and solid 30 FPS pacing in \`CameraPreviewViewport\`, preventing GPU/IPC queue backlog while maintaining smooth output in OBS Studio.
+- **Shared Memory Health**: Fixed \`HeartWaveCam.dll\` timeout cycle so OBS displays a persistent, rock-solid video feed without blinking or dropping offline.
 
-### 🎨 Custom Branded Installer & App Icon
-- **NSIS Setup Icon Customization**: Replaced the default NSIS generic globe-and-arrow icon with the official HeartWave 3D heart-lens brand logo (\`icons/icon.ico\`) for both the installer and uninstaller.
-- **Native High-DPI Visual Polish**: Windows Explorer now renders crisp, full-bleed HeartWave branding across setup executables, taskbar icons, and uninstallation entries.
+### 🌐 GitHub Actions Multi-Platform Release Fix
+- **Cryptographic Key Provisioning**: Configured signing key and password fallback in \`.github/workflows/release.yml\` enabling macOS (\`.dmg\`, \`.app\`) and Linux (\`.AppImage\`, \`.deb\`) GitHub Action runners to cleanly package and sign releases.
+- **Bundle Identifier Normalization**: Updated macOS bundle identifier to \`com.heartwave.desktop\` preventing macOS bundle name collision warnings.
 
-### 🌐 Multi-Platform Packaging Architecture (macOS & Linux)
-- **Cross-Platform Conditional Compilation**: Fully gated Windows-specific DirectShow MMF APIs behind \`#[cfg(windows)]\` and implemented clean platform stubs for macOS and Linux.
-- **Automated Multi-OS CI/CD Workflow**: Added GitHub Actions workflow supporting concurrent builds for Windows (\`.exe\` / \`.msi\`), macOS (\`.dmg\` / \`.app\`), and Linux (\`.AppImage\` / \`.deb\`).
-- **Comprehensive Platform Instructions**: Updated \`README.md\` with detailed installation commands, permission notes, and OBS Studio integration instructions.
+### 🎨 Installer Custom Icon
+- **NSIS Setup Icon Customization**: Windows setup executables, taskbar shortcuts, and uninstaller display the official HeartWave 3D brand logo.
 
 ---
 ### 📦 Windows Downloads

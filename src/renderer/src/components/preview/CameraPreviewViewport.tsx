@@ -56,6 +56,8 @@ export const CameraPreviewViewport: React.FC = () => {
   const audioKeepAliveRef = useRef<AudioKeepAlive | null>(null);
   const framesSentCountRef = useRef<number>(0);
   const lastTelemetryLogRef = useRef<number>(0);
+  const isSendingFrameRef = useRef<boolean>(false);
+  const lastFrameSendTimeRef = useRef<number>(0);
 
   const [isTrackerWarming, setIsTrackerWarming] = useState(false);
 
@@ -410,10 +412,16 @@ export const CameraPreviewViewport: React.FC = () => {
           setCompositorMetrics(compMetrics);
         }
 
-        if (liveVcamStatus === 'broadcasting') {
+        if (liveVcamStatus === 'broadcasting' && !isSendingFrameRef.current && (now - lastFrameSendTimeRef.current >= 33)) {
+          lastFrameSendTimeRef.current = now;
           const frame = videoCompositor.extractFrameBuffer();
           if (frame && window.heartwaveApi?.sendFrame) {
-            window.heartwaveApi.sendFrame(new Uint8Array(frame.data.buffer), frame.width, frame.height, livePrivacyActive);
+            isSendingFrameRef.current = true;
+            window.heartwaveApi.sendFrame(frame.data, frame.width, frame.height, livePrivacyActive)
+              ?.catch(() => {})
+              .finally(() => {
+                isSendingFrameRef.current = false;
+              });
             framesSentCountRef.current++;
           }
         }
