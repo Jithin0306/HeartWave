@@ -351,14 +351,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const devices = await cameraManager.enumerateDevices();
       const currentSelected = get().selectedDeviceId;
-      const deviceExists = devices.some((d) => d.id === currentSelected);
+      const isMobile = get().isMobileConnected;
+      const mobileDevice = get().availableDevices.find((d) => d.id === 'mobile-wireless');
+
+      const allDevices = isMobile && mobileDevice ? [mobileDevice, ...devices.filter((d) => d.id !== 'mobile-wireless')] : devices;
+      const deviceExists = allDevices.some((d) => d.id === currentSelected);
 
       set({
-        availableDevices: devices,
+        availableDevices: allDevices,
         selectedDeviceId: deviceExists
           ? currentSelected
-          : devices.length > 0
-          ? devices[0].id
+          : allDevices.length > 0
+          ? allDevices[0].id
           : '',
       });
     } catch (err) {

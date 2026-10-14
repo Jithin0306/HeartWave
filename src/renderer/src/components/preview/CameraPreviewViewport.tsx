@@ -140,8 +140,9 @@ export const CameraPreviewViewport: React.FC = () => {
     if (videoRef.current) {
       if (activeStream) {
         videoRef.current.srcObject = activeStream;
-        videoRef.current.volume = 0;
-        videoRef.current.muted = false;
+        videoRef.current.defaultMuted = true;
+        videoRef.current.muted = true;
+        videoRef.current.playsInline = true;
         videoRef.current.play().catch((err) => {
           console.warn('Auto-play was interrupted:', err);
         });
@@ -788,7 +789,7 @@ export const CameraPreviewViewport: React.FC = () => {
           ref={videoRef}
           autoPlay
           playsInline
-          muted={false}
+          muted={true}
           style={{
             width: '100%',
             height: '100%',

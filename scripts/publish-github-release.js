@@ -19,25 +19,19 @@ function getGithubToken() {
   return '';
 }
 
-const VERSION = '1.3.11';
+const VERSION = '1.3.12';
 const TAG = `v${VERSION}`;
 const REPO = 'jithin0306/HeartWave';
 const TOKEN = getGithubToken();
 
-const RELEASE_TITLE = `HeartWave v${VERSION} - Segmentation Stability Fix & Enlarged Taskbar Icon`;
+const RELEASE_TITLE = `HeartWave v${VERSION} - Mobile-to-PC Connection Resilience & Streaming Fix`;
 const RELEASE_NOTES = `## HeartWave v${VERSION} Release Notes
 
-### 🛡️ Segmentation Stability & Scanline Artifact Elimination
-- **Complete Elimination of Green Scanline Stripes**: Removed the morphological filter that caused sensor noise row-banding and restored rock-solid 1D confidence processing.
-- **Balanced Studio Optical Thresholding**: Calibrated default threshold to \`0.50\` with a crisp \`0.10\` feather softness band ([0.40, 0.60]), perfectly protecting dark clothing, indoor lighting shadows, and hair texture while maintaining a clean, anti-aliased edge.
-- **Rock-Solid Pipeline Across All Modes**: Flawless foreground isolation with zero bleed or tearing across DSLR Bokeh Blur, Virtual Backdrops, and Chroma Key Green Screen.
-
-### 🌟 Enlarged High-DPI Windows Taskbar Icon
-- **Full-Bleed Icon Assets**: Cropped excess 40% transparent padding and regenerated all platform icons (\`icon.ico\`, \`icon.png\`, square app logos) with \`tauri icon\`.
-- **+60% Larger Glyph**: The HeartWave heart emblem now fills the Windows taskbar slot cleanly, appearing bold, crisp, and high-resolution on all display scalings.
-
-### 🗑️ Quick-Remove Custom Backdrop HUD Button
-- **Split-Pill HUD Control**: Floating Optics HUD bar features an integrated \`×\` remove button directly on the "My Photo" pill for instant photo deletion without opening settings.
+### 📱 Mobile-to-PC Connection Resilience & Streaming Fix
+- **Prevented Device Enumeration Drops**: Fixed bug where system hardware webcam queries evicted active mobile wireless sessions from device lists and forced fallback to physical webcams.
+- **Signaling Collision Recovery**: Handled lingering PeerJS cloud socket locks (\`unavailable-id\`) by automatically generating fresh room IDs on the fly, eliminating infinite connection hangs.
+- **Media Stream Handshake Synchronization**: Modal pairing dialog now waits for incoming WebRTC audio/video streams before closing, preventing race conditions during peer connection.
+- **Autoplay Security Enforcement**: Enforced background canvas stream \`muted={true}\` and \`playsInline={true}\` attributes, guaranteeing frictionless video playback across all Chromium/WebView2 runtime policies.
 
 ---
 ### 📦 Downloads

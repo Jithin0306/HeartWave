@@ -321,7 +321,9 @@ class MobileCamService {
           try {
             conn.send({ type: 'HANDSHAKE_ACK', timestamp: Date.now() });
           } catch {}
-          this.state = 'connected';
+          if (this.activeStream) {
+            this.state = 'connected';
+          }
           this.notify();
         });
 
@@ -457,10 +459,9 @@ class MobileCamService {
       this.peer.on('error', (err: any) => {
         console.warn('[MobileCam] Peer error:', err);
         if (err.type === 'unavailable-id') {
-          console.log('[MobileCam] Room ID in use or socket lingering, retrying with same stable room ID in 1.5s...');
-          setTimeout(() => {
-            this.startServer();
-          }, 1500);
+          console.warn('[MobileCam] Room ID in use or lingering, generating fresh room ID...');
+          this.generateNewRoomId();
+          this.startServer();
           return;
         }
         if (err.type !== 'network') {
