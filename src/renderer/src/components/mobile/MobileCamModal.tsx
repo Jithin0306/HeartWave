@@ -41,9 +41,10 @@ export const MobileCamModal: React.FC = () => {
 
     const unsub = mobileCamService.subscribe((data) => {
       setTelemetry(data);
-      if (data.state === 'connected' && data.stream) {
-        attachMobileStream(data.stream, data.deviceName || 'Wireless Phone');
-        // Automatically close QR modal only when video stream is established
+      if (data.state === 'connected') {
+        if (data.stream) {
+          attachMobileStream(data.stream, data.deviceName || 'Wireless Phone');
+        }
         setIsMobileCamModalOpen(false);
       }
     });
@@ -53,12 +54,15 @@ export const MobileCamModal: React.FC = () => {
     };
   }, [isMobileCamModalOpen, attachMobileStream, setIsMobileCamModalOpen]);
 
-  // Secondary guarantee: auto-close if telemetry state flips to connected with active stream
+  // Secondary guarantee: auto-close if telemetry state flips to connected while modal is open
   useEffect(() => {
-    if (telemetry.state === 'connected' && telemetry.stream && isMobileCamModalOpen) {
+    if (telemetry.state === 'connected' && isMobileCamModalOpen) {
+      if (telemetry.stream) {
+        attachMobileStream(telemetry.stream, telemetry.deviceName || 'Wireless Phone');
+      }
       setIsMobileCamModalOpen(false);
     }
-  }, [telemetry.state, telemetry.stream, isMobileCamModalOpen, setIsMobileCamModalOpen]);
+  }, [telemetry.state, telemetry.stream, isMobileCamModalOpen, attachMobileStream, setIsMobileCamModalOpen]);
 
   if (!isMobileCamModalOpen) return null;
 
@@ -299,9 +303,9 @@ export const MobileCamModal: React.FC = () => {
                 {telemetry.roomId || 'Connecting...'}
               </span>
               <button
-                onClick={() => {
-                  mobileCamService.generateNewRoomId();
-                  mobileCamService.startServer();
+                onClick={async () => {
+                  await mobileCamService.generateNewRoomId();
+                  await mobileCamService.startServer();
                 }}
                 title="Generate new Room Code"
                 style={{

@@ -137,18 +137,30 @@ export const CameraPreviewViewport: React.FC = () => {
 
   // Bind active media stream to the HTMLVideoElement
   useEffect(() => {
-    if (videoRef.current) {
-      if (activeStream) {
-        videoRef.current.srcObject = activeStream;
-        videoRef.current.defaultMuted = true;
-        videoRef.current.muted = true;
-        videoRef.current.playsInline = true;
-        videoRef.current.play().catch((err) => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (activeStream) {
+      video.srcObject = activeStream;
+      video.defaultMuted = true;
+      video.muted = true;
+      video.playsInline = true;
+
+      const playVideo = () => {
+        video.play().catch((err) => {
           console.warn('Auto-play was interrupted:', err);
         });
+      };
+
+      if (video.readyState >= 1) {
+        playVideo();
       } else {
-        videoRef.current.srcObject = null;
+        video.onloadedmetadata = () => {
+          playVideo();
+        };
       }
+    } else {
+      video.srcObject = null;
     }
   }, [activeStream]);
 

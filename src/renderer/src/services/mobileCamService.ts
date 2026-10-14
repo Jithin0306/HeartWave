@@ -68,8 +68,14 @@ class MobileCamService {
   private listeners = new Set<MobileCamListener>();
   private pingTimer: any = null;
 
+  private onDisconnectCallback: (() => void) | null = null;
+
   constructor() {
     this.initRoomId();
+  }
+
+  public setOnDisconnect(cb: (() => void) | null) {
+    this.onDisconnectCallback = cb;
   }
 
   private initRoomId() {
@@ -81,12 +87,43 @@ class MobileCamService {
     if (saved && saved.startsWith('hw-cam-')) {
       this.roomId = saved;
     } else {
-      this.generateNewRoomId();
+      this.roomId = 'hw-cam-main';
     }
     this.updatePortalUrls();
   }
 
-  public generateNewRoomId() {
+  public async generateQrCodes(): Promise<void> {
+    try {
+      const qrOpts: QRCode.QRCodeToDataURLOptions = {
+        width: 360,
+        margin: 1,
+        color: {
+          dark: '#141211',
+          light: '#FFFFFF',
+        },
+        errorCorrectionLevel: 'M',
+      };
+
+      const [wifiQr, usbQr] = await Promise.all([
+        QRCode.toDataURL(this.wifiPortalUrl, qrOpts),
+        QRCode.toDataURL(this.usbPortalUrl, qrOpts),
+      ]);
+
+      this.wifiQrDataUrl = wifiQr;
+      this.usbQrDataUrl = usbQr;
+      this.notify();
+    } catch (err: any) {
+      console.error('Failed to generate QR Codes:', err);
+    }
+  }
+
+  public async generateNewRoomId(): Promise<void> {
+    if (this.peer) {
+      try {
+        this.peer.destroy();
+      } catch {}
+      this.peer = null;
+    }
     const chars = '23456789abcdefghjkmnpqrstuvwxyz';
     let code = '';
     for (let i = 0; i < 6; i++) {
@@ -97,6 +134,7 @@ class MobileCamService {
       localStorage.setItem('hw_mobile_room_id', this.roomId);
     } catch {}
     this.updatePortalUrls();
+    await this.generateQrCodes();
   }
 
   private updatePortalUrls() {
@@ -244,8 +282,11 @@ class MobileCamService {
    * Start waiting for mobile phone connection
    */
   public async startServer(): Promise<void> {
-    if (this.peer && this.peer.open && !this.peer.destroyed) {
+    if (this.peer && this.peer.open && !this.peer.destroyed && this.peer.id === this.roomId) {
       this.state = this.activeStream ? 'connected' : 'waiting';
+      if (!this.wifiQrDataUrl || !this.usbQrDataUrl) {
+        await this.generateQrCodes();
+      }
       this.notify();
       return;
     }
@@ -255,31 +296,8 @@ class MobileCamService {
     }
     this.state = 'waiting';
     this.errorMessage = '';
-    this.notify();
 
-    // Generate high-resolution QR Codes
-    try {
-      const qrOpts: QRCode.QRCodeToDataURLOptions = {
-        width: 360,
-        margin: 1,
-        color: {
-          dark: '#141211',
-          light: '#FFFFFF',
-        },
-        errorCorrectionLevel: 'M',
-      };
-
-      const [wifiQr, usbQr] = await Promise.all([
-        QRCode.toDataURL(this.wifiPortalUrl, qrOpts),
-        QRCode.toDataURL(this.usbPortalUrl, qrOpts),
-      ]);
-
-      this.wifiQrDataUrl = wifiQr;
-      this.usbQrDataUrl = usbQr;
-      this.notify();
-    } catch (err: any) {
-      console.error('Failed to generate QR Codes:', err);
-    }
+    await this.generateQrCodes();
 
     // Clean up previous dead peer if any
     if (this.peer) {
@@ -321,9 +339,7 @@ class MobileCamService {
           try {
             conn.send({ type: 'HANDSHAKE_ACK', timestamp: Date.now() });
           } catch {}
-          if (this.activeStream) {
-            this.state = 'connected';
-          }
+          this.state = 'connected';
           this.notify();
         });
 
@@ -395,10 +411,12 @@ class MobileCamService {
 
           pc.ontrack = (event) => {
             console.log('[MobileCam] Direct ontrack event received:', event.track.kind);
-            const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
-            this.activeStream = stream;
-            this.state = 'connected';
-            this.notify();
+            if (!this.activeStream || this.activeStream.getVideoTracks().length === 0) {
+              const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
+              this.activeStream = stream;
+              this.state = 'connected';
+              this.notify();
+            }
 
             if (this.currentDataConn && this.currentDataConn.open) {
               try {
@@ -459,9 +477,10 @@ class MobileCamService {
       this.peer.on('error', (err: any) => {
         console.warn('[MobileCam] Peer error:', err);
         if (err.type === 'unavailable-id') {
-          console.warn('[MobileCam] Room ID in use or lingering, generating fresh room ID...');
-          this.generateNewRoomId();
-          this.startServer();
+          console.log('[MobileCam] Room ID in use or socket lingering, retrying with same stable room ID in 1.5s...');
+          setTimeout(() => {
+            this.startServer();
+          }, 1500);
           return;
         }
         if (err.type !== 'network') {
@@ -492,6 +511,11 @@ class MobileCamService {
     this.currentCall = null;
     this.isDirect = false;
     this.notify();
+    if (this.onDisconnectCallback) {
+      try {
+        this.onDisconnectCallback();
+      } catch {}
+    }
   }
 
   /**

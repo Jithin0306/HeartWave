@@ -162,6 +162,9 @@ pub fn run() {
             let menu = Menu::with_items(app, &[&show_i, &vcam_i, &privacy_i, &quit_i])?;
 
             let icon = app.default_window_icon().cloned().unwrap();
+            if let Some(w) = app.get_webview_window("main") {
+                let _ = w.set_icon(icon.clone());
+            }
             let _tray = TrayIconBuilder::new()
                 .icon(icon)
                 .tooltip("HeartWave - Gesture Virtual Camera")

@@ -19,19 +19,26 @@ function getGithubToken() {
   return '';
 }
 
-const VERSION = '1.3.12';
+const VERSION = '1.3.13';
 const TAG = `v${VERSION}`;
 const REPO = 'jithin0306/HeartWave';
 const TOKEN = getGithubToken();
 
-const RELEASE_TITLE = `HeartWave v${VERSION} - Mobile-to-PC Connection Resilience & Streaming Fix`;
+const RELEASE_TITLE = `HeartWave v${VERSION} - Native Taskbar Icon Restoration & Rock-Solid Phone Connection`;
 const RELEASE_NOTES = `## HeartWave v${VERSION} Release Notes
 
-### 📱 Mobile-to-PC Connection Resilience & Streaming Fix
-- **Prevented Device Enumeration Drops**: Fixed bug where system hardware webcam queries evicted active mobile wireless sessions from device lists and forced fallback to physical webcams.
-- **Signaling Collision Recovery**: Handled lingering PeerJS cloud socket locks (\`unavailable-id\`) by automatically generating fresh room IDs on the fly, eliminating infinite connection hangs.
-- **Media Stream Handshake Synchronization**: Modal pairing dialog now waits for incoming WebRTC audio/video streams before closing, preventing race conditions during peer connection.
-- **Autoplay Security Enforcement**: Enforced background canvas stream \`muted={true}\` and \`playsInline={true}\` attributes, guaranteeing frictionless video playback across all Chromium/WebView2 runtime policies.
+### 🌟 Native High-DPI Windows Taskbar Icon
+- **Restored Original Pristine Master Icon**: Fully restored original high-resolution icons across Windows, macOS, and Linux without artificial scaling or downsample blurring.
+- **Explicit Win32 Taskbar Binding**: Configured native Windows \`set_icon\` on window initialization to ensure the Taskbar icon displays full-size, crisp, and high-DPI across all Windows scaling settings.
+
+### 📱 Flawless Phone-to-PC Camera Connection
+- **Stable Room ID Preservation**: Retained stable room architecture (\`hw-cam-main\` / saved code) so phones connect immediately upon QR scan or URL open without room ID mismatch.
+- **Graceful Lingering Socket Recovery**: Handled cloud signaling socket retries cleanly without regenerating new random room codes.
+- **Clean Disconnect & Stream Fallback Lifecycle**: Integrated clean store-level detach hook so desktop gracefully transitions back to physical camera if mobile disconnects, with instant re-attachment on reconnect.
+- **HTML5 WebRTC Auto-Play Optimization**: Added \`onloadedmetadata\` safety pipeline guaranteeing video playback starts without interruption.
+
+### 🧹 Workspace Cleanup
+- Removed temporary build caches and obsolete bundles, reducing folder footprint from 8.8 GB down to under 2.9 GB.
 
 ---
 ### 📦 Downloads

@@ -420,6 +420,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ selectedDeviceId: deviceId });
     if (deviceId !== 'mobile-wireless' && get().cameraStatus === 'active') {
       await get().startCamera();
+    } else if (deviceId === 'mobile-wireless') {
+      const activeStream = mobileCamService.getTelemetry().stream;
+      if (activeStream) {
+        set({ activeStream, cameraStatus: 'active', cameraError: null });
+      }
     }
   },
 
@@ -711,3 +716,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().setBackgroundMode(next);
   },
 }));
+
+mobileCamService.setOnDisconnect(() => {
+  const state = useAppStore.getState();
+  if (state.isMobileConnected) {
+    state.detachMobileStream();
+  }
+});
