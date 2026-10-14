@@ -18,6 +18,8 @@ import {
   Zap,
   ZoomIn,
   Sliders,
+  PanelRightClose,
+  PanelRightOpen,
 } from 'lucide-react';
 import { useAppStore, RESOLUTION_PRESETS } from '../../store/appStore';
 import { cameraManager } from '../../services/cameraManager';
@@ -28,6 +30,7 @@ import { videoCompositor } from '../../services/videoCompositor';
 import { VirtualOutputBar } from '../output/VirtualOutputBar';
 import { AudioKeepAlive } from '../../services/audioKeepAlive';
 import { soundEngine } from '../../services/soundEngine';
+import { HomeStudioDeck } from '../home/HomeStudioDeck';
 import logoIcon from '../../assets/logo-icon.png';
 
 export const CameraPreviewViewport: React.FC = () => {
@@ -90,6 +93,8 @@ export const CameraPreviewViewport: React.FC = () => {
     setMobileZoom,
     toggleMobileTorch,
     switchMobileLens,
+    isRightPanelCollapsed,
+    toggleRightPanel,
   } = useAppStore();
 
   // Initialize hardware enumeration and device change listeners
@@ -392,7 +397,8 @@ export const CameraPreviewViewport: React.FC = () => {
         flexDirection: 'column',
         backgroundColor: 'var(--hw-bg-primary)',
         padding: '16px 20px',
-        overflow: 'hidden',
+        overflowY: 'auto',
+        overflowX: 'hidden',
         minWidth: '500px',
       }}
     >
@@ -414,7 +420,7 @@ export const CameraPreviewViewport: React.FC = () => {
               letterSpacing: '-0.01em',
             }}
           >
-            Camera Preview
+            {activeNav === 'home' ? 'Studio Command Center' : 'Camera Preview'}
           </h2>
 
           {/* Status Badge */}
@@ -615,6 +621,45 @@ export const CameraPreviewViewport: React.FC = () => {
             </select>
             <ChevronDown size={11} strokeWidth={2} style={{ color: 'var(--hw-text-muted)', flexShrink: 0 }} />
           </div>
+
+          {/* Studio Panel Collapse / Expand Button */}
+          <button
+            onClick={toggleRightPanel}
+            title={isRightPanelCollapsed ? 'Open Effects Studio Sidebar' : 'Collapse Effects Studio (Full Viewport)'}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '5px 12px',
+              borderRadius: 'var(--hw-radius-sm)',
+              backgroundColor: isRightPanelCollapsed
+                ? 'var(--hw-surface-elevated)'
+                : 'var(--hw-bg-secondary)',
+              border: isRightPanelCollapsed
+                ? '1px solid var(--hw-accent-rose)'
+                : '1px solid var(--hw-border-subtle)',
+              fontSize: '11px',
+              fontWeight: 600,
+              color: isRightPanelCollapsed ? 'var(--hw-accent-rose)' : 'var(--hw-text-secondary)',
+              cursor: 'pointer',
+              transition: 'all var(--hw-transition-fast)',
+              boxShadow: isRightPanelCollapsed ? '0 0 10px rgba(215, 154, 166, 0.25)' : 'none',
+              flexShrink: 0,
+            }}
+          >
+            {isRightPanelCollapsed ? (
+              <>
+                <Sparkles size={13} color="var(--hw-accent-rose)" />
+                <span>Open Studio</span>
+                <PanelRightOpen size={13} />
+              </>
+            ) : (
+              <>
+                <PanelRightClose size={13} />
+                <span>Hide Studio</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
 
@@ -1012,7 +1057,7 @@ export const CameraPreviewViewport: React.FC = () => {
           style={{
             position: 'absolute',
             top: '16px',
-            right: '36px',
+            right: isRightPanelCollapsed ? '150px' : '36px',
             zIndex: 20,
             display: 'flex',
             alignItems: 'center',
@@ -1073,6 +1118,37 @@ export const CameraPreviewViewport: React.FC = () => {
             }}
           />
         </div>
+
+        {/* Floating Open Studio Pill inside viewport when collapsed */}
+        {isRightPanelCollapsed && (
+          <button
+            onClick={toggleRightPanel}
+            title="Open Effects Studio"
+            style={{
+              position: 'absolute',
+              top: '16px',
+              right: '36px',
+              zIndex: 25,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '5px 12px',
+              borderRadius: 'var(--hw-radius-sm)',
+              backgroundColor: 'var(--hw-bg-secondary)',
+              border: '1px solid var(--hw-accent-rose)',
+              boxShadow: 'var(--hw-shadow-md)',
+              fontSize: '11px',
+              fontWeight: 600,
+              color: 'var(--hw-accent-rose)',
+              cursor: 'pointer',
+              transition: 'all var(--hw-transition-fast)',
+            }}
+          >
+            <Sparkles size={12} color="var(--hw-accent-rose)" />
+            <span>Open Studio</span>
+            <PanelRightOpen size={13} />
+          </button>
+        )}
 
         {/* Active Gesture Detection Floating Feedback Pill */}
         {cameraStatus === 'active' && activeGestureEvent && activeGestureEvent.gesture !== 'none' && (
@@ -1502,6 +1578,9 @@ export const CameraPreviewViewport: React.FC = () => {
 
       {/* Phase 5: Processed Video Output Pipeline Control Bar */}
       <VirtualOutputBar />
+
+      {/* Unique Home Studio Command Deck: Telemetry, Quick-Fire Shelf, and 4 Studio Launchpad Cards */}
+      {activeNav === 'home' && <HomeStudioDeck />}
     </section>
   );
 };

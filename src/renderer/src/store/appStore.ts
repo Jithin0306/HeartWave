@@ -221,6 +221,9 @@ interface AppState {
   setIsSettingsOpen: (open: boolean) => void;
   isInspectorOpen: boolean;
   setIsInspectorOpen: (open: boolean) => void;
+  isRightPanelCollapsed: boolean;
+  toggleRightPanel: () => void;
+  setRightPanelCollapsed: (collapsed: boolean) => void;
   isMobileCamModalOpen: boolean;
   setIsMobileCamModalOpen: (open: boolean) => void;
 
@@ -296,7 +299,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  activeNav: 'romantic',
+  activeNav: 'home',
   setActiveNav: (nav) => set({ activeNav: nav }),
 
   effects: INITIAL_EFFECTS,
@@ -529,6 +532,27 @@ export const useAppStore = create<AppState>((set, get) => ({
   setIsSettingsOpen: (open) => set({ isSettingsOpen: open }),
   isInspectorOpen: true,
   setIsInspectorOpen: (open) => set({ isInspectorOpen: open }),
+  isRightPanelCollapsed: (() => {
+    try {
+      return localStorage.getItem('hw_right_panel_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  })(),
+  toggleRightPanel: () =>
+    set((state) => {
+      const next = !state.isRightPanelCollapsed;
+      try {
+        localStorage.setItem('hw_right_panel_collapsed', String(next));
+      } catch {}
+      return { isRightPanelCollapsed: next };
+    }),
+  setRightPanelCollapsed: (collapsed: boolean) => {
+    try {
+      localStorage.setItem('hw_right_panel_collapsed', String(collapsed));
+    } catch {}
+    set({ isRightPanelCollapsed: collapsed });
+  },
 
   // Wireless Mobile Camera
   isMobileCamModalOpen: false,

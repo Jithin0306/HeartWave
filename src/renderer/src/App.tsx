@@ -10,7 +10,15 @@ import { useAppStore } from './store/appStore';
 import { mobileCamService } from './services/mobileCamService';
 
 export const App: React.FC = () => {
-  const { activeNav, togglePrivacyShutter, toggleBypass, toggleVirtualOutput, toggleMirror, attachMobileStream } = useAppStore();
+  const {
+    activeNav,
+    isRightPanelCollapsed,
+    togglePrivacyShutter,
+    toggleBypass,
+    toggleVirtualOutput,
+    toggleMirror,
+    attachMobileStream,
+  } = useAppStore();
 
   useEffect(() => {
     // 1. Keep Desktop room always warmed up and listening so mobile phone connects instantly
@@ -73,7 +81,7 @@ export const App: React.FC = () => {
         <CameraPreviewViewport />
 
         {/* Right Panel: Curated Effects Library or Dedicated Streamer Hub */}
-        {activeNav === 'streamer' ? <StreamerHub /> : <EffectsLibrary />}
+        {!isRightPanelCollapsed && (activeNav === 'streamer' ? <StreamerHub /> : <EffectsLibrary />)}
       </main>
 
       {/* Settings & Privacy Modal */}

@@ -11,6 +11,7 @@ import {
   Zap,
   Smartphone,
   QrCode,
+  PanelRightClose,
 } from 'lucide-react';
 import { useAppStore, RESOLUTION_PRESETS } from '../../store/appStore';
 
@@ -32,6 +33,7 @@ export const StreamerHub: React.FC = () => {
     isMobileConnected,
     mobileDeviceName,
     setIsMobileCamModalOpen,
+    toggleRightPanel,
   } = useAppStore();
 
   const isVirtualOutputActive = virtualOutputStatus === 'broadcasting';
@@ -87,32 +89,62 @@ export const StreamerHub: React.FC = () => {
             </h2>
           </div>
 
-          <span
-            style={{
-              fontSize: '10px',
-              padding: '2px 8px',
-              borderRadius: 'var(--hw-radius-full)',
-              backgroundColor: isVirtualOutputActive
-                ? 'rgba(52, 199, 89, 0.15)'
-                : 'var(--hw-surface-elevated)',
-              color: isVirtualOutputActive ? '#34c759' : 'var(--hw-text-muted)',
-              border: `1px solid ${isVirtualOutputActive ? 'rgba(52, 199, 89, 0.3)' : 'var(--hw-border-subtle)'}`,
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-            }}
-          >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span
               style={{
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                backgroundColor: isVirtualOutputActive ? '#34c759' : 'var(--hw-status-idle)',
+                fontSize: '10px',
+                padding: '2px 8px',
+                borderRadius: 'var(--hw-radius-full)',
+                backgroundColor: isVirtualOutputActive
+                  ? 'rgba(52, 199, 89, 0.15)'
+                  : 'var(--hw-surface-elevated)',
+                color: isVirtualOutputActive ? '#34c759' : 'var(--hw-text-muted)',
+                border: `1px solid ${isVirtualOutputActive ? 'rgba(52, 199, 89, 0.3)' : 'var(--hw-border-subtle)'}`,
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
               }}
-            />
-            {isVirtualOutputActive ? 'LIVE ON AIR' : 'STANDBY'}
-          </span>
+            >
+              <span
+                style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  backgroundColor: isVirtualOutputActive ? '#34c759' : 'var(--hw-status-idle)',
+                }}
+              />
+              {isVirtualOutputActive ? 'LIVE ON AIR' : 'STANDBY'}
+            </span>
+
+            <button
+              onClick={toggleRightPanel}
+              title="Collapse Broadcast Hub"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '26px',
+                height: '26px',
+                borderRadius: 'var(--hw-radius-sm)',
+                backgroundColor: 'var(--hw-surface-elevated)',
+                border: '1px solid var(--hw-border-subtle)',
+                color: 'var(--hw-text-muted)',
+                cursor: 'pointer',
+                transition: 'all var(--hw-transition-fast)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--hw-surface-hover)';
+                e.currentTarget.style.color = 'var(--hw-text-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--hw-surface-elevated)';
+                e.currentTarget.style.color = 'var(--hw-text-muted)';
+              }}
+            >
+              <PanelRightClose size={14} />
+            </button>
+          </div>
         </div>
 
         <p style={{ fontSize: '11px', color: 'var(--hw-text-muted)', lineHeight: 1.4 }}>

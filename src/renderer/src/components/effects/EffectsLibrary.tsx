@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Users, Heart, Star, Sparkles } from 'lucide-react';
+import { Search, Users, Heart, Star, Sparkles, PanelRightClose } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { EffectCard } from './EffectCard';
 import { EffectInspector } from './EffectInspector';
@@ -23,6 +23,7 @@ export const EffectsLibrary: React.FC = () => {
     categoryFilter,
     setCategoryFilter,
     setActiveNav,
+    toggleRightPanel,
   } = useAppStore();
 
   const handleCategorySelect = (catId: EffectCategory) => {
@@ -103,17 +104,47 @@ export const EffectsLibrary: React.FC = () => {
               {getHeaderTitle()}
             </h2>
           </div>
-          <span
-            style={{
-              fontSize: '11px',
-              color: 'var(--hw-text-muted)',
-              backgroundColor: 'var(--hw-surface-elevated)',
-              padding: '2px 8px',
-              borderRadius: 'var(--hw-radius-full)',
-            }}
-          >
-            {filteredEffects.length} Effects
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span
+              style={{
+                fontSize: '11px',
+                color: 'var(--hw-text-muted)',
+                backgroundColor: 'var(--hw-surface-elevated)',
+                padding: '2px 8px',
+                borderRadius: 'var(--hw-radius-full)',
+              }}
+            >
+              {filteredEffects.length} Effects
+            </span>
+
+            <button
+              onClick={toggleRightPanel}
+              title="Collapse Effects Studio"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '26px',
+                height: '26px',
+                borderRadius: 'var(--hw-radius-sm)',
+                backgroundColor: 'var(--hw-surface-elevated)',
+                border: '1px solid var(--hw-border-subtle)',
+                color: 'var(--hw-text-muted)',
+                cursor: 'pointer',
+                transition: 'all var(--hw-transition-fast)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--hw-surface-hover)';
+                e.currentTarget.style.color = 'var(--hw-text-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--hw-surface-elevated)';
+                e.currentTarget.style.color = 'var(--hw-text-muted)';
+              }}
+            >
+              <PanelRightClose size={14} />
+            </button>
+          </div>
         </div>
 
         {/* Search Bar */}
