@@ -25,7 +25,7 @@ export interface HeartwaveApi {
   startVirtualCamera: (width?: number, height?: number, fps?: number) => Promise<boolean>;
   stopVirtualCamera: () => Promise<boolean>;
   getVirtualCameraStatus: () => Promise<{ isRegistered: boolean; isBroadcasting: boolean }>;
-  sendFrame: (buffer: ArrayBuffer, width: number, height: number) => void;
+  sendFrame: (buffer: ArrayBuffer | Uint8Array | Uint8ClampedArray, width: number, height: number, isPrivacy?: boolean) => Promise<any> | void;
   sendTrayState: (state: { isPrivacy: boolean; isBypass: boolean; isVirtualOutput: boolean }) => void;
   onHotkeyPrivacy: (callback: () => void) => () => void;
   onHotkeyBypass: (callback: () => void) => () => void;
@@ -57,8 +57,8 @@ const api: HeartwaveApi = {
     ipcRenderer.invoke('vcam:start', width, height, fps),
   stopVirtualCamera: () => ipcRenderer.invoke('vcam:stop'),
   getVirtualCameraStatus: () => ipcRenderer.invoke('vcam:status'),
-  sendFrame: (buffer: ArrayBuffer, width: number, height: number) =>
-    ipcRenderer.send('vcam:frame', buffer, width, height),
+  sendFrame: (buffer: any, width: number, height: number, isPrivacy?: boolean) =>
+    ipcRenderer.send('vcam:frame', buffer, width, height, isPrivacy),
   sendTrayState: (state) => ipcRenderer.send('tray:state-update', state),
   onHotkeyPrivacy: (callback: () => void) => {
     const listener = () => callback();

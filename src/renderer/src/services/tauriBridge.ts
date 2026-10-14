@@ -73,17 +73,29 @@ export function initTauriBridge(): void {
         u8 = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
       }
 
-      const b64 = toBase64(u8);
-      return invoke('vcam_push_frame', {
-        payload: {
-          base64: b64,
-          width,
-          height,
-          isPrivacy: isPrivacy || false,
-        },
-      }).catch((e) => {
-        console.warn('[TauriBridge] vcam_push_frame error:', e);
-      });
+      try {
+        // Fast path: Zero-copy raw binary transfer directly to Rust IPC without base64 or JSON overhead
+        return await invoke('vcam_push_frame_raw', u8, {
+          headers: {
+            'x-width': String(width),
+            'x-height': String(height),
+            'x-privacy': isPrivacy ? 'true' : 'false',
+          },
+        });
+      } catch (err) {
+        // Resilient fallback to base64 if raw binary IPC encounters an issue
+        const b64 = toBase64(u8);
+        return await invoke('vcam_push_frame', {
+          payload: {
+            base64: b64,
+            width,
+            height,
+            isPrivacy: isPrivacy || false,
+          },
+        }).catch((e) => {
+          console.warn('[TauriBridge] vcam_push_frame fallback error:', e);
+        });
+      }
     },
     sendTrayState: (_state) => {},
     onHotkeyPrivacy: (callback: () => void) => {

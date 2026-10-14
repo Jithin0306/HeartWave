@@ -412,16 +412,23 @@ export const CameraPreviewViewport: React.FC = () => {
           setCompositorMetrics(compMetrics);
         }
 
-        if (liveVcamStatus === 'broadcasting' && !isSendingFrameRef.current && (now - lastFrameSendTimeRef.current >= 33)) {
+        if (liveVcamStatus === 'broadcasting' && !isSendingFrameRef.current && (now - lastFrameSendTimeRef.current >= 28)) {
           lastFrameSendTimeRef.current = now;
-          const frame = videoCompositor.extractFrameBuffer();
+          const targetW = liveResolution?.width || 1280;
+          const targetH = liveResolution?.height || 720;
+          const frame = videoCompositor.extractFrameBuffer(targetW, targetH);
           if (frame && window.heartwaveApi?.sendFrame) {
             isSendingFrameRef.current = true;
-            window.heartwaveApi.sendFrame(frame.data, frame.width, frame.height, livePrivacyActive)
-              ?.catch(() => {})
-              .finally(() => {
-                isSendingFrameRef.current = false;
-              });
+            const sendPromise: any = window.heartwaveApi.sendFrame(frame.data, frame.width, frame.height, livePrivacyActive);
+            if (sendPromise && typeof sendPromise.finally === 'function') {
+              sendPromise
+                .catch(() => {})
+                .finally(() => {
+                  isSendingFrameRef.current = false;
+                });
+            } else {
+              isSendingFrameRef.current = false;
+            }
             framesSentCountRef.current++;
           }
         }

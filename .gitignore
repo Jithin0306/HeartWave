@@ -5,6 +5,7 @@ release/
 .DS_Store
 *.log
 resources/bin/*_old*.dll
+resources/bin/*.old.dll
 *.obj
 *.lib
 *.exp

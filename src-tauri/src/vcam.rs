@@ -184,6 +184,8 @@ mod imp {
 
                 let idx = self.write_index.fetch_add(1, Ordering::SeqCst);
                 let header_slice = std::slice::from_raw_parts_mut(self.view_ptr, HEADER_SIZE);
+                header_slice[8..12].copy_from_slice(&(w as u32).to_le_bytes());
+                header_slice[12..16].copy_from_slice(&(h as u32).to_le_bytes());
                 header_slice[20..24].copy_from_slice(&(idx + 1).to_le_bytes());
 
                 let now_ticks = std::time::SystemTime::now()
@@ -191,6 +193,7 @@ mod imp {
                     .unwrap_or_default()
                     .as_nanos() as u64;
                 header_slice[24..32].copy_from_slice(&now_ticks.to_le_bytes());
+                header_slice[32..36].copy_from_slice(&(nv12_size as u32).to_le_bytes());
                 header_slice[36..40]
                     .copy_from_slice(&(if is_privacy { 1u32 } else { 0u32 }).to_le_bytes());
 

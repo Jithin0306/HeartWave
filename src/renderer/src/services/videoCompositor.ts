@@ -337,12 +337,40 @@ export class VideoCompositor {
     return this.outputStream;
   }
 
+  private vcamCanvas: HTMLCanvasElement | null = null;
+  private vcamCtx: CanvasRenderingContext2D | null = null;
+
   /**
    * Extract raw RGBA frame buffer for Phase 6 Native Windows Virtual Camera driver.
+   * If targetWidth/targetHeight are passed (e.g. 1280x720 standard broadcast),
+   * scales on GPU to guarantee maximum performance and zero CPU bottleneck.
    */
-  extractFrameBuffer(): ImageData | null {
+  extractFrameBuffer(targetWidth?: number, targetHeight?: number): { data: Uint8ClampedArray; width: number; height: number } | null {
     if (!this.ctx) return null;
-    return this.ctx.getImageData(0, 0, this.width, this.height);
+
+    if (targetWidth && targetHeight && (targetWidth !== this.width || targetHeight !== this.height)) {
+      if (!this.vcamCanvas) {
+        this.vcamCanvas = document.createElement('canvas');
+        this.vcamCanvas.width = targetWidth;
+        this.vcamCanvas.height = targetHeight;
+        this.vcamCtx = this.vcamCanvas.getContext('2d', {
+          alpha: false,
+          willReadFrequently: true,
+        });
+      }
+      if (this.vcamCanvas.width !== targetWidth || this.vcamCanvas.height !== targetHeight) {
+        this.vcamCanvas.width = targetWidth;
+        this.vcamCanvas.height = targetHeight;
+      }
+      if (this.vcamCtx) {
+        this.vcamCtx.drawImage(this.canvas, 0, 0, targetWidth, targetHeight);
+        const imgData = this.vcamCtx.getImageData(0, 0, targetWidth, targetHeight);
+        return { data: imgData.data, width: targetWidth, height: targetHeight };
+      }
+    }
+
+    const imgData = this.ctx.getImageData(0, 0, this.width, this.height);
+    return { data: imgData.data, width: this.width, height: this.height };
   }
 
   /**

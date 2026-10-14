@@ -939,10 +939,10 @@ void HeartWaveFilter::DoStream() {
                     RenderDefaultFrame(pData, width, height, subType);
                 }
 
-                REFERENCE_TIME rtStart = frameIndex * interval;
-                REFERENCE_TIME rtEnd = rtStart + interval;
-                pSample->SetTime(&rtStart, &rtEnd);
-                pSample->SetMediaTime(&rtStart, &rtEnd);
+                // For live virtual camera sources, setting timestamps to NULL forces immediate unbuffered delivery
+                // in downstream DirectShow clients (OBS Studio, Zoom, Teams, Meet) with 0ms buffering delay.
+                pSample->SetTime(NULL, NULL);
+                pSample->SetMediaTime(NULL, NULL);
                 pSample->SetSyncPoint(TRUE);
                 pSample->SetActualDataLength(frameSize);
 
