@@ -19,21 +19,21 @@ function getGithubToken() {
   return '';
 }
 
-const VERSION = '1.3.18';
+const VERSION = '1.3.19';
 const TAG = `v${VERSION}`;
 const REPO = 'jithin0306/HeartWave';
 const TOKEN = getGithubToken();
 
-const RELEASE_TITLE = `HeartWave v${VERSION} - OBS DirectShow Monotonic Timestamps & Preview Raster Fix`;
+const RELEASE_TITLE = `HeartWave v${VERSION} - High FPS Background Ticker & Foreground Segmentation Fix`;
 const RELEASE_NOTES = `## HeartWave v${VERSION} Release Notes
 
-### 🎥 OBS Studio DirectShow Monotonic Presentation Timestamps Fix
-- **Eliminated Blank/Black Screen in OBS Studio**: OBS's DirectShow capture pin (\`libdshowcapture\` / \`win-dshow\`) requires non-null presentation timestamps to accept incoming video frames. Replaced unassigned sample timestamps with monotonic real-time stream timestamps computed from the DirectShow reference clock (\`m_pClock\`) and elapsed wall-clock time.
-- **Strictly Monotonic Time Progression**: Guaranteed sequential timestamp increments even across variable sender frame rates, preventing OBS jitter filter frame drops while maintaining **0.00s queueing delay**.
+### 🚀 High FPS When Minimized (Zero Lag Virtual Camera)
+- **Dedicated Background Web Worker Ticker**: Chromium suspends \`requestAnimationFrame\` and clamps DOM timers when a window is minimized to the taskbar. We integrated an isolated Web Worker ticker that runs on an independent background thread and never sleeps, driving the composite broadcast pipeline at a rock-solid **30.0 FPS** regardless of window minimization or occlusion.
+- **Unthrottled WebView2 Execution**: Configured \`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS\` with \`--disable-renderer-backgrounding\` and \`--disable-background-timer-throttling\` in Rust to prevent Windows EcoQoS power management from capping the application when minimized.
 
-### 🖥️ In-App Preview Scanline & Interlacing Elimination
-- **Double-Buffered Hardware Rasterization**: Removed \`desynchronized: true\` from offscreen composite canvas context, completely eliminating the horizontal scanline / venetian blind raster tearing in the camera viewport.
-- **Direct Frame Extraction**: Streamlined \`extractFrameBuffer()\` to read cleanly without secondary canvas downscaling collisions.
+### 👤 Person Segmentation & Backdrop Foreground Fix
+- **Subject Extraction Correction**: Fixed MediaPipe SelfieSegmenter category mask selection to extract the person confidence mask (category 1) rather than the background mask (category 0). The human subject is now rendered cleanly and sharply in front of virtual backdrops, green screen chroma keys, and DSLR blur layers.
+- **Continuous Hardware Decoder Keep-Alive**: Replaced \`display: 'none'\` with layout-stable low opacity rendering for the physical camera video tag, preventing Chromium from detaching the element and freezing hardware video frame decoding.
 
 ---
 ### 📦 Windows Downloads

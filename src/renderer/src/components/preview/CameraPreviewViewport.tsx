@@ -47,6 +47,7 @@ export const CameraPreviewViewport: React.FC = () => {
   const diagnosticsRendererRef = useRef<DiagnosticsRenderer>(new DiagnosticsRenderer());
   const rafIdRef = useRef<number | null>(null);
   const fallbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const tickerWorkerRef = useRef<Worker | null>(null);
   const isLoopRunningRef = useRef<boolean>(false);
   const lastRenderTimeRef = useRef<number>(0);
   const lastMetricsTimeRef = useRef<number>(0);
@@ -469,6 +470,43 @@ export const CameraPreviewViewport: React.FC = () => {
       };
       rafIdRef.current = requestAnimationFrame(onRaf);
 
+      // Dedicated background Web Worker ticker
+      // Web Workers execute on an independent OS thread and are NEVER throttled by Chromium when minimized
+      try {
+        if (tickerWorkerRef.current) {
+          tickerWorkerRef.current.terminate();
+          tickerWorkerRef.current = null;
+        }
+        const workerBlob = new Blob([`
+          let timer = null;
+          self.onmessage = function(e) {
+            if (e.data.action === 'start') {
+              if (timer) clearInterval(timer);
+              timer = setInterval(function() {
+                self.postMessage('tick');
+              }, e.data.interval || 28);
+            } else if (e.data.action === 'stop') {
+              if (timer) clearInterval(timer);
+              timer = null;
+            }
+          };
+        `], { type: 'application/javascript' });
+        const workerUrl = URL.createObjectURL(workerBlob);
+        const worker = new Worker(workerUrl);
+        tickerWorkerRef.current = worker;
+        worker.onmessage = () => {
+          if (!isLoopRunningRef.current) return;
+          const now = performance.now();
+          if (now - lastRenderTimeRef.current >= targetInterval - 3) {
+            lastRenderTimeRef.current = now;
+            renderFrameRef.current(now);
+          }
+        };
+        worker.postMessage({ action: 'start', interval: Math.max(16, Math.floor(targetInterval)) });
+      } catch (workerErr) {
+        console.warn('[CameraPreview] Web Worker ticker fallback:', workerErr);
+      }
+
       // Resilient watchdog ticker: if RAF is delayed or skipped by OS DWM when minimized, this ticker fires
       fallbackIntervalRef.current = setInterval(() => {
         if (!isLoopRunningRef.current) return;
@@ -481,6 +519,13 @@ export const CameraPreviewViewport: React.FC = () => {
     } else {
       isLoopRunningRef.current = false;
       audioKeepAliveRef.current?.stop();
+      if (tickerWorkerRef.current) {
+        try {
+          tickerWorkerRef.current.postMessage({ action: 'stop' });
+          tickerWorkerRef.current.terminate();
+        } catch {}
+        tickerWorkerRef.current = null;
+      }
       if (rafIdRef.current) {
         cancelAnimationFrame(rafIdRef.current);
         rafIdRef.current = null;
@@ -503,6 +548,13 @@ export const CameraPreviewViewport: React.FC = () => {
 
     return () => {
       isLoopRunningRef.current = false;
+      if (tickerWorkerRef.current) {
+        try {
+          tickerWorkerRef.current.postMessage({ action: 'stop' });
+          tickerWorkerRef.current.terminate();
+        } catch {}
+        tickerWorkerRef.current = null;
+      }
       if (rafIdRef.current) {
         cancelAnimationFrame(rafIdRef.current);
         rafIdRef.current = null;
@@ -822,10 +874,15 @@ export const CameraPreviewViewport: React.FC = () => {
           playsInline
           muted={true}
           style={{
+            position: 'absolute',
+            inset: 0,
             width: '100%',
             height: '100%',
             objectFit: 'contain',
-            display: cameraStatus === 'active' && backgroundMode === 'off' ? 'block' : 'none',
+            display: cameraStatus === 'active' ? 'block' : 'none',
+            opacity: backgroundMode === 'off' ? 1 : 0.001,
+            pointerEvents: 'none',
+            zIndex: 1,
             transform: isMirrored ? 'scaleX(-1)' : 'none',
             transition: 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
           }}

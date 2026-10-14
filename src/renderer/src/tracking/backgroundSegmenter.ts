@@ -110,7 +110,13 @@ export class BackgroundSegmenter {
 
     try {
       this.segmenter.segmentForVideo(videoSource, timestamp, (result) => {
-        const mask = result.confidenceMasks?.[0];
+        // MediaPipe SelfieSegmenter provides confidenceMasks where:
+        // index 0: background confidence (1.0 = background, 0.0 = person)
+        // index 1: person confidence (1.0 = person, 0.0 = background)
+        // We select the person mask so the human subject is extracted and kept as the foreground.
+        const mask = (result.confidenceMasks && result.confidenceMasks.length > 1)
+          ? result.confidenceMasks[1]
+          : result.confidenceMasks?.[0];
         if (!mask) return;
 
         const width = mask.width;
