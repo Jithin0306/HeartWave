@@ -14,3 +14,4 @@ resources/bin/*.old
 *.key
 src-tauri/target/
 release-*/
+HeartWave-Portable.exe

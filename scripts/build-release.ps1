@@ -1,6 +1,6 @@
 # HeartWave Release & Auto-Updater Packaging Script
 param (
-    [string]$Version = "1.3.22"
+    [string]$Version = "1.3.23"
 )
 
 $ErrorActionPreference = "Stop"

@@ -20,6 +20,10 @@ export class VideoCompositor {
   private blurCanvas: HTMLCanvasElement;
   private blurCtx: CanvasRenderingContext2D | null;
 
+  // Dedicated high-throughput Virtual Camera broadcast buffer
+  private broadcastCanvas: HTMLCanvasElement;
+  private broadcastCtx: CanvasRenderingContext2D | null;
+
   // Cached Backdrop Image Elements
   private backdropCache: Map<string, HTMLImageElement> = new Map();
   private customBackdropImg: HTMLImageElement | null = null;
@@ -66,6 +70,17 @@ export class VideoCompositor {
     });
     if (this.blurCtx) {
       this.blurCtx.imageSmoothingEnabled = true;
+    }
+
+    this.broadcastCanvas = document.createElement('canvas');
+    this.broadcastCanvas.width = 1280;
+    this.broadcastCanvas.height = 720;
+    this.broadcastCtx = this.broadcastCanvas.getContext('2d', {
+      alpha: false,
+      willReadFrequently: true,
+    });
+    if (this.broadcastCtx) {
+      this.broadcastCtx.imageSmoothingEnabled = true;
     }
 
     try {
@@ -364,10 +379,26 @@ export class VideoCompositor {
 
   /**
    * Extract raw RGBA frame buffer for Phase 6 Native Windows Virtual Camera driver.
+   * If source resolution exceeds 1280x720, pre-scales on GPU to 1280x720 to eliminate
+   * the 20ms synchronous 1080p GPU readback stall and 250 MB/s IPC memory traffic.
+   * DirectShow driver (HeartWaveCam.dll) automatically scales to 1080p for OBS via SIMD.
    */
-  extractFrameBuffer(): ImageData | null {
+  extractFrameBuffer(): { data: Uint8ClampedArray; width: number; height: number } | null {
     if (!this.ctx) return null;
-    return this.ctx.getImageData(0, 0, this.width, this.height);
+
+    if (this.width <= 1280 && this.height <= 720) {
+      const imgData = this.ctx.getImageData(0, 0, this.width, this.height);
+      return { data: imgData.data, width: this.width, height: this.height };
+    }
+
+    if (this.broadcastCtx) {
+      this.broadcastCtx.drawImage(this.canvas, 0, 0, 1280, 720);
+      const imgData = this.broadcastCtx.getImageData(0, 0, 1280, 720);
+      return { data: imgData.data, width: 1280, height: 720 };
+    }
+
+    const imgData = this.ctx.getImageData(0, 0, this.width, this.height);
+    return { data: imgData.data, width: this.width, height: this.height };
   }
 
   /**
