@@ -221,13 +221,11 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(shared_vcam)
         .setup(|app| {
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
-            }
+            app.handle().plugin(
+                tauri_plugin_log::Builder::default()
+                    .level(log::LevelFilter::Info)
+                    .build(),
+            )?;
 
             // Register DirectShow Virtual Camera DLL from resources/bin if present
             if let Ok(res_dir) = app.path().resource_dir() {

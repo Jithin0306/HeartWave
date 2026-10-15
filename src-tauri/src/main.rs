@@ -7,7 +7,7 @@ fn main() {
         unsafe {
             std::env::set_var(
                 "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
-                "--disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-frame-rate-limit",
+                "--disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding",
             );
         }
     }

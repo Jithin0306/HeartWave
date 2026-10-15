@@ -9,18 +9,18 @@ export class GestureStateMachine {
   private currentGesture: SemanticGesture = 'none';
   private candidateGesture: SemanticGesture = 'none';
   private candidateCount: number = 0;
-  private minCandidateFrames: number = 3; // 3-frame debounce confirmation (~80-100ms)
+  private minCandidateFrames: number = 1; // Snappy 1-frame trigger when gesture is detected
 
   private gestureStartTime: number = 0;
   private lastTriggerTime: number = 0;
-  private holdDurationMs: number = 550; // 0.55s sustained hold for snappy yet deliberate feel
-  private cooldownMs: number = 1000;
+  private holdDurationMs: number = 220; // 0.22s snappy trigger for modern responsive feel
+  private cooldownMs: number = 800;
   private graceLostTimeout: number = 220; // 220ms grace window for micro-occlusions
   private lastSeenTime: number = 0;
   private isCurrentlyTriggered: boolean = false;
   private lastValidAnchor: { x: number; y: number } = { x: 0.5, y: 0.5 };
 
-  constructor(holdDurationSeconds: number = 0.55, cooldownSeconds: number = 1.0) {
+  constructor(holdDurationSeconds: number = 0.22, cooldownSeconds: number = 0.8) {
     this.holdDurationMs = holdDurationSeconds * 1000;
     this.cooldownMs = cooldownSeconds * 1000;
   }

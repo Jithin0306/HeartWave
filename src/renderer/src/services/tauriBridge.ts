@@ -23,18 +23,6 @@ function notifyStatus(status: typeof currentStatus) {
   });
 }
 
-function toBase64(u8: Uint8Array): string {
-  if (typeof (u8 as any).toBase64 === 'function') {
-    return (u8 as any).toBase64();
-  }
-  let binary = '';
-  const len = u8.byteLength;
-  const chunkSize = 0x8000;
-  for (let i = 0; i < len; i += chunkSize) {
-    binary += String.fromCharCode.apply(null, u8.subarray(i, Math.min(i + chunkSize, len)) as any);
-  }
-  return btoa(binary);
-}
 
 export function initTauriBridge(): void {
   if (typeof window === 'undefined') return;
@@ -83,18 +71,10 @@ export function initTauriBridge(): void {
           },
         });
       } catch (err) {
-        // Resilient fallback to base64 if raw binary IPC encounters an issue
-        const b64 = toBase64(u8);
-        return await invoke('vcam_push_frame', {
-          payload: {
-            base64: b64,
-            width,
-            height,
-            isPrivacy: isPrivacy || false,
-          },
-        }).catch((e) => {
-          console.warn('[TauriBridge] vcam_push_frame fallback error:', e);
-        });
+        // Silently catch or log without allocating multi-megabyte Base64 strings that balloon memory
+        if (Math.random() < 0.02) {
+          console.warn('[TauriBridge] vcam_push_frame_raw IPC warning:', err);
+        }
       }
     },
     sendTrayState: (_state) => {},

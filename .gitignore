@@ -4,10 +4,9 @@ dist-electron/
 release/
 .DS_Store
 *.log
-resources/bin/*_old*.dll
-resources/bin/*.old.dll
-resources/bin/*.dll.old
-resources/bin/*.old
+resources/bin/*.old*
+resources/bin/*_old*
+resources/bin/*.bak
 *.obj
 *.lib
 *.exp

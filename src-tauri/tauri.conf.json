@@ -32,9 +32,10 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "createUpdaterArtifacts": true,
+    "createUpdaterArtifacts": false,
     "resources": [
-      "../resources/bin/HeartWaveCam.dll"
+      "../resources/bin/HeartWaveCam.dll",
+      "../resources/bin/HeartWaveCam32.dll"
     ],
     "icon": [
       "icons/32x32.png",
