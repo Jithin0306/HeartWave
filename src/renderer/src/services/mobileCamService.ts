@@ -411,6 +411,16 @@ class MobileCamService {
         call.on('stream', (remoteStream: MediaStream) => {
           if (remoteStream && remoteStream.getVideoTracks().length > 0) {
             console.log('[MobileCam] Mobile stream attached via call.on("stream"):', remoteStream.id);
+            if (call.peerConnection) {
+              try {
+                call.peerConnection.getReceivers().forEach((r: any) => {
+                  if (r.track?.kind === 'video') {
+                    if ('playoutDelayHint' in r) r.playoutDelayHint = 0;
+                    if ('jitterBufferTarget' in r) r.jitterBufferTarget = 0;
+                  }
+                });
+              } catch {}
+            }
             this.activeStream = remoteStream;
             this.state = 'connected';
             this.notify();
@@ -429,6 +439,13 @@ class MobileCamService {
 
           pc.ontrack = (event) => {
             console.log('[MobileCam] Direct ontrack event received:', event.track.kind);
+            try {
+              const r = (event as any).receiver;
+              if (r) {
+                if ('playoutDelayHint' in r) r.playoutDelayHint = 0;
+                if ('jitterBufferTarget' in r) r.jitterBufferTarget = 0;
+              }
+            } catch {}
             if (!this.activeStream || this.activeStream.getVideoTracks().length === 0) {
               const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
               this.activeStream = stream;

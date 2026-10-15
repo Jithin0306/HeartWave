@@ -404,7 +404,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (typeof window !== 'undefined' && window.heartwaveApi?.startVirtualCamera) {
           window.heartwaveApi.startVirtualCamera(res.width, res.height, res.fps || 30);
         }
-        set({ virtualOutputStatus: 'broadcasting' });
+        set({ virtualOutputStatus: 'broadcasting', virtualCameraStatus: 'active' });
       }
     } catch (err) {
       const parsed = cameraManager.parseError(err);
@@ -422,7 +422,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       activeStream: null,
       cameraStatus: 'standby',
       cameraMetrics: null,
+      virtualOutputStatus: 'standby',
+      virtualCameraStatus: 'offline',
     });
+    if (typeof window !== 'undefined' && window.heartwaveApi?.stopVirtualCamera) {
+      window.heartwaveApi.stopVirtualCamera();
+    }
   },
 
   selectDevice: async (deviceId: string) => {
@@ -433,6 +438,13 @@ export const useAppStore = create<AppState>((set, get) => ({
       const activeStream = mobileCamService.getTelemetry().stream;
       if (activeStream) {
         set({ activeStream, cameraStatus: 'active', cameraError: null });
+        if (get().virtualOutputStatus !== 'broadcasting') {
+          const res = get().selectedResolution;
+          if (typeof window !== 'undefined' && window.heartwaveApi?.startVirtualCamera) {
+            window.heartwaveApi.startVirtualCamera(res.width, res.height, res.fps || 30);
+          }
+          set({ virtualOutputStatus: 'broadcasting', virtualCameraStatus: 'active' });
+        }
       }
     }
   },
@@ -464,11 +476,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   setGestureConfidence: (val) => set({ gestureConfidence: val }),
 
   virtualCameraStatus: 'offline',
-  toggleVirtualCamera: () =>
-    set((state) => ({
-      virtualCameraStatus:
-        state.virtualCameraStatus === 'offline' ? 'driver_unregistered' : 'offline',
-    })),
+  toggleVirtualCamera: () => {
+    get().toggleVirtualOutput();
+  },
 
   // Phase 5 Video Output Pipeline Actions
   virtualOutputStatus: 'standby',
@@ -482,7 +492,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (typeof window !== 'undefined' && window.heartwaveApi?.stopVirtualCamera) {
         window.heartwaveApi.stopVirtualCamera();
       }
-      set({ virtualOutputStatus: 'standby' });
+      set({ virtualOutputStatus: 'standby', virtualCameraStatus: 'offline' });
     } else {
       const compW = videoCompositor.getWidth();
       const compH = videoCompositor.getHeight();
@@ -494,7 +504,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (typeof window !== 'undefined' && window.heartwaveApi?.startVirtualCamera) {
         window.heartwaveApi.startVirtualCamera(width, height, fps);
       }
-      set({ virtualOutputStatus: 'broadcasting' });
+      set({ virtualOutputStatus: 'broadcasting', virtualCameraStatus: 'active' });
     }
     if (typeof window !== 'undefined' && window.heartwaveApi?.sendTrayState) {
       window.heartwaveApi.sendTrayState({

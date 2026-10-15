@@ -537,7 +537,7 @@ export const CameraPreviewViewport: React.FC = () => {
               if (timer) clearInterval(timer);
               timer = setInterval(function() {
                 self.postMessage('tick');
-              }, e.data.interval || 31);
+              }, e.data.interval || 16);
             } else if (e.data.action === 'stop') {
               if (timer) clearInterval(timer);
               timer = null;
@@ -550,13 +550,13 @@ export const CameraPreviewViewport: React.FC = () => {
         worker.onmessage = () => {
           if (!isLoopRunningRef.current) return;
           const now = performance.now();
-          // When window is minimized or hidden, RAF pauses; the worker keeps ticking at 30 FPS
-          if (document.hidden || now - lastRenderTimeRef.current >= 30) {
+          const isHidden = document.hidden || document.visibilityState === 'hidden';
+          if (isHidden || now - lastRenderTimeRef.current >= 30) {
             lastRenderTimeRef.current = now;
             renderFrameRef.current(now);
           }
         };
-        worker.postMessage({ action: 'start', interval: 31 });
+        worker.postMessage({ action: 'start', interval: 16 });
       } catch (workerErr) {
         console.warn('[CameraPreview] Web Worker ticker fallback:', workerErr);
       }
@@ -2175,7 +2175,7 @@ export const CameraPreviewViewport: React.FC = () => {
             }}
           >
             <Layers size={13} strokeWidth={1.8} />
-            Virtual Camera: {virtualCameraStatus === 'offline' ? 'Off' : 'Driver Standby'}
+            Virtual Camera: {virtualCameraStatus === 'offline' ? 'Off' : 'On'}
           </button>
         </div>
       </div>

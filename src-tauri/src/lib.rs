@@ -210,6 +210,13 @@ pub fn run() {
 
     let shared_vcam: SharedVcamBridge = Arc::new(Mutex::new(VirtualCameraBridge::new()));
 
+    // Prime the DirectShow shared memory buffer with a valid 1080p standby frame on startup
+    // so OBS Studio instantly latches onto the video stream without displaying a black screen.
+    {
+        let mut bridge = shared_vcam.lock();
+        let _ = bridge.start(1920, 1080);
+    }
+
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(shared_vcam)

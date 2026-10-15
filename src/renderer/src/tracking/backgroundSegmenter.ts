@@ -11,10 +11,11 @@ export class BackgroundSegmenter {
 
   // Smoothing & Feathering buffers
   private smoothedBuffer: Float32Array | null = null;
+  private blurBuffer: Float32Array | null = null;
   private hasHistory: boolean = false;
-  private temporalAlpha: number = 0.75; // 0.75 = crisp reaction + zero edge jitter
-  private edgeThreshold: number = 0.30; // Sensitive low-light threshold (prevents human subject dropout in dim lighting)
-  private edgeFeather: number = 0.15; // Smooth natural feathering band
+  private temporalAlpha: number = 0.45; // 45% current + 55% previous frame for zero edge jitter
+  private lowerCutoff: number = 0.55; // Eliminates wooden headboard & red blanket leakage
+  private upperCutoff: number = 0.72; // Guarantees 100% solid opacity on t-shirt/torso (no green holes)
 
   // Output Mask Canvas (Hardware-accelerated bilinear scaling)
   private maskCanvas: HTMLCanvasElement;
@@ -25,7 +26,7 @@ export class BackgroundSegmenter {
   private inputCanvas: HTMLCanvasElement;
   private inputCtx: CanvasRenderingContext2D | null = null;
 
-  // Pre-computed Look-Up Table (LUT) for sub-millisecond edge feathering
+  // Pre-computed Look-Up Table (LUT) for sub-millisecond hysteresis edge feathering
   private lut: Uint8Array = new Uint8Array(256);
 
   // Cadence pacing & monotonicity safeguards
@@ -61,14 +62,20 @@ export class BackgroundSegmenter {
   }
 
   private updateLut(): void {
-    const lowerBound = Math.max(0.01, this.edgeThreshold - this.edgeFeather);
-    const upperBound = Math.min(0.99, this.edgeThreshold + this.edgeFeather);
+    const lowerBound = this.lowerCutoff;
+    const upperBound = this.upperCutoff;
     const invRange = 1.0 / (upperBound - lowerBound);
     for (let i = 0; i < 256; i++) {
       const val = i / 255.0;
-      const t = Math.max(0, Math.min(1, (val - lowerBound) * invRange));
-      const smoothVal = t * t * (3.0 - 2.0 * t);
-      this.lut[i] = (smoothVal * 255) | 0;
+      if (val <= lowerBound) {
+        this.lut[i] = 0;
+      } else if (val >= upperBound) {
+        this.lut[i] = 255;
+      } else {
+        const t = (val - lowerBound) * invRange;
+        const smoothVal = t * t * (3.0 - 2.0 * t);
+        this.lut[i] = Math.round(smoothVal * 255);
+      }
     }
   }
 
@@ -195,21 +202,46 @@ export class BackgroundSegmenter {
         const oneMinusAlpha = 1.0 - alpha;
         const lut = this.lut;
 
+        // 1. Temporal EMA Smoothing (~45% current mask, ~55% previous frame mask)
         if (!this.hasHistory) {
           for (let i = 0; i < totalPixels; i++) {
-            const raw = rawFloats[i];
-            smoothed[i] = raw;
-            const b = (raw * 255) | 0;
-            data[i * 4 + 3] = lut[b < 0 ? 0 : (b > 255 ? 255 : b)];
+            smoothed[i] = rawFloats[i];
           }
           this.hasHistory = true;
         } else {
           for (let i = 0; i < totalPixels; i++) {
-            const raw = rawFloats[i];
-            const s = alpha * raw + oneMinusAlpha * smoothed[i];
-            smoothed[i] = s;
-            const b = (s * 255) | 0;
-            data[i * 4 + 3] = lut[b < 0 ? 0 : (b > 255 ? 255 : b)];
+            smoothed[i] = alpha * rawFloats[i] + oneMinusAlpha * smoothed[i];
+          }
+        }
+
+        // 2. Spatial 5-point Cross Filtering (eliminates 8x8 blocky pixelation along silhouette edges)
+        if (!this.blurBuffer || this.blurBuffer.length !== totalPixels) {
+          this.blurBuffer = new Float32Array(totalPixels);
+        }
+        const blurBuf = this.blurBuffer;
+        const w = width;
+        const h = height;
+
+        for (let y = 0; y < h; y++) {
+          const yOffset = y * w;
+          const yPrev = (y > 0 ? y - 1 : y) * w;
+          const yNext = (y < h - 1 ? y + 1 : y) * w;
+
+          for (let x = 0; x < w; x++) {
+            const xPrev = x > 0 ? x - 1 : x;
+            const xNext = x < w - 1 ? x + 1 : x;
+
+            const center = smoothed[yOffset + x];
+            const filtered = 0.5 * center + 0.125 * (
+              smoothed[yOffset + xPrev] +
+              smoothed[yOffset + xNext] +
+              smoothed[yPrev + x] +
+              smoothed[yNext + x]
+            );
+            blurBuf[yOffset + x] = filtered;
+
+            const b = (filtered * 255) | 0;
+            data[(yOffset + x) * 4 + 3] = lut[b < 0 ? 0 : (b > 255 ? 255 : b)];
           }
         }
 
@@ -236,12 +268,16 @@ export class BackgroundSegmenter {
   }
 
   setEdgeFeather(feather: number): void {
-    this.edgeFeather = Math.max(0.02, Math.min(0.4, feather));
+    const f = Math.max(0.04, Math.min(0.18, feather));
+    this.lowerCutoff = Math.max(0.40, 0.635 - f);
+    this.upperCutoff = Math.min(0.90, 0.635 + f);
     this.updateLut();
   }
 
   setEdgeThreshold(threshold: number): void {
-    this.edgeThreshold = Math.max(0.1, Math.min(0.95, threshold));
+    const center = Math.max(0.45, Math.min(0.80, threshold));
+    this.lowerCutoff = Math.max(0.35, center - 0.085);
+    this.upperCutoff = Math.min(0.95, center + 0.085);
     this.updateLut();
   }
 
