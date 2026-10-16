@@ -22,41 +22,44 @@ export class FloatingHeartsEffect implements VisualEffect {
     this.lastAnchor = anchor;
     this.isHolding = true;
 
-    // Burst of hearts
-    for (let i = 0; i < 10; i++) {
-      this.particles.push({
-        x: anchor.x * this.width + (Math.random() - 0.5) * 50,
-        y: anchor.y * this.height + (Math.random() - 0.5) * 20,
-        vx: (Math.random() - 0.5) * 45,
-        vy: -70 - Math.random() * 60,
-        size: 9 + Math.random() * 11,
-        alpha: 0.95,
-        maxLife: 2.2 + Math.random() * 1.0,
-        life: 0,
-        rotation: (Math.random() - 0.5) * 0.4,
-        vRot: (Math.random() - 0.5) * 0.4,
-        color: i % 3 === 0 ? '#D6BD91' : i % 2 === 0 ? '#D79AA6' : '#B85C70',
-      });
+    // Gentle initial burst of hearts (restrained & fluid)
+    if (this.particles.length === 0) {
+      for (let i = 0; i < 3; i++) {
+        this.particles.push({
+          x: anchor.x * this.width + (Math.random() - 0.5) * 40,
+          y: anchor.y * this.height + (Math.random() - 0.5) * 15,
+          vx: (Math.random() - 0.5) * 35,
+          vy: -60 - Math.random() * 45,
+          size: 11 + Math.random() * 9,
+          alpha: 0.95,
+          maxLife: 2.2 + Math.random() * 0.8,
+          life: 0,
+          rotation: (Math.random() - 0.5) * 0.3,
+          vRot: (Math.random() - 0.5) * 0.3,
+          color: i % 2 === 0 ? '#D79AA6' : '#B85C70',
+        });
+      }
     }
   }
 
   update(dt: number, intensity: number, anchor?: EffectAnchor): void {
     if (anchor) this.lastAnchor = anchor;
 
-    const intensityMult = intensity / 100;
+    const intensityMult = Math.max(0.5, intensity / 100);
 
-    if (this.isHolding) {
+    // Controlled spawn rate: 1 heart every ~0.4s, max 8 particles active to eliminate any lag
+    if (this.isHolding && this.particles.length < 8) {
       this.spawnTimer += dt;
-      if (this.spawnTimer >= Math.max(0.08, 0.2 / intensityMult)) {
+      if (this.spawnTimer >= Math.max(0.35, 0.6 / intensityMult)) {
         this.spawnTimer = 0;
         this.particles.push({
-          x: this.lastAnchor.x * this.width + (Math.random() - 0.5) * 60,
+          x: this.lastAnchor.x * this.width + (Math.random() - 0.5) * 50,
           y: this.lastAnchor.y * this.height,
-          vx: (Math.random() - 0.5) * 35,
-          vy: -60 - Math.random() * 70 * intensityMult,
-          size: 8 + Math.random() * 10,
+          vx: (Math.random() - 0.5) * 30,
+          vy: -55 - Math.random() * 45 * intensityMult,
+          size: 10 + Math.random() * 9,
           alpha: 0.9,
-          maxLife: 2.4,
+          maxLife: 2.5,
           life: 0,
           rotation: (Math.random() - 0.5) * 0.3,
           vRot: (Math.random() - 0.5) * 0.3,
@@ -90,11 +93,7 @@ export class FloatingHeartsEffect implements VisualEffect {
     this.particles.forEach((p) => {
       ctx.save();
       ctx.globalAlpha = p.alpha;
-      ctx.shadowColor = 'rgba(215, 154, 166, 0.5)';
-      ctx.shadowBlur = 10;
-
       drawRefinedHeart(ctx, p.x, p.y, p.size, p.color, '#FFFFFF', 1);
-
       ctx.restore();
     });
 
@@ -103,6 +102,9 @@ export class FloatingHeartsEffect implements VisualEffect {
 
   setHolding(holding: boolean): void {
     this.isHolding = holding;
+    if (!holding) {
+      this.spawnTimer = 0;
+    }
   }
 
   hasActiveParticles(): boolean {

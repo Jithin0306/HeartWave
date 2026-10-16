@@ -68,7 +68,15 @@ class CameraManager {
       videoConstraints.width = { ideal: resolution.width };
       videoConstraints.height = { ideal: resolution.height };
       videoConstraints.frameRate = { ideal: resolution.fps, max: resolution.fps };
+    } else {
+      videoConstraints.width = { ideal: 1280 };
+      videoConstraints.height = { ideal: 720 };
+      videoConstraints.frameRate = { ideal: 60, max: 60 };
     }
+
+    // Chrome direct hardware capture low-latency flags (Camo standard: zero capture queue buffering)
+    (videoConstraints as any).latency = 0;
+    (videoConstraints as any).resizeMode = 'none';
 
     let stream: MediaStream;
     try {
@@ -90,25 +98,6 @@ class CameraManager {
     }
 
     this.currentStream = stream;
-
-    // Attach an inaudible silent audio track to prevent Chromium's WebMediaPlayerMS
-    // from suspending video frame decoding when the window is hidden or minimized
-    try {
-      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      if (AudioContextClass) {
-        const audioCtx = new AudioContextClass();
-        const osc = audioCtx.createOscillator();
-        const dst = audioCtx.createMediaStreamDestination();
-        osc.connect(dst);
-        osc.start();
-        const silentTrack = dst.stream.getAudioTracks()[0];
-        if (silentTrack) {
-          stream.addTrack(silentTrack);
-        }
-      }
-    } catch (e) {
-      console.warn('Could not attach silent audio anchor track:', e);
-    }
 
     // Attach disconnection listener to the active video track
     const videoTrack = stream.getVideoTracks()[0];

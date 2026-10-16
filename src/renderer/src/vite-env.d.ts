@@ -35,6 +35,9 @@ interface Window {
     stopVirtualCamera?: () => Promise<boolean>;
     getVirtualCameraStatus?: () => Promise<{ isRegistered: boolean; isBroadcasting: boolean }>;
     sendFrame?: (buffer: ArrayBuffer | Uint8Array | Uint8ClampedArray, width: number, height: number, isPrivacy?: boolean) => Promise<any> | void;
+    triggerEffect?: (effectId: string, x: number, y: number, confidence?: number) => Promise<void>;
+    updateEffectAnchor?: (effectId: string, x: number, y: number) => Promise<void>;
+    releaseEffect?: (effectId: string) => Promise<void>;
     sendTrayState?: (state: { isPrivacy: boolean; isBypass: boolean; isVirtualOutput: boolean }) => void;
     onHotkeyPrivacy?: (callback: () => void) => () => void;
     onHotkeyBypass?: (callback: () => void) => () => void;

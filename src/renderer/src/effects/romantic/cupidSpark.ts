@@ -22,47 +22,49 @@ export class CupidSparkEffect implements VisualEffect {
     this.lastAnchor = anchor;
     this.isPointing = true;
 
-    // Burst at fingertip
-    for (let i = 0; i < 12; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 40 + Math.random() * 80;
-      this.particles.push({
-        x: anchor.x * this.width,
-        y: anchor.y * this.height,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        size: 8 + Math.random() * 10,
-        alpha: 1.0,
-        maxLife: 1.2 + Math.random() * 0.8,
-        life: 0,
-        rotation: Math.random() * Math.PI,
-        vRot: (Math.random() - 0.5) * 5.0,
-        color: i % 2 === 0 ? '#D6BD91' : '#F5EFE9',
-      });
+    // Controlled burst at fingertip (restrained & sharp)
+    if (this.particles.length === 0) {
+      for (let i = 0; i < 4; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 35 + Math.random() * 50;
+        this.particles.push({
+          x: anchor.x * this.width,
+          y: anchor.y * this.height,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          size: 8 + Math.random() * 8,
+          alpha: 1.0,
+          maxLife: 1.0 + Math.random() * 0.6,
+          life: 0,
+          rotation: Math.random() * Math.PI,
+          vRot: (Math.random() - 0.5) * 4.0,
+          color: i % 2 === 0 ? '#D6BD91' : '#F5EFE9',
+        });
+      }
     }
   }
 
   update(dt: number, intensity: number, anchor?: EffectAnchor): void {
     if (anchor) this.lastAnchor = anchor;
 
-    const intensityMult = intensity / 100;
+    const intensityMult = Math.max(0.5, intensity / 100);
 
-    // Follow moving fingertip and emit delicate sparkle trail
-    if (this.isPointing) {
+    // Follow moving fingertip and emit delicate sparkle trail (max 8 particles)
+    if (this.isPointing && this.particles.length < 8) {
       this.sparkTimer += dt;
-      if (this.sparkTimer >= Math.max(0.04, 0.12 / intensityMult)) {
+      if (this.sparkTimer >= Math.max(0.18, 0.32 / intensityMult)) {
         this.sparkTimer = 0;
         this.particles.push({
           x: this.lastAnchor.x * this.width + (Math.random() - 0.5) * 8,
           y: this.lastAnchor.y * this.height + (Math.random() - 0.5) * 8,
           vx: (Math.random() - 0.5) * 20,
           vy: (Math.random() - 0.5) * 20 - 15,
-          size: 6 + Math.random() * 8,
+          size: 7 + Math.random() * 6,
           alpha: 0.95,
-          maxLife: 0.9 + Math.random() * 0.5,
+          maxLife: 0.8 + Math.random() * 0.4,
           life: 0,
           rotation: Math.random() * Math.PI,
-          vRot: (Math.random() - 0.5) * 4.0,
+          vRot: (Math.random() - 0.5) * 3.0,
           color: Math.random() > 0.4 ? '#D6BD91' : '#D79AA6',
         });
       }
@@ -93,11 +95,7 @@ export class CupidSparkEffect implements VisualEffect {
 
     this.particles.forEach((p) => {
       ctx.save();
-      ctx.shadowColor = 'rgba(214, 189, 145, 0.7)';
-      ctx.shadowBlur = 12;
-
       drawSparkle(ctx, p.x, p.y, p.size, p.rotation, p.color, p.alpha);
-
       ctx.restore();
     });
 

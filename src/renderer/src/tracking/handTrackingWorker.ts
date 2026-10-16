@@ -5,11 +5,12 @@ import { GestureClassifier } from './gestureClassifier';
 import { GestureStateMachine } from './gestureStateMachine';
 
 let handLandmarker: HandLandmarker | null = null;
-let smoother = new LandmarkSmoother(0.65);
+let smoother = new LandmarkSmoother(0.55);
 let classifier = new GestureClassifier();
-let stateMachine = new GestureStateMachine(0.7, 1.2);
+let stateMachine = new GestureStateMachine(0.22, 0.8);
 let isInitializing = false;
 let isReady = false;
+let lastTimestamp = 0;
 
 function resolvePath(rel: string): string {
   try {
@@ -29,7 +30,7 @@ async function initLandmarker(wasmDir?: string, modelPath?: string) {
     let vision;
     try {
       vision = await FilesetResolver.forVisionTasks(targetWasm);
-    } catch (e) {
+    } catch {
       try {
         vision = await FilesetResolver.forVisionTasks('./wasm');
       } catch {
@@ -50,9 +51,9 @@ async function initLandmarker(wasmDir?: string, modelPath?: string) {
         },
         runningMode: 'VIDEO',
         numHands: 2,
-        minHandDetectionConfidence: 0.6,
-        minHandPresenceConfidence: 0.6,
-        minTrackingConfidence: 0.6,
+        minHandDetectionConfidence: 0.50,
+        minHandPresenceConfidence: 0.50,
+        minTrackingConfidence: 0.50,
       });
     } catch (gpuErr) {
       console.warn('[HandTrackingWorker] GPU delegate failed in worker, falling back to CPU:', gpuErr);
@@ -64,9 +65,9 @@ async function initLandmarker(wasmDir?: string, modelPath?: string) {
         },
         runningMode: 'VIDEO',
         numHands: 2,
-        minHandDetectionConfidence: 0.6,
-        minHandPresenceConfidence: 0.6,
-        minTrackingConfidence: 0.6,
+        minHandDetectionConfidence: 0.50,
+        minHandPresenceConfidence: 0.50,
+        minTrackingConfidence: 0.50,
       });
     }
 
@@ -92,7 +93,14 @@ self.onmessage = async (e: MessageEvent) => {
 
     case 'process': {
       const bitmap: ImageBitmap = data.bitmap;
-      const timestamp: number = data.timestamp || performance.now();
+      const rawTimestamp: number = data.timestamp || performance.now();
+
+      // Guard strictly monotonic timestamps required by MediaPipe Tasks-Vision
+      let timestamp = rawTimestamp;
+      if (timestamp <= lastTimestamp) {
+        timestamp = lastTimestamp + 1;
+      }
+      lastTimestamp = timestamp;
 
       if (!isReady || !handLandmarker || !bitmap) {
         if (bitmap) {

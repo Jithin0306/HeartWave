@@ -12,7 +12,7 @@ export class EffectManager {
   private gestureToEffectMap: Map<SemanticGesture, string> = new Map([
     ['korean_finger_heart', 'golden-finger-heart'],
     ['two_hand_heart', 'big-heart'],
-    ['open_palm_up', 'rose-bloom'],
+    ['fist', 'rose-bloom'],
     ['open_palm', 'floating-hearts'],
     ['index_point', 'cupid-spark'],
     ['petal_rain_pose', 'petal-rain'],
@@ -57,18 +57,21 @@ export class EffectManager {
     }
 
     const matchedEffectId = this.gestureToEffectMap.get(event.gesture);
-    const targetEffect = matchedEffectId ? this.effects.get(matchedEffectId) : undefined;
+    const anchor: EffectAnchor = { x: event.anchor.x, y: event.anchor.y };
 
-    if (targetEffect) {
-      const anchor: EffectAnchor = { x: event.anchor.x, y: event.anchor.y };
-
-      // Set holding true while gesture is detected
-      if ('setHolding' in targetEffect) {
-        (targetEffect as any).setHolding(true);
+    this.effects.forEach((eff, id) => {
+      if (id === matchedEffectId) {
+        if ('setHolding' in eff) {
+          (eff as any).setHolding(true);
+        }
+        eff.onGestureTrigger(anchor, event.confidence);
+      } else {
+        // Guarantee clean mutual exclusivity: release all non-matched effects
+        if ('setHolding' in eff) {
+          (eff as any).setHolding(false);
+        }
       }
-
-      targetEffect.onGestureTrigger(anchor, event.confidence);
-    }
+    });
   }
 
   /**

@@ -33,11 +33,11 @@ export class RoseBloomEffect implements VisualEffect {
     this.isHolding = true;
 
     if (!this.rose) {
-      // Create single persistent 3D rose rooted at the palm
+      // Create single persistent 3D rose rooted at the fist
       this.rose = {
         x: anchor.x,
         y: anchor.y,
-        stemHeight: 120,
+        stemHeight: 210,
         bloomProgress: 0.05,
         swayTime: 0,
         alpha: 1.0,
@@ -56,7 +56,7 @@ export class RoseBloomEffect implements VisualEffect {
 
     if (this.rose) {
       if (this.isHolding) {
-        // 1. Smoothly follow palm position
+        // 1. Smoothly follow fist position
         const followSpeed = 12;
         this.rose.x += (this.targetAnchor.x - this.rose.x) * Math.min(1.0, followSpeed * dt);
         this.rose.y += (this.targetAnchor.y - this.rose.y) * Math.min(1.0, followSpeed * dt);
@@ -71,19 +71,19 @@ export class RoseBloomEffect implements VisualEffect {
         this.rose.alpha = 1.0;
 
         // 4. Occasional single petal shedding (zero spam, restrained & elegant)
-        if (this.rose.bloomProgress > 0.6) {
+        if (this.rose.bloomProgress > 0.6 && this.petals.length < 3) {
           this.petalTimer += dt;
-          if (this.petalTimer >= 0.85 / intensityMult) {
+          if (this.petalTimer >= 1.8 / intensityMult) {
             this.petalTimer = 0;
             const topY = this.rose.y * this.height - this.rose.stemHeight;
             this.petals.push({
               x: this.rose.x * this.width + (Math.random() - 0.5) * 20,
               y: topY + 10,
-              vx: (Math.random() - 0.5) * 25,
-              vy: 35 + Math.random() * 35,
-              size: 10 + Math.random() * 6,
+              vx: (Math.random() - 0.5) * 20,
+              vy: 30 + Math.random() * 30,
+              size: 16 + Math.random() * 8,
               alpha: 0.9,
-              maxLife: 2.6,
+              maxLife: 2.8,
               life: 0,
               rotation: Math.random() * Math.PI * 2,
               vRot: (Math.random() - 0.5) * 1.5,

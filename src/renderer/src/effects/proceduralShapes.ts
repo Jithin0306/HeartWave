@@ -2,6 +2,24 @@
  * High-performance, art-directed procedural vector shapes for Heartwave effects.
  */
 
+// Hardware-accelerated offscreen sprite cache for zero-copy GPU quad particle rendering
+const spriteCache = new Map<string, HTMLCanvasElement>();
+
+function getOrCreateSprite(key: string, size: number, drawFn: (c: CanvasRenderingContext2D, s: number) => void): HTMLCanvasElement {
+  let canvas = spriteCache.get(key);
+  if (!canvas) {
+    canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      drawFn(ctx, size);
+    }
+    spriteCache.set(key, canvas);
+  }
+  return canvas;
+}
+
 export function drawRefinedHeart(
   ctx: CanvasRenderingContext2D,
   cx: number,
@@ -11,33 +29,33 @@ export function drawRefinedHeart(
   strokeColor?: string,
   lineWidth: number = 2
 ): void {
-  ctx.save();
-  ctx.translate(cx, cy);
+  const spriteSize = 96;
+  const key = `heart_${fillColor || 'none'}_${strokeColor || 'none'}_${lineWidth}`;
+  const sprite = getOrCreateSprite(key, spriteSize, (c, s) => {
+    const half = s / 2;
+    c.translate(half, half * 0.85);
+    const sz = half * 0.82;
 
-  ctx.beginPath();
-  const topCurveHeight = size * 0.3;
-  ctx.moveTo(0, topCurveHeight);
+    c.beginPath();
+    const topCurveHeight = sz * 0.3;
+    c.moveTo(0, topCurveHeight);
+    c.bezierCurveTo(-sz / 2, -sz / 2, -sz, topCurveHeight / 3, 0, sz);
+    c.bezierCurveTo(sz, topCurveHeight / 3, sz / 2, -sz / 2, 0, topCurveHeight);
+    c.closePath();
 
-  // Top left curve
-  ctx.bezierCurveTo(-size / 2, -size / 2, -size, topCurveHeight / 3, 0, size);
+    if (fillColor) {
+      c.fillStyle = fillColor;
+      c.fill();
+    }
 
-  // Top right curve
-  ctx.bezierCurveTo(size, topCurveHeight / 3, size / 2, -size / 2, 0, topCurveHeight);
+    if (strokeColor) {
+      c.strokeStyle = strokeColor;
+      c.lineWidth = lineWidth;
+      c.stroke();
+    }
+  });
 
-  ctx.closePath();
-
-  if (fillColor) {
-    ctx.fillStyle = fillColor;
-    ctx.fill();
-  }
-
-  if (strokeColor) {
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = lineWidth;
-    ctx.stroke();
-  }
-
-  ctx.restore();
+  ctx.drawImage(sprite, cx - size, cy - size, size * 2, size * 2);
 }
 
 /**
@@ -56,9 +74,9 @@ export function drawGoldenHeart(
   ctx.scale(scale, scale);
   ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
 
-  // 1. Soft Champagne Ambient Glow
-  ctx.shadowColor = 'rgba(235, 205, 135, 0.65)';
-  ctx.shadowBlur = 14;
+  // 1. Soft Champagne Ambient Contour
+  ctx.strokeStyle = 'rgba(235, 205, 135, 0.45)';
+  ctx.lineWidth = 2.0;
 
   // 2. Main Gold Gradient Body
   const grad = ctx.createLinearGradient(-size * 0.5, -size * 0.5, size * 0.5, size);
@@ -78,7 +96,6 @@ export function drawGoldenHeart(
   ctx.fill();
 
   // 3. Delicate Luminous Rim Contour
-  ctx.shadowBlur = 0;
   ctx.strokeStyle = 'rgba(255, 245, 220, 0.85)';
   ctx.lineWidth = 1.4;
   ctx.stroke();
@@ -108,9 +125,9 @@ export function drawBigVelvetHeart(
   ctx.scale(scale, scale);
   ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
 
-  // 1. Ambient Rose-Burgundy Glow
-  ctx.shadowColor = 'rgba(184, 92, 112, 0.55)';
-  ctx.shadowBlur = 24;
+  // 1. Ambient Rose-Burgundy Base
+  ctx.strokeStyle = 'rgba(184, 92, 112, 0.45)';
+  ctx.lineWidth = 2.5;
 
   // 2. Rich Dimensional Velvet Gradient Body
   const grad = ctx.createRadialGradient(0, size * 0.3, size * 0.1, 0, size * 0.4, size * 0.9);
@@ -129,7 +146,6 @@ export function drawBigVelvetHeart(
   ctx.fill();
 
   // 3. Subtle Champagne & Muted Rose Outer Contour
-  ctx.shadowBlur = 0;
   const strokeGrad = ctx.createLinearGradient(0, -size * 0.4, 0, size);
   strokeGrad.addColorStop(0, 'rgba(214, 189, 145, 0.7)'); // Champagne top highlight
   strokeGrad.addColorStop(0.6, 'rgba(215, 154, 166, 0.5)'); // Rose mid
@@ -162,21 +178,25 @@ export function drawPetal(
   fillColor: string,
   alpha: number
 ): void {
+  const spriteSize = 64;
+  const key = `petal_${fillColor}`;
+  const sprite = getOrCreateSprite(key, spriteSize, (c, s) => {
+    const half = s / 2;
+    c.translate(half, half);
+    c.beginPath();
+    c.moveTo(0, -half * 0.9);
+    c.bezierCurveTo(half * 0.65, -half * 0.65, half * 0.85, half * 0.45, 0, half * 0.9);
+    c.bezierCurveTo(-half * 0.85, half * 0.45, -half * 0.65, -half * 0.65, 0, -half * 0.9);
+    c.closePath();
+    c.fillStyle = fillColor;
+    c.fill();
+  });
+
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(rotation);
   ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
-
-  ctx.beginPath();
-  ctx.moveTo(0, -size);
-  // Organic asymmetric petal bezier curves
-  ctx.bezierCurveTo(size * 0.7, -size * 0.7, size * 0.9, size * 0.5, 0, size);
-  ctx.bezierCurveTo(-size * 0.9, size * 0.5, -size * 0.7, -size * 0.7, 0, -size);
-  ctx.closePath();
-
-  ctx.fillStyle = fillColor;
-  ctx.fill();
-
+  ctx.drawImage(sprite, -size, -size, size * 2, size * 2);
   ctx.restore();
 }
 
@@ -189,30 +209,33 @@ export function drawSparkle(
   color: string,
   alpha: number
 ): void {
+  const spriteSize = 64;
+  const key = `sparkle_${color}`;
+  const sprite = getOrCreateSprite(key, spriteSize, (c, s) => {
+    const half = s / 2;
+    c.translate(half, half);
+    c.fillStyle = color;
+    c.beginPath();
+    const inner = half * 0.22;
+    c.moveTo(0, -half * 0.9);
+    c.quadraticCurveTo(0, 0, half * 0.9, 0);
+    c.quadraticCurveTo(0, 0, 0, half * 0.9);
+    c.quadraticCurveTo(0, 0, -half * 0.9, 0);
+    c.quadraticCurveTo(0, 0, 0, -half * 0.9);
+    c.closePath();
+    c.fill();
+
+    c.beginPath();
+    c.arc(0, 0, inner, 0, Math.PI * 2);
+    c.fillStyle = '#FFFFFF';
+    c.fill();
+  });
+
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(rotation);
   ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
-
-  ctx.fillStyle = color;
-  ctx.beginPath();
-
-  // 4-pointed precision luxury sparkle
-  const inner = size * 0.22;
-  ctx.moveTo(0, -size);
-  ctx.quadraticCurveTo(0, 0, size, 0);
-  ctx.quadraticCurveTo(0, 0, 0, size);
-  ctx.quadraticCurveTo(0, 0, -size, 0);
-  ctx.quadraticCurveTo(0, 0, 0, -size);
-  ctx.closePath();
-  ctx.fill();
-
-  // Subtle center core glow
-  ctx.beginPath();
-  ctx.arc(0, 0, inner, 0, Math.PI * 2);
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fill();
-
+  ctx.drawImage(sprite, -size, -size, size * 2, size * 2);
   ctx.restore();
 }
 
@@ -234,11 +257,11 @@ export function drawBotanical3DRose(
   ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
 
   const currentHeight = targetHeight * Math.min(1.0, progress * 1.15);
-  const headSize = 34 * Math.min(1.0, 0.4 + 0.6 * progress);
+  const headSize = 82 * Math.min(1.0, 0.45 + 0.55 * progress);
 
   // Sway control points for organic stem curve
-  const midX = Math.sin(sway) * 14;
-  const topX = Math.sin(sway * 1.2) * 22;
+  const midX = Math.sin(sway) * 16;
+  const topX = Math.sin(sway * 1.2) * 26;
   const topY = -currentHeight;
 
   // 1. DIMENSIONAL CURVED BOTANICAL STEM
@@ -253,16 +276,16 @@ export function drawBotanical3DRose(
   stemGrad.addColorStop(1, '#537C47'); // Fresh botanical top
 
   ctx.strokeStyle = stemGrad;
-  ctx.lineWidth = Math.max(2, 4.2 * (1 - (currentHeight / (targetHeight * 1.5)) * 0.3));
+  ctx.lineWidth = Math.max(3.5, 7.5 * (1 - (currentHeight / (targetHeight * 1.5)) * 0.3));
   ctx.lineCap = 'round';
   ctx.stroke();
 
   // Stem highlight rim
   ctx.beginPath();
   ctx.moveTo(0, 0);
-  ctx.quadraticCurveTo(midX - 1.2, -currentHeight * 0.5, topX - 1, topY);
-  ctx.strokeStyle = 'rgba(125, 175, 110, 0.4)';
-  ctx.lineWidth = 1.2;
+  ctx.quadraticCurveTo(midX - 1.5, -currentHeight * 0.5, topX - 1.2, topY);
+  ctx.strokeStyle = 'rgba(145, 195, 130, 0.5)';
+  ctx.lineWidth = 1.8;
   ctx.stroke();
   ctx.restore();
 
@@ -273,14 +296,14 @@ export function drawBotanical3DRose(
     // Leaf 1: Lower Left Node
     const l1Y = -currentHeight * 0.42;
     const l1X = midX * 0.8;
-    drawSculptedLeaf(ctx, l1X, l1Y, 19 * leafProgress, -Math.PI * 0.68 + sway * 0.3, true);
+    drawSculptedLeaf(ctx, l1X, l1Y, 40 * leafProgress, -Math.PI * 0.68 + sway * 0.3, true);
 
     // Leaf 2: Upper Right Node
     if (progress > 0.45) {
       const l2Progress = Math.min(1, (progress - 0.45) / 0.55);
       const l2Y = -currentHeight * 0.72;
       const l2X = topX * 0.8;
-      drawSculptedLeaf(ctx, l2X, l2Y, 16 * l2Progress, -Math.PI * 0.28 + sway * 0.3, false);
+      drawSculptedLeaf(ctx, l2X, l2Y, 34 * l2Progress, -Math.PI * 0.28 + sway * 0.3, false);
     }
   }
 
@@ -294,9 +317,9 @@ export function drawBotanical3DRose(
       ctx.save();
       ctx.rotate((i * Math.PI) / 6 + sway * 0.2);
       ctx.beginPath();
-      ctx.moveTo(-3, 0);
-      ctx.quadraticCurveTo(-2, headSize * 0.35, 0, headSize * 0.55);
-      ctx.quadraticCurveTo(2, headSize * 0.35, 3, 0);
+      ctx.moveTo(-4, 0);
+      ctx.quadraticCurveTo(-3, headSize * 0.35, 0, headSize * 0.55);
+      ctx.quadraticCurveTo(3, headSize * 0.35, 4, 0);
       ctx.closePath();
       ctx.fill();
       ctx.restore();
@@ -311,7 +334,7 @@ export function drawBotanical3DRose(
     ctx.save();
     ctx.rotate(angle);
     ctx.beginPath();
-    ctx.ellipse(0, -headSize * 0.42 * progress, headSize * 0.38, headSize * 0.44, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, -headSize * 0.42 * progress, headSize * 0.40, headSize * 0.46, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
@@ -328,34 +351,34 @@ export function drawBotanical3DRose(
     petalGrad.addColorStop(1, '#D79AA6'); // Pale rim highlight
 
     ctx.beginPath();
-    ctx.ellipse(0, -headSize * 0.28 * progress, headSize * 0.28, headSize * 0.34, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, -headSize * 0.28 * progress, headSize * 0.30, headSize * 0.36, 0, 0, Math.PI * 2);
     ctx.fillStyle = petalGrad;
     ctx.fill();
 
     // Subtle edge rim stroke
     ctx.strokeStyle = 'rgba(235, 185, 195, 0.45)';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1.2;
     ctx.stroke();
     ctx.restore();
   }
 
   // Inner spiral bud core (Sculptural 3D tight petals)
   ctx.save();
-  const coreGrad = ctx.createRadialGradient(0, -headSize * 0.05, 2, 0, 0, headSize * 0.22);
+  const coreGrad = ctx.createRadialGradient(0, -headSize * 0.05, 3, 0, 0, headSize * 0.24);
   coreGrad.addColorStop(0, '#E6B8C2'); // Soft highlight core
   coreGrad.addColorStop(0.4, '#C26379'); // Rich pink mid
   coreGrad.addColorStop(1, '#5E1B2C'); // Deep crevice shadow
 
   ctx.beginPath();
-  ctx.arc(0, 0, headSize * 0.22, 0, Math.PI * 2);
+  ctx.arc(0, 0, headSize * 0.24, 0, Math.PI * 2);
   ctx.fillStyle = coreGrad;
   ctx.fill();
 
   // Fine swirl line in bud center
   ctx.beginPath();
-  ctx.arc(0, -headSize * 0.04, headSize * 0.11, 0.4, Math.PI * 1.8);
+  ctx.arc(0, -headSize * 0.04, headSize * 0.12, 0.4, Math.PI * 1.8);
   ctx.strokeStyle = 'rgba(255, 240, 245, 0.7)';
-  ctx.lineWidth = 1.2;
+  ctx.lineWidth = 1.6;
   ctx.stroke();
   ctx.restore();
 

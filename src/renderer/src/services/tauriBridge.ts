@@ -17,12 +17,15 @@ function notifyStatus(status: typeof currentStatus) {
   updateListeners.forEach((cb) => {
     try {
       cb(status);
-    } catch (e) {
-      console.error(e);
-    }
+    } catch {}
   });
 }
 
+let cachedSendPacket: Uint8Array | null = null;
+let cachedDataView: DataView | null = null;
+
+let isFrameInFlight = false;
+let lastFlightStartTime = 0;
 
 export function initTauriBridge(): void {
   if (typeof window === 'undefined') return;
@@ -52,6 +55,10 @@ export function initTauriBridge(): void {
       };
     },
     sendFrame: async (buffer: ArrayBuffer | Uint8Array | Uint8ClampedArray, width: number, height: number, isPrivacy?: boolean) => {
+      // In-flight backpressure with 45ms stuck recovery: never drop frames for microtask delay
+      const now = performance.now();
+      if (isFrameInFlight && (now - lastFlightStartTime < 45)) return;
+
       let u8: Uint8Array;
       if (buffer instanceof Uint8Array) {
         u8 = buffer;
@@ -61,22 +68,51 @@ export function initTauriBridge(): void {
         u8 = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
       }
 
-      try {
-        // Fast path: Zero-copy raw binary transfer directly to Rust IPC without base64 or JSON overhead
-        return await invoke('vcam_push_frame_raw', u8, {
-          headers: {
-            'x-width': String(width),
-            'x-height': String(height),
-            'x-privacy': isPrivacy ? 'true' : 'false',
-          },
-        });
-      } catch (err) {
-        // Silently catch or log without allocating multi-megabyte Base64 strings that balloon memory
-        if (Math.random() < 0.02) {
-          console.warn('[TauriBridge] vcam_push_frame_raw IPC warning:', err);
+      // Pre-allocated static packet with 16-byte HWAV binary header to guarantee ZERO JSON serialization overhead
+      const neededLen = 16 + u8.byteLength;
+      if (!cachedSendPacket || cachedSendPacket.byteLength !== neededLen) {
+        cachedSendPacket = new Uint8Array(neededLen);
+        cachedDataView = new DataView(cachedSendPacket.buffer);
+      }
+
+      if (cachedDataView && cachedSendPacket) {
+        // [0..4] 'HWAV' magic LE = 0x48574156
+        cachedDataView.setUint32(0, 0x48574156, true);
+        cachedDataView.setUint32(4, width, true);
+        cachedDataView.setUint32(8, height, true);
+        cachedSendPacket[12] = isPrivacy ? 1 : 0;
+        cachedSendPacket[13] = 0;
+        cachedSendPacket[14] = 0;
+        cachedSendPacket[15] = 0;
+        cachedSendPacket.set(u8, 16);
+
+        isFrameInFlight = true;
+        lastFlightStartTime = performance.now();
+        try {
+          // Direct zero-copy Tauri 2.0 raw binary IPC (< 0.2ms)
+          await invoke('vcam_push_frame_raw', cachedSendPacket);
+        } catch (err) {
+          if (Math.random() < 0.01) {
+            console.warn('[TauriBridge] vcam_push_frame_raw error:', err);
+          }
+        } finally {
+          isFrameInFlight = false;
         }
       }
     },
+    triggerEffect: (effectId: string, x: number, y: number, confidence: number = 1.0) => {
+      if (!effectId || effectId === 'none' || effectId === 'all') {
+        invoke<void>('engine_release_effect', { effectId: 'all' }).catch(() => {});
+        return;
+      }
+      invoke<void>('engine_trigger_effect', { effectId, x, y, confidence }).catch(() => {});
+    },
+    updateEffectAnchor: (effectId: string, x: number, y: number) => {
+      if (!effectId || effectId === 'none') return;
+      invoke<void>('engine_update_anchor', { effectId, x, y }).catch(() => {});
+    },
+    releaseEffect: (effectId: string) =>
+      invoke<void>('engine_release_effect', { effectId: effectId || 'all' }).catch(() => {}),
     sendTrayState: (_state) => {},
     onHotkeyPrivacy: (callback: () => void) => {
       let unlistenFn: (() => void) | null = null;

@@ -3,7 +3,7 @@ export type EffectCategory = 'all' | 'romantic' | 'couples' | 'streamer' | 'favo
 export type GestureType =
   | 'korean_finger_heart'
   | 'two_hand_heart'
-  | 'open_palm_up'
+  | 'fist'
   | 'open_palm'
   | 'index_point'
   | 'petal_rain_pose';

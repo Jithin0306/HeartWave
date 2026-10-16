@@ -1,0 +1,12 @@
+LIBRARY HeartWaveEngine
+EXPORTS
+    HeartWaveEngine_Initialize
+    HeartWaveEngine_Update
+    HeartWaveEngine_Render
+    HeartWaveEngine_TriggerEffect
+    HeartWaveEngine_UpdateEffectAnchor
+    HeartWaveEngine_ReleaseEffect
+    HeartWaveEngine_PushRgbaFrame
+    HeartWaveEngine_GetSharedTextureHandle
+    HeartWaveEngine_GetOutputFrame
+    HeartWaveEngine_Shutdown

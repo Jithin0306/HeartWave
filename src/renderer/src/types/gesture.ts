@@ -8,7 +8,7 @@ export type SemanticGesture =
   | 'none'
   | 'korean_finger_heart'
   | 'two_hand_heart'
-  | 'open_palm_up'
+  | 'fist'
   | 'open_palm'
   | 'index_point'
   | 'petal_rain_pose';
@@ -42,8 +42,8 @@ export const GESTURE_LABELS: Record<SemanticGesture, string> = {
   none: 'No Gesture',
   korean_finger_heart: 'Korean Finger Heart',
   two_hand_heart: 'Two-Hand Heart',
-  open_palm_up: 'Upward Palm',
-  open_palm: 'Open Palm Float',
+  fist: 'Closed Fist Rose',
+  open_palm: 'Open Palm Floating Hearts',
   index_point: 'Index Point / Pinch',
   petal_rain_pose: 'Petal Rain Pose',
 };

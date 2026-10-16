@@ -20,42 +20,45 @@ export class PetalRainEffect implements VisualEffect {
   onGestureTrigger(_anchor: EffectAnchor, _confidence: number): void {
     this.isRaining = true;
 
-    // Initial burst across width
-    for (let i = 0; i < 24; i++) {
-      this.petals.push({
-        x: Math.random() * this.width,
-        y: -10 - Math.random() * 100,
-        vx: (Math.random() - 0.5) * 35,
-        vy: 40 + Math.random() * 60,
-        size: 9 + Math.random() * 12,
-        alpha: 0.9,
-        maxLife: 6.0,
-        life: 0,
-        rotation: Math.random() * Math.PI * 2,
-        vRot: (Math.random() - 0.5) * 2.0,
-        color: Math.random() > 0.5 ? '#B85C70' : '#D79AA6',
-      });
+    // Controlled burst across width (delicate & cinematic)
+    if (this.petals.length === 0) {
+      for (let i = 0; i < 6; i++) {
+        this.petals.push({
+          x: Math.random() * this.width,
+          y: -10 - Math.random() * 80,
+          vx: (Math.random() - 0.5) * 25,
+          vy: 35 + Math.random() * 45,
+          size: 11 + Math.random() * 9,
+          alpha: 0.9,
+          maxLife: 5.5,
+          life: 0,
+          rotation: Math.random() * Math.PI * 2,
+          vRot: (Math.random() - 0.5) * 1.5,
+          color: Math.random() > 0.5 ? '#B85C70' : '#D79AA6',
+        });
+      }
     }
   }
 
   update(dt: number, intensity: number, _anchor?: EffectAnchor): void {
-    const intensityMult = intensity / 100;
+    const intensityMult = Math.max(0.5, intensity / 100);
 
-    if (this.isRaining) {
+    // Controlled spawn rate: max 10 petals on screen to eliminate GPU / canvas lag
+    if (this.isRaining && this.petals.length < 10) {
       this.spawnTimer += dt;
-      if (this.spawnTimer >= Math.max(0.06, 0.15 / intensityMult)) {
+      if (this.spawnTimer >= Math.max(0.40, 0.70 / intensityMult)) {
         this.spawnTimer = 0;
         this.petals.push({
           x: Math.random() * this.width,
           y: -15,
-          vx: (Math.random() - 0.5) * 35,
-          vy: 45 + Math.random() * 55 * intensityMult,
-          size: 9 + Math.random() * 11,
+          vx: (Math.random() - 0.5) * 25,
+          vy: 40 + Math.random() * 40 * intensityMult,
+          size: 11 + Math.random() * 9,
           alpha: 0.95,
-          maxLife: 6.5,
+          maxLife: 6.0,
           life: 0,
           rotation: Math.random() * Math.PI * 2,
-          vRot: (Math.random() - 0.5) * 2.0,
+          vRot: (Math.random() - 0.5) * 1.5,
           color: Math.random() > 0.6 ? '#672F40' : Math.random() > 0.3 ? '#B85C70' : '#D79AA6',
         });
       }

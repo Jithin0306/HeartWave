@@ -12,5 +12,7 @@ resources/bin/*.bak
 *.exp
 *.key
 src-tauri/target/
-release-*/
 HeartWave-Portable.exe
+_backup_pre_arch2/
+/*.dll
+

@@ -32,7 +32,16 @@ export class GestureClassifier {
    * Classify hand landmarks into a semantic gesture with mutually exclusive rules.
    */
   classify(hands: TrackedHand[]): GestureDetectionResult {
-    if (!hands || hands.length === 0) {
+    // 1. Strict anti-hallucination filter: ignore background noise, bedding folds, and low-confidence detections
+    const validHands = (hands || []).filter((h) => {
+      if (h.score < 0.70) return false;
+      if (!h.landmarks || h.landmarks.length < 21) return false;
+      // Palm span filter: real foreground user hand has palm size >= 7% of screen
+      const palmSpan = dist2D(h.landmarks[0], h.landmarks[9]);
+      return palmSpan >= 0.07;
+    });
+
+    if (validHands.length === 0) {
       return {
         gesture: 'none',
         confidence: 0,
@@ -45,9 +54,9 @@ export class GestureClassifier {
     // =========================================================================
     // 1. Two-Hand Gestures (Highest priority when 2 hands are active)
     // =========================================================================
-    if (hands.length >= 2) {
-      const h1 = hands[0];
-      const h2 = hands[1];
+    if (validHands.length >= 2) {
+      const h1 = validHands[0];
+      const h2 = validHands[1];
 
       // A. Two-Hand Heart Pose:
       // Index fingertips touch or come close, Thumb tips touch or come close
@@ -100,7 +109,7 @@ export class GestureClassifier {
     // =========================================================================
     // 2. Single-Hand Gestures (Evaluated per hand to prevent multi-hand lockouts)
     // =========================================================================
-    for (const hand of hands) {
+    for (const hand of validHands) {
       const lm = hand.landmarks;
       const wrist = lm[0];
 
@@ -109,6 +118,7 @@ export class GestureClassifier {
       const ringExt = this.isFingerExtended(lm, 16, 14, 13);
       const pinkyExt = this.isFingerExtended(lm, 20, 18, 17);
 
+      const indexCurled = this.isFingerCurled(lm, 8, 6);
       const middleCurled = this.isFingerCurled(lm, 12, 10);
       const ringCurled = this.isFingerCurled(lm, 16, 14);
       const pinkyCurled = this.isFingerCurled(lm, 20, 18);
@@ -122,8 +132,8 @@ export class GestureClassifier {
           gesture: 'index_point',
           confidence: 0.92,
           anchor: { x: lm[8].x, y: lm[8].y },
-          handsCount: hands.length,
-          rawHands: hands,
+          handsCount: validHands.length,
+          rawHands: validHands,
         };
       }
 
@@ -131,47 +141,45 @@ export class GestureClassifier {
       // Strict rule: Thumb tip & index tip pinched close, index is NOT extended straight, others curled
       const indexTipDistFromWrist = dist2D(wrist, lm[8]);
       const indexPipDistFromWrist = dist2D(wrist, lm[6]);
-      const indexNotExtended = !indexExt || indexTipDistFromWrist < indexPipDistFromWrist * 1.30;
+      const isPinchedHeart = thumbIndexTipDist < 0.11 && indexTipDistFromWrist > indexPipDistFromWrist * 1.05;
 
-      if (thumbIndexTipDist < 0.13 && indexNotExtended && middleCurled && ringCurled && pinkyCurled) {
+      if (isPinchedHeart && middleCurled && ringCurled && pinkyCurled) {
         return {
           gesture: 'korean_finger_heart',
-          confidence: 0.92,
+          confidence: 0.94,
           anchor: {
             x: (lm[4].x + lm[8].x) / 2,
             y: Math.min(lm[4].y, lm[8].y) - 0.04,
           },
-          handsCount: hands.length,
-          rawHands: hands,
+          handsCount: validHands.length,
+          rawHands: validHands,
         };
       }
 
-      // --- OPEN PALM VARIANTS (Rose Bloom vs Floating Hearts) ---
-      // All 4 fingers extended
-      if (indexExt && middleExt && ringExt && pinkyExt) {
-        // Vertical span between wrist and middle fingertip in video frame
-        const verticalSpan = wrist.y - lm[12].y;
+      // --- CLOSED FIST: Dedicated 3D Rose Gesture ---
+      // All 4 fingers curled into palm, no fingers extended
+      if (indexCurled && middleCurled && ringCurled && pinkyCurled && !indexExt && !middleExt && !ringExt && !pinkyExt) {
+        return {
+          gesture: 'fist',
+          confidence: 0.94,
+          anchor: { x: lm[9].x, y: lm[9].y - 0.06 },
+          handsCount: validHands.length,
+          rawHands: validHands,
+        };
+      }
 
-        // Upward Palm (holding flower): Hand is tilted horizontally or foreshortened
-        const isUpwardHorizontal = verticalSpan < 0.19 || lm[9].z < wrist.z - 0.035;
+      // --- OPEN PALM: Dedicated Floating Hearts Gesture ---
+      // All 4 fingers extended open, hand held vertically upright (fingers clearly above wrist)
+      const isUpright = lm[12].y < wrist.y - 0.07;
+      const thumbOpen = dist2D(lm[4], lm[2]) > 0.055 || thumbIndexTipDist > 0.07;
 
-        if (isUpwardHorizontal) {
-          return {
-            gesture: 'open_palm_up',
-            confidence: 0.88,
-            anchor: { x: lm[9].x, y: lm[9].y - 0.06 },
-            handsCount: hands.length,
-            rawHands: hands,
-          };
-        }
-
-        // Frontal Open Palm (waving / stopping toward camera): Hand is held high & upright
+      if (indexExt && middleExt && ringExt && pinkyExt && isUpright && thumbOpen) {
         return {
           gesture: 'open_palm',
-          confidence: 0.85,
+          confidence: 0.92,
           anchor: { x: lm[9].x, y: lm[9].y },
-          handsCount: hands.length,
-          rawHands: hands,
+          handsCount: validHands.length,
+          rawHands: validHands,
         };
       }
     }
@@ -179,9 +187,9 @@ export class GestureClassifier {
     return {
       gesture: 'none',
       confidence: 0,
-      anchor: { x: hands[0].landmarks[9].x, y: hands[0].landmarks[9].y },
-      handsCount: hands.length,
-      rawHands: hands,
+      anchor: { x: validHands[0].landmarks[9].x, y: validHands[0].landmarks[9].y },
+      handsCount: validHands.length,
+      rawHands: validHands,
     };
   }
 }

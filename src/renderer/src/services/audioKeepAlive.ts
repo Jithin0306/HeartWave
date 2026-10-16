@@ -25,14 +25,14 @@ export class AudioKeepAlive {
 
       this.audioCtx = new AudioContextClass();
 
-      // Silent gain (essentially 0, but non-zero to keep the audio graph active)
+      // Absolute zero-gain digital silence to prevent any audio engine or AEC interference
       this.gainNode = this.audioCtx.createGain();
-      this.gainNode.gain.value = 0.00001;
+      this.gainNode.gain.value = 0.0;
 
-      // Inaudible low oscillator
+      // Sub-audible infrasound carrier keeping WebMediaPlayer alive
       this.oscillator = this.audioCtx.createOscillator();
       this.oscillator.type = 'sine';
-      this.oscillator.frequency.value = 100; // 100 Hz at 0.00001 volume is imperceptible
+      this.oscillator.frequency.value = 20;
 
       this.oscillator.connect(this.gainNode);
       this.gainNode.connect(this.audioCtx.destination);

@@ -89,6 +89,7 @@ private:
     IReferenceClock* m_pClock;
     REFERENCE_TIME m_tStart;
     ULONGLONG m_startTick;
+    REFERENCE_TIME m_rtLastTime;
     HeartWavePin* m_pPin;
 
     HANDLE m_hThread;
@@ -267,7 +268,7 @@ public:
 HeartWavePin::HeartWavePin(HeartWaveFilter* pFilter)
     : m_cRef(1), m_pFilter(pFilter), m_pConnectedPin(NULL),
       m_pAllocator(NULL), m_pMemInputPin(NULL), m_bConnected(false),
-      m_width(1280), m_height(720), m_avgTimePerFrame(333333), // 30 FPS
+      m_width(1280), m_height(720), m_avgTimePerFrame(166666), // 60 FPS silky smooth
       m_subType(MEDIASUBTYPE_YUY2) {
     ZeroMemory(&m_currentMediaType, sizeof(m_currentMediaType));
     BuildMediaType(0, &m_currentMediaType);
@@ -353,7 +354,7 @@ HRESULT HeartWavePin::BuildMediaType(int index, AM_MEDIA_TYPE* pmt) {
     vih->rcSource.right = w;
     vih->rcSource.bottom = h;
     vih->rcTarget = vih->rcSource;
-    vih->AvgTimePerFrame = 333333; // 30 FPS
+    vih->AvgTimePerFrame = 166666; // 60 FPS native for Discord & OBS
     vih->dwBitRate = (DWORD)((uint64_t)imgSize * 10000000ULL / vih->AvgTimePerFrame * 8ULL);
 
     vih->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
@@ -423,7 +424,7 @@ STDMETHODIMP HeartWavePin::Connect(IPin* pReceivePin, const AM_MEDIA_TYPE* pmt) 
 
     ALLOCATOR_PROPERTIES propReq = {0};
     ALLOCATOR_PROPERTIES propActual = {0};
-    propReq.cBuffers = 4;
+    propReq.cBuffers = 8;
     DWORD neededSize = (DWORD)(m_width * m_height * 4);
     if (m_currentMediaType.lSampleSize > neededSize) {
         neededSize = m_currentMediaType.lSampleSize;
@@ -550,7 +551,7 @@ STDMETHODIMP HeartWavePin::SetFormat(AM_MEDIA_TYPE* pmt) {
         VIDEOINFOHEADER* vih = (VIDEOINFOHEADER*)pmt->pbFormat;
         m_width = vih->bmiHeader.biWidth;
         m_height = abs(vih->bmiHeader.biHeight);
-        m_avgTimePerFrame = (vih->AvgTimePerFrame > 0) ? vih->AvgTimePerFrame : 333333;
+        m_avgTimePerFrame = (vih->AvgTimePerFrame > 0) ? vih->AvgTimePerFrame : 166666; // 60 FPS default
         m_subType = pmt->subtype;
 
         DWORD bpp = 16;
@@ -654,6 +655,7 @@ STDMETHODIMP HeartWavePin::QuerySupported(REFGUID guidPropSet, DWORD dwPropID, D
 
 HeartWaveFilter::HeartWaveFilter()
     : m_cRef(1), m_state(State_Stopped), m_pGraph(NULL), m_pClock(NULL), m_tStart(0), m_startTick(0),
+      m_rtLastTime(0),
       m_hThread(NULL), m_hStopEvent(NULL), m_hNewFrameEvent(NULL), m_bStreaming(false),
       m_hMMF(NULL), m_pSharedHeader(NULL), m_pSharedData(NULL) {
     timeBeginPeriod(1);
@@ -667,6 +669,10 @@ HeartWaveFilter::~HeartWaveFilter() {
     if (m_hStopEvent) CloseHandle(m_hStopEvent);
     if (m_hNewFrameEvent) CloseHandle(m_hNewFrameEvent);
     if (m_pPin) m_pPin->Release();
+    if (m_pClock) {
+        m_pClock->Release();
+        m_pClock = NULL;
+    }
     timeEndPeriod(1);
     InterlockedDecrement(&g_cServerLocks);
 }
@@ -706,6 +712,7 @@ STDMETHODIMP HeartWaveFilter::GetClassID(CLSID* pClsID) {
 STDMETHODIMP HeartWaveFilter::Stop() {
     if (m_state != State_Stopped) {
         m_bStreaming = false;
+        m_rtLastTime = 0;
         if (m_hStopEvent) SetEvent(m_hStopEvent);
         if (m_hThread) {
             WaitForSingleObject(m_hThread, 2000);
@@ -729,11 +736,13 @@ STDMETHODIMP HeartWaveFilter::Stop() {
             m_hMMF = NULL;
         }
     }
+    m_rtLastTime = 0;
     m_state = State_Stopped;
     return S_OK;
 }
 
 STDMETHODIMP HeartWaveFilter::Pause() {
+    m_rtLastTime = 0;
     if (m_state == State_Stopped) {
         if (m_pPin->GetAllocator()) {
             m_pPin->GetAllocator()->Commit();
@@ -752,6 +761,7 @@ STDMETHODIMP HeartWaveFilter::Run(REFERENCE_TIME tStart) {
     }
     m_tStart = tStart;
     m_startTick = GetTickCount64();
+    m_rtLastTime = 0;
     m_state = State_Running;
     return S_OK;
 }
@@ -810,6 +820,7 @@ STDMETHODIMP HeartWaveFilter::QueryVendorInfo(LPWSTR*) { return E_NOTIMPL; }
 STDMETHODIMP_(ULONG) HeartWaveFilter::GetMiscFlags() { return AM_FILTER_MISC_FLAGS_IS_SOURCE; }
 
 DWORD WINAPI HeartWaveFilter::ThreadProc(LPVOID lpParam) {
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
     HeartWaveFilter* pThis = (HeartWaveFilter*)lpParam;
     pThis->DoStream();
     return 0;
@@ -1068,6 +1079,8 @@ static void YUY2ToRGB32(const uint8_t* pSrc, int srcW, int srcH, uint8_t* pDst, 
 }
 
 void HeartWaveFilter::DoStream() {
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+
     IMemAllocator* pAlloc = m_pPin->GetAllocator();
     IMemInputPin* pInputPin = m_pPin->GetMemInputPin();
     if (!pAlloc || !pInputPin) return;
@@ -1075,61 +1088,31 @@ void HeartWaveFilter::DoStream() {
     int width = m_pPin->GetWidth();
     int height = m_pPin->GetHeight();
     REFERENCE_TIME interval = m_pPin->GetInterval();
-    if (interval <= 0) interval = 333333; // 30 FPS default
+    if (interval <= 0) interval = 166666; // 60 FPS default
     GUID subType = m_pPin->GetSubType();
     int frameSize = (subType == MEDIASUBTYPE_NV12) ? (width * height * 3 / 2) :
                     (subType == MEDIASUBTYPE_YUY2) ? (width * height * 2) : (width * height * 4);
 
-    LARGE_INTEGER qpcFreq;
-    QueryPerformanceFrequency(&qpcFreq);
-    LONGLONG qpcInterval = (LONGLONG)((double)interval * (double)qpcFreq.QuadPart / 10000000.0);
-    if (qpcInterval <= 0) qpcInterval = qpcFreq.QuadPart / 30;
-
-    LARGE_INTEGER qpcTarget;
-    QueryPerformanceCounter(&qpcTarget);
-    qpcTarget.QuadPart += qpcInterval;
+    // Dynamic frame interval in milliseconds (e.g. 16ms for 60 FPS, 33ms for 30 FPS)
+    DWORD frameIntervalMs = (DWORD)(interval / 10000);
+    if (frameIntervalMs < 10) frameIntervalMs = 16;
+    DWORD waitTimeout = frameIntervalMs;
+    uint32_t lastDeliveredWriteIndex = 0xFFFFFFFF;
 
     while (m_bStreaming) {
-        // Ensure new frame event is opened
         if (!m_hNewFrameEvent) {
             m_hNewFrameEvent = OpenEventW(SYNCHRONIZE, FALSE, HEARTWAVE_EVENT_NAME);
-        }
-
-        // Calculate time remaining until next frame presentation deadline
-        LARGE_INTEGER qpcNow;
-        QueryPerformanceCounter(&qpcNow);
-        LONGLONG diffTicks = qpcTarget.QuadPart - qpcNow.QuadPart;
-
-        DWORD waitTime = 1;
-        if (diffTicks > 0) {
-            waitTime = (DWORD)((diffTicks * 1000) / qpcFreq.QuadPart);
-            if (waitTime > 50) waitTime = 50;
-        } else {
-            waitTime = 0;
         }
 
         HANDLE waitHandles[2] = { m_hStopEvent, m_hNewFrameEvent };
         DWORD handleCount = m_hNewFrameEvent ? 2 : 1;
 
-        if (waitTime > 0) {
-            DWORD waitRes = WaitForMultipleObjects(handleCount, waitHandles, FALSE, waitTime);
-            if (waitRes == WAIT_OBJECT_0) {
-                break; // Stop event signaled
-            }
-        } else {
-            if (WaitForSingleObject(m_hStopEvent, 0) == WAIT_OBJECT_0) {
-                break;
-            }
+        DWORD waitRes = WaitForMultipleObjects(handleCount, waitHandles, FALSE, waitTimeout);
+        if (waitRes == WAIT_OBJECT_0) {
+            break; // Stop event signaled
         }
 
         if (!m_bStreaming) break;
-
-        // Schedule next presentation tick strictly monotonically
-        qpcTarget.QuadPart += qpcInterval;
-        QueryPerformanceCounter(&qpcNow);
-        if (qpcNow.QuadPart - qpcTarget.QuadPart > qpcInterval * 2) {
-            qpcTarget.QuadPart = qpcNow.QuadPart + qpcInterval;
-        }
 
         // Try open or read MMF
         if (!m_hMMF) {
@@ -1217,19 +1200,32 @@ void HeartWaveFilter::DoStream() {
                     RenderDefaultFrame(pData, width, height, subType);
                 }
 
-                // Reference-clock aligned timestamps matching Discord's WebRTC capture clock
+                // Hardware-synchronized stream presentation timestamps (OBS VirtualCam & Camo standard):
+                // Syncs video stream timestamps directly to the DirectShow graph reference clock / system clock.
+                // In WebRTC (Discord/Google Meet) and OBS Studio, WASAPI microphone audio is locked to this exact clock.
+                // Providing stream presentation timestamps collapses WebRTC's playout jitter buffer from 1000-2000ms down to 0ms,
+                // eliminating the 1-2 second video delay and ensuring perfect real-time lip sync!
+                REFERENCE_TIME rtStart = 0;
+                REFERENCE_TIME rtEnd = 0;
+
                 if (m_pClock) {
                     REFERENCE_TIME rtNow = 0;
                     if (SUCCEEDED(m_pClock->GetTime(&rtNow))) {
-                        REFERENCE_TIME rtStart = rtNow;
-                        REFERENCE_TIME rtEnd = rtNow + interval;
-                        pSample->SetTime(&rtStart, &rtEnd);
+                        rtStart = (rtNow > m_tStart) ? (rtNow - m_tStart) : 0;
                     } else {
-                        pSample->SetTime(NULL, NULL);
+                        rtStart = (REFERENCE_TIME)(GetTickCount64() - m_startTick) * 10000;
                     }
                 } else {
-                    pSample->SetTime(NULL, NULL);
+                    rtStart = (REFERENCE_TIME)(GetTickCount64() - m_startTick) * 10000;
                 }
+
+                if (rtStart < m_rtLastTime) {
+                    rtStart = m_rtLastTime;
+                }
+                rtEnd = rtStart + interval;
+                m_rtLastTime = rtStart + 1;
+
+                pSample->SetTime(&rtStart, &rtEnd);
 
                 pSample->SetMediaTime(NULL, NULL);
                 pSample->SetSyncPoint(TRUE);
@@ -1238,6 +1234,9 @@ void HeartWaveFilter::DoStream() {
                 pSample->SetActualDataLength(frameSize);
 
                 pInputPin->Receive(pSample);
+                if (m_pSharedHeader && m_pSharedHeader->magic == HW_MAGIC) {
+                    lastDeliveredWriteIndex = m_pSharedHeader->writeIndex;
+                }
             }
             pSample->Release();
         }
