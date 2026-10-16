@@ -70,6 +70,20 @@ jobs:
       - name: Build Web Renderer
         run: npm run build:renderer
 
+      - name: Read Release Notes
+        id: notes
+        shell: bash
+        run: |
+          if [ -f "RELEASE_NOTES.md" ]; then
+            BODY=$(cat RELEASE_NOTES.md)
+          else
+            BODY="HeartWave multi-platform release."
+          fi
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "body<<$EOF" >> $GITHUB_OUTPUT
+          echo "$BODY" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+
       - name: Build Tauri Application
         uses: tauri-apps/tauri-action@v0
         env:
@@ -79,7 +93,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'HeartWave __VERSION__'
-          releaseBody: 'See release notes on GitHub for full details.'
+          releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}

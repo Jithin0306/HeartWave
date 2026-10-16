@@ -19,31 +19,16 @@ function getGithubToken() {
   return '';
 }
 
-const VERSION = '1.3.23';
+const VERSION = '1.3.24';
 const TAG = `v${VERSION}`;
 const REPO = 'jithin0306/HeartWave';
 const TOKEN = getGithubToken();
 
-const RELEASE_TITLE = `HeartWave v${VERSION} - 60 FPS UI Preview, Locked 30 FPS OBS Output, GPU Readback Elimination & Interleaved AI`;
-const RELEASE_NOTES = `## HeartWave v${VERSION} Release Notes
+const RELEASE_TITLE = `HeartWave v${VERSION} - Real-Time A/V Lip Sync, Hardware Clock Timestamps, Viewport HUD Polish & Multi-Platform CI/CD`;
+const RELEASE_NOTES = fs.existsSync(path.resolve('RELEASE_NOTES.md'))
+  ? fs.readFileSync(path.resolve('RELEASE_NOTES.md'), 'utf-8')
+  : `## HeartWave v${VERSION} Release Notes\n\n- Zero-latency A/V lip sync with DirectShow hardware timestamps\n- Unthrottled real-time Virtual Camera dispatch\n- Unified Viewport HUD flex row (eliminated overlapping badges)\n- Multi-platform GitHub Actions build matrix for Windows, macOS, and Linux\n`;
 
-### 🚀 Decoupled Dual-Clock Architecture (60 FPS UI + Locked 30 FPS OBS)
-- **Fluid 60 FPS Viewport**: Uncapped \`requestAnimationFrame\` loop drives the on-screen preview at full monitor refresh rate (60 Hz+). Particle physics, romantic overlays, and camera view now animate with zero micro-stutters.
-- **Locked 30.0 FPS Virtual Camera Output**: Metered 31ms dispatch clock paces frames sent to the native DirectShow driver (\`HeartWaveCam.dll\`), providing OBS Studio, Discord, and Zoom with a rock-solid, jitter-free 30.0 FPS broadcast.
-
-### ⚡ Eliminated 250 MB/s GPU Readback & IPC Bottleneck
-- Implemented a dedicated 1280x720 \`broadcastCanvas\` with hardware \`willReadFrequently: true\`.
-- GPU pre-scaling replaces the previous 1080p synchronous \`getImageData\` stall, slashing readback time from 25ms down to <3ms and cutting memory transfer bandwidth by 56% (from 8.3 MB down to 3.6 MB per frame).
-- DirectShow driver leverages hardware SIMD to scale the output to 1080p inside OBS with zero CPU overhead.
-
-### 🧠 Interleaved AI Inference Cadence
-- MediaPipe Hand Tracking and AI Background Segmentation now run on alternating frame ticks when both are enabled.
-- Prevents peak-frame compute spikes where both AI models previously competed on the same frame, keeping per-frame AI overhead under 10ms.
-
-### 🛡️ Rock-Solid Minimized & Background Performance
-- Background Web Worker ticker maintains 30.0 FPS frame delivery even when HeartWave is minimized, occluded, or parked in the Windows System Tray.
-- Zero disturbance to Mobile Cam (QR code pairing, WebRTC, and low-latency USB/Wi-Fi connection are 100% preserved).
-`;
 
 async function main() {
   const releaseOutputDir = path.resolve(`release-${VERSION}`);
