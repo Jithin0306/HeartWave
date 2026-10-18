@@ -21,12 +21,19 @@ jobs:
       matrix:
         include:
           - platform: 'windows-latest'
+            name: 'Windows x64'
             args: ''
           - platform: 'macos-latest'
-            args: '--bundles dmg,app'
+            name: 'macOS Apple Silicon (aarch64)'
+            args: '--target aarch64-apple-darwin --bundles dmg,app'
+          - platform: 'macos-latest'
+            name: 'macOS Intel (x86_64)'
+            args: '--target x86_64-apple-darwin --bundles dmg,app'
           - platform: 'ubuntu-22.04'
-            args: '--bundles appimage,deb'
+            name: 'Linux x64 (AppImage, deb, rpm)'
+            args: '--bundles appimage,deb,rpm'
 
+    name: ${{ matrix.name }}
     runs-on: ${{ matrix.platform }}
 
     steps:
@@ -62,7 +69,8 @@ jobs:
             libxdo-dev \
             libssl-dev \
             libayatana-appindicator3-dev \
-            librsvg2-dev
+            librsvg2-dev \
+            rpm
 
       - name: Install NPM dependencies
         run: npm ci
@@ -91,7 +99,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY || 'dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWduIGVuY3J5cHRlZCBzZWNyZXQga2V5ClJXUlRZMEl5VjlMLzBWZDBrTDltOWRRenNKR0t3b0w2VGNnTUhTT2xUK0NkTG1Qd2NFa0FBQkFBQUFBQUFBQUFBQUlBQUFBQWhqNjUwcStNem00bm5NRS8zZmZ2NGtxMkFER3FodmtsVjhjMk9KRDEwREI5akl6VHZxd3lHWGFnRUJwVk9xelVlcCtIbUIvQ3cwYTJnYTZqeFJQd2F1THVGT2U3M3V2UklyT2UrQTBDNjdXeWFKa3M4czJNU1NrMytva0Y1YmVVRkw5Vk84cElOQ1E9Cg==' }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || 'HeartWaveRelease2026' }}
         with:
-          tagName: ${{ github.ref_name }}
+          tagName: ${{ github.event.inputs.version || github.ref_name }}
           releaseName: 'HeartWave __VERSION__'
           releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: false

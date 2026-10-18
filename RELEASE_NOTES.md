@@ -1,5 +1,19 @@
 # HeartWave v1.3.30 Release Notes
 
+## 💻 Multi-Platform Distribution Assets
+| Platform | Package Format | Architecture | Filename & Description |
+| :--- | :--- | :--- | :--- |
+| **Windows** | `.exe` (Setup) | x86_64 | `HeartWave_1.3.30_x64-setup.exe` (Signed NSIS installer) |
+| **Windows** | `.msi` | x86_64 | `HeartWave_1.3.30_x64_en-US.msi` (Enterprise MSI package) |
+| **Windows** | `.exe` (Portable) | x86_64 | `HeartWave-Portable.exe` (Standalone zero-install portable) |
+| **macOS** | `.dmg` | Apple Silicon (`aarch64`) | `HeartWave_1.3.30_aarch64.dmg` (M1/M2/M3/M4 native disk image) |
+| **macOS** | `.app.tar.gz` | Apple Silicon (`aarch64`) | `HeartWave_aarch64.app.tar.gz` (Apple Silicon application bundle) |
+| **macOS** | `.dmg` | Intel (`x86_64`) | `HeartWave_1.3.30_x64.dmg` (Intel Core 64-bit disk image) |
+| **macOS** | `.app.tar.gz` | Intel (`x86_64`) | `HeartWave_x64.app.tar.gz` (Intel Core application bundle) |
+| **Linux** | `.AppImage` | x86_64 (`amd64`) | `HeartWave_1.3.30_amd64.AppImage` (Universal standalone executable) |
+| **Linux** | `.deb` | x86_64 (`amd64`) | `HeartWave_1.3.30_amd64.deb` (Debian / Ubuntu / Mint / Pop!_OS) |
+| **Linux** | `.rpm` | x86_64 | `HeartWave-1.3.30-1.x86_64.rpm` (Fedora / RHEL / CentOS / openSUSE) |
+
 ## 🧈 Silky-Smooth Movement & Video Pipeline Refinement
 - **Framerate-Independent Anchor Interpolation**: Added continuous exponential LERP smoothing (`1 - Math.exp(-22 * dt)`) updated on every render frame with dedicated delta-time tracking (`lastAnchorSmoothTimeRef`). Bridges the gap between ~30 Hz MediaPipe tracking and 60–180 FPS viewport rendering, converting stepped jumps into fluid, continuous gliding motion.
 - **Multi-Anchor Slot Stability**: Upgraded anchor association to match incoming multi-anchors to their nearest unclaimed previous slots before smoothing. Prevents multi-hand effects (such as Elemental Flame & Frost and Two-Hand Hearts) from jittering or crossing hands when detector order shifts.
