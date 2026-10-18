@@ -58,12 +58,8 @@ export const Footer: React.FC = () => {
           </a>
         </div>
 
-        {/* Hosting colophon */}
+        {/* Colophon */}
         <div className="flex flex-col items-center md:items-end gap-1.5 text-[11px] font-mono">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.03] border border-white/10 text-hw-sand">
-            <span className="w-1.5 h-1.5 rounded-full bg-hw-emerald" />
-            <span>Ready for Vercel Edge ($0 Hosting)</span>
-          </div>
           <span className="text-hw-muted">Free & Open Source forever under MIT</span>
         </div>
       </div>
