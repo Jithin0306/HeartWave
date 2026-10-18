@@ -17,4 +17,5 @@ HeartWave-Portable*.exe
 _backup_pre_arch2/
 src-tauri/target/
 /*.dll
+release-*/
 
