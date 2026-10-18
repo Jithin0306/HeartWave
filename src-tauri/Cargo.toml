@@ -1,6 +1,6 @@
 [package]
 name = "heartwave"
-version = "1.3.26"
+version = "1.3.27"
 description = "HeartWave - Gesture-Powered Virtual Camera"
 authors = ["you"]
 license = ""

@@ -54,6 +54,17 @@ export class GestureClassifier {
     return { isHeart: false, anchor: { x: 0, y: 0 } };
   }
 
+  private isHornsPose(lm: Point3D[]): boolean {
+    const hornsThumbTucked = dist2D(lm[4], lm[10]) < 0.16 || dist2D(lm[4], lm[14]) < 0.16;
+    return (
+      this.isFingerExtended(lm, 8, 6, 5) &&
+      this.isFingerExtended(lm, 20, 18, 17) &&
+      this.isFingerCurled(lm, 12, 10) &&
+      this.isFingerCurled(lm, 16, 14) &&
+      hornsThumbTucked
+    );
+  }
+
   /**
    * Classify hand landmarks into a semantic gesture with mutually exclusive rules.
    */
@@ -104,12 +115,51 @@ export class GestureClassifier {
         };
       }
 
-      // B. Two-Hand Heart Pose:
-      // Index fingertips touch or come close, Thumb tips touch or come close
+      const wristsDist = dist2D(h1.landmarks[0], h2.landmarks[0]);
       const indexTipsDist = dist2D(h1.landmarks[8], h2.landmarks[8]);
       const thumbTipsDist = dist2D(h1.landmarks[4], h2.landmarks[4]);
 
-      // Generous but strict threshold for joined two-hand heart
+      const h1AllExt =
+        this.isFingerExtended(h1.landmarks, 8, 6, 5) &&
+        this.isFingerExtended(h1.landmarks, 12, 10, 9) &&
+        this.isFingerExtended(h1.landmarks, 16, 14, 13) &&
+        this.isFingerExtended(h1.landmarks, 20, 18, 17);
+      const h2AllExt =
+        this.isFingerExtended(h2.landmarks, 8, 6, 5) &&
+        this.isFingerExtended(h2.landmarks, 12, 10, 9) &&
+        this.isFingerExtended(h2.landmarks, 16, 14, 13) &&
+        this.isFingerExtended(h2.landmarks, 20, 18, 17);
+
+      // B. Birthday Cake Cupped Hands Pose:
+      // Both hands held together in lower/mid frame, all fingers extended flat/cupped holding cake platter
+      const wristsYDiff = Math.abs(h1.landmarks[0].y - h2.landmarks[0].y);
+      const indexKnuckleDist = dist2D(h1.landmarks[5], h2.landmarks[5]);
+
+      if (
+        h1AllExt &&
+        h2AllExt &&
+        wristsDist < 0.24 &&
+        indexKnuckleDist > 0.06 &&
+        indexKnuckleDist < 0.24 &&
+        thumbTipsDist > 0.08 &&
+        wristsYDiff < 0.10 &&
+        h1.landmarks[0].y > 0.38 &&
+        h2.landmarks[0].y > 0.38
+      ) {
+        return {
+          gesture: 'birthday_cake',
+          confidence: 0.95,
+          anchor: {
+            x: (h1.landmarks[9].x + h2.landmarks[9].x) / 2,
+            y: (h1.landmarks[9].y + h2.landmarks[9].y) / 2 - 0.10,
+          },
+          handsCount: 2,
+          rawHands: validHands,
+        };
+      }
+
+      // C. Two-Hand Heart Pose:
+      // Index fingertips touch or come close, Thumb tips touch or come close
       if (indexTipsDist < 0.18 && thumbTipsDist < 0.18) {
         const topY = Math.min(h1.landmarks[8].y, h2.landmarks[8].y);
         const bottomY = Math.max(h1.landmarks[4].y, h2.landmarks[4].y);
@@ -127,20 +177,8 @@ export class GestureClassifier {
         };
       }
 
-      // C. Petal Rain Pose:
+      // D. Petal Rain Pose:
       // Both hands held wide apart in upper frame, all 4 fingers extended on both
-      const wristsDist = dist2D(h1.landmarks[0], h2.landmarks[0]);
-      const h1AllExt =
-        this.isFingerExtended(h1.landmarks, 8, 6, 5) &&
-        this.isFingerExtended(h1.landmarks, 12, 10, 9) &&
-        this.isFingerExtended(h1.landmarks, 16, 14, 13) &&
-        this.isFingerExtended(h1.landmarks, 20, 18, 17);
-      const h2AllExt =
-        this.isFingerExtended(h2.landmarks, 8, 6, 5) &&
-        this.isFingerExtended(h2.landmarks, 12, 10, 9) &&
-        this.isFingerExtended(h2.landmarks, 16, 14, 13) &&
-        this.isFingerExtended(h2.landmarks, 20, 18, 17);
-
       if (h1AllExt && h2AllExt && wristsDist > 0.28 && h1.landmarks[0].y < 0.58 && h2.landmarks[0].y < 0.58) {
         return {
           gesture: 'petal_rain_pose',
@@ -183,6 +221,38 @@ export class GestureClassifier {
         };
       }
 
+      // --- VICTORY / PEACE SIGN: Dedicated Celebration Trophy & Fireworks ---
+      // Index & middle extended in a V-shape, ring & pinky curled
+      const vSpread = dist2D(lm[8], lm[12]) > 0.035;
+      const thumbTucked = lm[4].y > lm[6].y - 0.02 || dist2D(lm[4], lm[14]) < 0.15;
+      if (indexExt && middleExt && ringCurled && pinkyCurled && vSpread && thumbTucked) {
+        return {
+          gesture: 'victory_fireworks',
+          confidence: 0.94,
+          anchor: { x: (lm[8].x + lm[12].x) / 2, y: (lm[8].y + lm[12].y) / 2 },
+          handsCount: validHands.length,
+          rawHands: validHands,
+        };
+      }
+
+      // --- ROCK-ON / DEVIL HORNS: Dedicated Elemental Flame & Frost ---
+      if (this.isHornsPose(lm)) {
+        const hornsAnchors: Array<{ x: number; y: number }> = [];
+        for (const h of validHands) {
+          if (this.isHornsPose(h.landmarks)) {
+            hornsAnchors.push({ x: h.landmarks[9].x, y: h.landmarks[9].y });
+          }
+        }
+        return {
+          gesture: 'flame_frost',
+          confidence: 0.95,
+          anchor: { x: lm[9].x, y: lm[9].y },
+          anchors: hornsAnchors.length > 0 ? hornsAnchors : [{ x: lm[9].x, y: lm[9].y }],
+          handsCount: validHands.length,
+          rawHands: validHands,
+        };
+      }
+
       // --- KOREAN FINGER HEART: Crossed / Pinched Mini Heart ---
       const fh = this.checkFingerHeart(hand);
       if (fh.isHeart) {
@@ -196,9 +266,22 @@ export class GestureClassifier {
         };
       }
 
+      // --- THUMBS UP: Dedicated Champagne Pop Gesture ---
+      // All 4 fingers curled into palm, thumb extended straight upwards
+      const thumbIsUp = lm[4].y < lm[3].y - 0.03 && lm[3].y < lm[2].y && lm[4].y < lm[5].y - 0.04;
+      if (indexCurled && middleCurled && ringCurled && pinkyCurled && thumbIsUp) {
+        return {
+          gesture: 'champagne_pop',
+          confidence: 0.95,
+          anchor: { x: lm[4].x, y: lm[4].y },
+          handsCount: validHands.length,
+          rawHands: validHands,
+        };
+      }
+
       // --- CLOSED FIST: Dedicated 3D Rose Gesture ---
-      // All 4 fingers curled into palm, no fingers extended
-      if (indexCurled && middleCurled && ringCurled && pinkyCurled && !indexExt && !middleExt && !ringExt && !pinkyExt) {
+      // All 4 fingers curled into palm, no fingers extended, thumb not pointing up
+      if (indexCurled && middleCurled && ringCurled && pinkyCurled && !indexExt && !middleExt && !ringExt && !pinkyExt && !thumbIsUp) {
         return {
           gesture: 'fist',
           confidence: 0.94,

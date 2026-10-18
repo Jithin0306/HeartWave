@@ -11,7 +11,11 @@ export type SemanticGesture =
   | 'fist'
   | 'open_palm'
   | 'index_point'
-  | 'petal_rain_pose';
+  | 'petal_rain_pose'
+  | 'birthday_cake'
+  | 'champagne_pop'
+  | 'victory_fireworks'
+  | 'flame_frost';
 
 export interface TrackedHand {
   landmarks: Point3D[];
@@ -48,4 +52,8 @@ export const GESTURE_LABELS: Record<SemanticGesture, string> = {
   open_palm: 'Open Palm Floating Hearts',
   index_point: 'Index Point / Pinch',
   petal_rain_pose: 'Petal Rain Pose',
+  birthday_cake: 'Birthday Cake & Candle Wish',
+  champagne_pop: 'Champagne Pop & Bubbles',
+  victory_fireworks: 'Victory Trophy & Fireworks',
+  flame_frost: 'Elemental Flame & Frost',
 };

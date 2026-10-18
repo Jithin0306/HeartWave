@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Users, Heart, Star, Sparkles, PanelRightClose } from 'lucide-react';
+import { Search, Users, Heart, Star, Sparkles, PanelRightClose, PartyPopper, Zap } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { EffectCard } from './EffectCard';
 import { EffectInspector } from './EffectInspector';
@@ -7,8 +7,10 @@ import { EffectCategory } from '../../types/effect';
 
 const CATEGORIES: { id: EffectCategory; label: string }[] = [
   { id: 'all', label: 'All Effects' },
-  { id: 'couples', label: 'Couples & Duo' },
+  { id: 'celebration', label: 'Celebration' },
+  { id: 'streamer', label: 'Streamer Hype' },
   { id: 'romantic', label: 'Romantic FX' },
+  { id: 'couples', label: 'Couples & Duo' },
   { id: 'favorites', label: 'Favorites' },
 ];
 
@@ -32,12 +34,15 @@ export const EffectsLibrary: React.FC = () => {
     else if (catId === 'couples') setActiveNav('couples');
     else if (catId === 'romantic') setActiveNav('romantic');
     else if (catId === 'favorites') setActiveNav('favorites');
+    else setActiveNav('home');
   };
 
   const filteredEffects = effects.filter((effect) => {
     // Category match
     if (categoryFilter === 'romantic' && effect.category !== 'romantic') return false;
     if (categoryFilter === 'couples' && effect.category !== 'couples') return false;
+    if (categoryFilter === 'celebration' && effect.category !== 'celebration') return false;
+    if (categoryFilter === 'streamer' && effect.category !== 'streamer') return false;
     if (categoryFilter === 'favorites' && !effect.isFavorite) return false;
 
     // Search query match
@@ -54,6 +59,10 @@ export const EffectsLibrary: React.FC = () => {
 
   const getHeaderTitle = () => {
     switch (categoryFilter) {
+      case 'celebration':
+        return 'Celebration Suite';
+      case 'streamer':
+        return 'Streamer Hype FX';
       case 'couples':
         return 'Couples & Duo Mode';
       case 'romantic':
@@ -89,6 +98,8 @@ export const EffectsLibrary: React.FC = () => {
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {categoryFilter === 'celebration' && <PartyPopper size={16} color="#e5a83b" />}
+            {categoryFilter === 'streamer' && <Zap size={16} color="#00e5ff" />}
             {categoryFilter === 'couples' && <Users size={16} color="var(--hw-accent-rose)" />}
             {categoryFilter === 'romantic' && <Heart size={16} color="var(--hw-accent-champagne)" />}
             {categoryFilter === 'favorites' && <Star size={16} color="#e5a83b" />}

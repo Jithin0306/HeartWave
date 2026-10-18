@@ -1,3 +1,29 @@
+# HeartWave v1.3.27 Release Notes
+
+## 🎉 Celebration & Streamer Hype Suite
+- **Interactive Birthday Cake & Candle Wish (`birthday_cake`)**:
+  - Activated by holding both hands cupped side-by-side in front of your chest.
+  - Renders a 3D tiered celebration cake with animated dripping frosting, glowing candles with flickering flame shaders, and a festive celebration party cone hat tracking dynamically over the user's head.
+  - Holding the pose to make a wish extinguishes the candle flames, releasing curl-noise smoke wisps, and triggers a screen-wide 160-particle confetti explosion.
+- **Champagne Pop & Effervescent Bubbles (`champagne_pop`)**:
+  - Activated by a single-hand thumbs-up gesture.
+  - Pops an emerald glass champagne bottle with an upward-accelerating cork physics trajectory, fizzy foam spray, and 90+ rising effervescent bubbles with specular highlights.
+- **Victory Trophy & Fireworks (`victory_fireworks`)**:
+  - Activated by a victory / peace sign (✌️).
+  - Summons a 3D gold champion trophy with rotating celestial rings and bursts spherical background fireworks in vibrant celebratory hues.
+- **Elemental Flame & Frost (`flame_frost`)**:
+  - Activated by a rock-on / horns gesture (🤘).
+  - Unleashes dual elemental fury: blazing dragon fire embers swirling on one hand and glacial azure frost crystals with freezing mist on the other.
+
+## 🎯 Deconfliction & Precision Tracking Engine
+- **Mathematical Gesture Isolation**: Strict knuckle, wrist, and fingertip thresholding prevents any cross-triggering between fists, points, victory signs, horns, and cupped hands.
+- **Early Cupped Hands Priority**: `birthday_cake` is evaluated ahead of joined two-hand heart detection, ensuring open/cupped hands are never incorrectly captured as a two-hand heart.
+- **Dropout Smoothing & Single-Burst Guards**: `ChampagnePopEffect` and `VictoryFireworksEffect` now guard initial bursts and cork pops against single-frame tracking dropouts, preventing jarring re-pops mid-gesture.
+- **Webcam Mirror Inversion Protection**: All floating typography, banners ("MAKE A WISH" / "HAPPY BIRTHDAY!"), trophy inscriptions ("★ VICTORY ★"), and bottle labels ("CUVÉE GOLD") are protected with counter-flipped canvas transforms so text is always crisp, readable, and properly oriented even when webcam mirroring is active.
+- **CodeRabbit CLI Validated**: All changes verified by CodeRabbit with **0 findings** across all 11 modified files.
+
+---
+
 # HeartWave v1.3.26 Release Notes
 
 ## 💖 Dual-Hand Korean Finger Heart & Multi-Anchor Particle Synchronization

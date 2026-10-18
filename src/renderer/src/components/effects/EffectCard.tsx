@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, Sparkles, Heart, Flower2, Flame, CloudRain } from 'lucide-react';
+import { Star, Sparkles, Heart, Flower2, Flame, CloudRain, Cake, PartyPopper, Trophy, Zap } from 'lucide-react';
 import { EffectItem } from '../../types/effect';
 
 interface EffectCardProps {
@@ -143,6 +143,82 @@ export const EffectCard: React.FC<EffectCardProps> = ({
             }}
           >
             <CloudRain size={36} color="var(--hw-accent-rose)" strokeWidth={1.8} />
+          </div>
+        );
+
+      case 'birthday_cake':
+        return (
+          <div
+            style={{
+              width: '100%',
+              height: '76px',
+              borderRadius: 'var(--hw-radius-sm)',
+              background: 'radial-gradient(circle at center, rgba(229, 168, 59, 0.3) 0%, rgba(38, 32, 31, 0.8) 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            <Cake size={36} color="#E5A83B" strokeWidth={1.8} />
+          </div>
+        );
+
+      case 'champagne_pop':
+        return (
+          <div
+            style={{
+              width: '100%',
+              height: '76px',
+              borderRadius: 'var(--hw-radius-sm)',
+              background: 'radial-gradient(circle at center, rgba(255, 215, 0, 0.3) 0%, rgba(38, 32, 31, 0.8) 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            <PartyPopper size={36} color="#FFD700" strokeWidth={1.8} />
+          </div>
+        );
+
+      case 'victory_fireworks':
+        return (
+          <div
+            style={{
+              width: '100%',
+              height: '76px',
+              borderRadius: 'var(--hw-radius-sm)',
+              background: 'radial-gradient(circle at center, rgba(255, 179, 0, 0.3) 0%, rgba(38, 32, 31, 0.8) 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            <Trophy size={36} color="#FFB300" strokeWidth={1.8} />
+          </div>
+        );
+
+      case 'flame_frost':
+        return (
+          <div
+            style={{
+              width: '100%',
+              height: '76px',
+              borderRadius: 'var(--hw-radius-sm)',
+              background: 'radial-gradient(circle at center, rgba(0, 229, 255, 0.3) 0%, rgba(38, 32, 31, 0.8) 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            <Zap size={36} color="#00E5FF" strokeWidth={1.8} />
           </div>
         );
 

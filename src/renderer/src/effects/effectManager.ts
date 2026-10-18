@@ -6,6 +6,10 @@ import { RoseBloomEffect } from './romantic/roseBloom';
 import { FloatingHeartsEffect } from './romantic/floatingHearts';
 import { CupidSparkEffect } from './romantic/cupidSpark';
 import { PetalRainEffect } from './romantic/petalRain';
+import { BirthdayCakeEffect } from './celebration/birthdayCake';
+import { ChampagnePopEffect } from './celebration/champagnePop';
+import { VictoryFireworksEffect } from './celebration/victoryFireworks';
+import { FlameFrostEffect } from './celebration/flameFrost';
 
 export class EffectManager {
   private effects: Map<string, VisualEffect> = new Map();
@@ -16,6 +20,10 @@ export class EffectManager {
     ['open_palm', 'floating-hearts'],
     ['index_point', 'cupid-spark'],
     ['petal_rain_pose', 'petal-rain'],
+    ['birthday_cake', 'birthday-cake'],
+    ['champagne_pop', 'champagne-pop'],
+    ['victory_fireworks', 'victory-fireworks'],
+    ['flame_frost', 'flame-frost'],
   ]);
 
   private activeEffectId: string = 'golden-finger-heart';
@@ -28,6 +36,10 @@ export class EffectManager {
     this.registerEffect(new FloatingHeartsEffect());
     this.registerEffect(new CupidSparkEffect());
     this.registerEffect(new PetalRainEffect());
+    this.registerEffect(new BirthdayCakeEffect());
+    this.registerEffect(new ChampagnePopEffect());
+    this.registerEffect(new VictoryFireworksEffect());
+    this.registerEffect(new FlameFrostEffect());
   }
 
   private registerEffect(effect: VisualEffect): void {
