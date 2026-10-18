@@ -171,6 +171,14 @@ mod imp {
             let w = width as usize;
             let h = height as usize;
 
+            if w == 0 || h == 0 || w > 1920 || h > 1080 {
+                return;
+            }
+
+            if !is_privacy && rgba.len() < (w * h * 4) {
+                return;
+            }
+
             unsafe {
                 let header = &*(self.view_ptr as *const HeartWaveSharedHeader);
                 let req_format = header.requested_format;
@@ -182,6 +190,10 @@ mod imp {
                 } else {
                     w * h * 3 / 2
                 };
+
+                if frame_size > MAX_SLOT_SIZE {
+                    return;
+                }
 
                 // Acquire next write slot in triple-buffered ring buffer
                 let latest = self.latest_slot.load(Ordering::Acquire);

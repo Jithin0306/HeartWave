@@ -256,63 +256,73 @@ export class BackgroundSegmenter {
       const sourceForInference = this.inputCanvas || videoSource;
 
       this.fallbackSegmenter.segmentForVideo(sourceForInference, timestamp, (result) => {
-        const mask = (result.confidenceMasks && result.confidenceMasks.length > 1)
-          ? result.confidenceMasks[1]
-          : result.confidenceMasks?.[0];
-        if (!mask) return;
+        try {
+          const mask = (result.confidenceMasks && result.confidenceMasks.length > 1)
+            ? result.confidenceMasks[1]
+            : result.confidenceMasks?.[0];
+          if (!mask) return;
 
-        const width = mask.width;
-        const height = mask.height;
-        const totalPixels = width * height;
+          const width = mask.width;
+          const height = mask.height;
+          const totalPixels = width * height;
 
-        if (!this.fallbackSmoothedBuffer || this.fallbackSmoothedBuffer.length !== totalPixels) {
-          this.fallbackSmoothedBuffer = new Float32Array(totalPixels);
-          this.fallbackBlurBuffer = new Float32Array(totalPixels);
-          this.fallbackHasHistory = false;
-        }
+          if (!this.fallbackSmoothedBuffer || this.fallbackSmoothedBuffer.length !== totalPixels) {
+            this.fallbackSmoothedBuffer = new Float32Array(totalPixels);
+            this.fallbackBlurBuffer = new Float32Array(totalPixels);
+            this.fallbackHasHistory = false;
+          }
 
-        const rawFloats = mask.getAsFloat32Array();
-        const smoothed = this.fallbackSmoothedBuffer;
-        const blurBuf = this.fallbackBlurBuffer!;
-        const data = this.maskImageData!.data;
-        const alpha = this.temporalAlpha;
-        const oneMinusAlpha = 1.0 - alpha;
-        const lut = this.lut;
+          const rawFloats = mask.getAsFloat32Array();
+          const smoothed = this.fallbackSmoothedBuffer;
+          const blurBuf = this.fallbackBlurBuffer!;
+          const data = this.maskImageData!.data;
+          const alpha = this.temporalAlpha;
+          const oneMinusAlpha = 1.0 - alpha;
+          const lut = this.lut;
 
-        if (!this.fallbackHasHistory) {
-          for (let i = 0; i < totalPixels; i++) smoothed[i] = rawFloats[i];
-          this.fallbackHasHistory = true;
-        } else {
-          for (let i = 0; i < totalPixels; i++) {
-            smoothed[i] = alpha * rawFloats[i] + oneMinusAlpha * smoothed[i];
+          if (!this.fallbackHasHistory) {
+            for (let i = 0; i < totalPixels; i++) smoothed[i] = rawFloats[i];
+            this.fallbackHasHistory = true;
+          } else {
+            for (let i = 0; i < totalPixels; i++) {
+              smoothed[i] = alpha * rawFloats[i] + oneMinusAlpha * smoothed[i];
+            }
+          }
+
+          for (let y = 0; y < height; y++) {
+            const yOffset = y * width;
+            const yPrev = (y > 0 ? y - 1 : y) * width;
+            const yNext = (y < height - 1 ? y + 1 : y) * width;
+
+            for (let x = 0; x < width; x++) {
+              const xPrev = x > 0 ? x - 1 : x;
+              const xNext = x < width - 1 ? x + 1 : x;
+
+              const center = smoothed[yOffset + x];
+              const filtered = 0.5 * center + 0.125 * (
+                smoothed[yOffset + xPrev] +
+                smoothed[yOffset + xNext] +
+                smoothed[yPrev + x] +
+                smoothed[yNext + x]
+              );
+              blurBuf[yOffset + x] = filtered;
+
+              const b = (filtered * 255) | 0;
+              data[(yOffset + x) * 4 + 3] = lut[b < 0 ? 0 : (b > 255 ? 255 : b)];
+            }
+          }
+
+          this.maskCtx!.putImageData(this.maskImageData!, 0, 0);
+          this.hasHistory = true;
+        } finally {
+          if (result.confidenceMasks) {
+            for (let i = 0; i < result.confidenceMasks.length; i++) {
+              try {
+                result.confidenceMasks[i].close();
+              } catch {}
+            }
           }
         }
-
-        for (let y = 0; y < height; y++) {
-          const yOffset = y * width;
-          const yPrev = (y > 0 ? y - 1 : y) * width;
-          const yNext = (y < height - 1 ? y + 1 : y) * width;
-
-          for (let x = 0; x < width; x++) {
-            const xPrev = x > 0 ? x - 1 : x;
-            const xNext = x < width - 1 ? x + 1 : x;
-
-            const center = smoothed[yOffset + x];
-            const filtered = 0.5 * center + 0.125 * (
-              smoothed[yOffset + xPrev] +
-              smoothed[yOffset + xNext] +
-              smoothed[yPrev + x] +
-              smoothed[yNext + x]
-            );
-            blurBuf[yOffset + x] = filtered;
-
-            const b = (filtered * 255) | 0;
-            data[(yOffset + x) * 4 + 3] = lut[b < 0 ? 0 : (b > 255 ? 255 : b)];
-          }
-        }
-
-        this.maskCtx!.putImageData(this.maskImageData!, 0, 0);
-        this.hasHistory = true;
       });
 
       return this.maskCanvas;

@@ -1,7 +1,6 @@
 import { CompositorMetrics } from '../types/compositor';
 import { BackgroundMode } from '../types/background';
 import { BACKDROP_PRESETS } from '../data/initialBackdrops';
-import { GlPboReader } from './glPboReader';
 import logoFullUrl from '../assets/logo-full.jpg';
 import logoIconUrl from '../assets/logo-icon.png';
 
@@ -12,10 +11,6 @@ export class VideoCompositor {
   private height: number = 720;
   private logoFullImg: HTMLImageElement | null = null;
   private logoIconImg: HTMLImageElement | null = null;
-
-  // Zero-allocation DMA WebGL2 PBO reader & fallback persistent buffer
-  private pboReader: GlPboReader | null = null;
-  private persistentBuffer: Uint8Array | null = null;
 
   // Dual-pass segmentation foreground buffer
   private foregroundCanvas: HTMLCanvasElement;
@@ -100,13 +95,6 @@ export class VideoCompositor {
     try {
       this.outputStream = this.canvas.captureStream(30);
     } catch {}
-
-    try {
-      this.pboReader = new GlPboReader(1280, 720);
-    } catch (e) {
-      console.warn('[VideoCompositor] GlPboReader initialization warning:', e);
-      this.pboReader = null;
-    }
   }
 
   private preloadBackdrops(): void {
@@ -130,6 +118,11 @@ export class VideoCompositor {
       this.foregroundCanvas.height = height;
       this.blurCanvas.width = Math.max(160, Math.round(width / 4));
       this.blurCanvas.height = Math.max(90, Math.round(height / 4));
+
+      // Re-apply smoothing states as resizing canvas resets 2D context states to browser defaults
+      if (this.ctx) this.ctx.imageSmoothingEnabled = true;
+      if (this.fgCtx) this.fgCtx.imageSmoothingEnabled = true;
+      if (this.blurCtx) this.blurCtx.imageSmoothingEnabled = true;
     }
   }
 

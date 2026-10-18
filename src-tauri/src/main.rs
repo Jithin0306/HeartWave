@@ -7,7 +7,24 @@ fn main() {
         unsafe {
             std::env::set_var(
                 "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
-                "--disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --enable-gpu-rasterization --enable-zero-copy --disable-direct-composition-video-overlays --js-flags=--max-old-space-size=96 --disk-cache-size=10485760",
+                "--disable-background-timer-throttling \
+                 --disable-backgrounding-occluded-windows \
+                 --disable-renderer-backgrounding \
+                 --enable-gpu-rasterization \
+                 --enable-zero-copy \
+                 --disable-direct-composition-video-overlays \
+                 --enable-features=V8MemoryReducer \
+                 --disable-features=SpareRendererForSitePerProcess,msWebOOUI,CalculateNativeWinOcclusion \
+                 --disk-cache-size=2097152 \
+                 --media-cache-size=2097152 \
+                 --disable-domain-reliability \
+                 --disable-component-update \
+                 --disable-speech-api \
+                 --disable-sync \
+                 --disable-default-apps \
+                 --renderer-process-limit=2 \
+                 --process-per-site \
+                 --js-flags=--max-old-space-size=128",
             );
         }
     }

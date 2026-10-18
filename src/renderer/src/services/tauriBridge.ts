@@ -26,6 +26,7 @@ let cachedDataView: DataView | null = null;
 
 let isFrameInFlight = false;
 let lastFlightStartTime = 0;
+let flightToken = 0;
 
 export function initTauriBridge(): void {
   if (typeof window === 'undefined') return;
@@ -54,10 +55,10 @@ export function initTauriBridge(): void {
         isBroadcasting: res.is_broadcasting,
       };
     },
-    sendFrame: async (buffer: ArrayBuffer | Uint8Array | Uint8ClampedArray, width: number, height: number, isPrivacy?: boolean) => {
-      // In-flight backpressure with 45ms stuck recovery: never drop frames for microtask delay
-      const now = performance.now();
-      if (isFrameInFlight && (now - lastFlightStartTime < 45)) return;
+    sendFrame: async (buffer: ArrayBuffer | Uint8Array | Uint8ClampedArray, width: number, height: number, isPrivacy?: boolean): Promise<boolean> => {
+      // In-flight backpressure: guarantee previous invoke finishes before new frame dispatches
+      // Guard against hung invoke: if an invoke has taken >1000ms, allow recovery
+      if (isFrameInFlight && (performance.now() - lastFlightStartTime < 1000)) return false;
 
       let u8: Uint8Array;
       if (buffer instanceof Uint8Array) {
@@ -88,31 +89,38 @@ export function initTauriBridge(): void {
 
         isFrameInFlight = true;
         lastFlightStartTime = performance.now();
+        const currentToken = ++flightToken;
         try {
           // Direct zero-copy Tauri 2.0 raw binary IPC (< 0.2ms)
           await invoke('vcam_push_frame_raw', cachedSendPacket);
+          return true;
         } catch (err) {
           if (Math.random() < 0.01) {
             console.warn('[TauriBridge] vcam_push_frame_raw error:', err);
           }
+          return false;
         } finally {
-          isFrameInFlight = false;
+          if (currentToken === flightToken) {
+            isFrameInFlight = false;
+          }
         }
       }
+      return false;
     },
-    triggerEffect: (effectId: string, x: number, y: number, confidence: number = 1.0) => {
+    triggerEffect: async (effectId: string, x: number, y: number, confidence: number = 1.0) => {
       if (!effectId || effectId === 'none' || effectId === 'all') {
-        invoke<void>('engine_release_effect', { effectId: 'all' }).catch(() => {});
+        await invoke<void>('engine_release_effect', { effectId: 'all' }).catch(() => {});
         return;
       }
-      invoke<void>('engine_trigger_effect', { effectId, x, y, confidence }).catch(() => {});
+      await invoke<void>('engine_trigger_effect', { effectId, x, y, confidence }).catch(() => {});
     },
-    updateEffectAnchor: (effectId: string, x: number, y: number) => {
+    updateEffectAnchor: async (effectId: string, x: number, y: number) => {
       if (!effectId || effectId === 'none') return;
-      invoke<void>('engine_update_anchor', { effectId, x, y }).catch(() => {});
+      await invoke<void>('engine_update_anchor', { effectId, x, y }).catch(() => {});
     },
-    releaseEffect: (effectId: string) =>
-      invoke<void>('engine_release_effect', { effectId: effectId || 'all' }).catch(() => {}),
+    releaseEffect: async (effectId: string) => {
+      await invoke<void>('engine_release_effect', { effectId: effectId || 'all' }).catch(() => {});
+    },
     sendTrayState: (_state) => {},
     onHotkeyPrivacy: (callback: () => void) => {
       let unlistenFn: (() => void) | null = null;

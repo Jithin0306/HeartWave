@@ -162,74 +162,87 @@ self.onmessage = async (e: MessageEvent) => {
 
       try {
         segmenter.segmentForVideo(bitmap, timestamp, (result) => {
-          const mask = (result.confidenceMasks && result.confidenceMasks.length > 1)
-            ? result.confidenceMasks[1]
-            : result.confidenceMasks?.[0];
+          try {
+            const mask = (result.confidenceMasks && result.confidenceMasks.length > 1)
+              ? result.confidenceMasks[1]
+              : result.confidenceMasks?.[0];
 
-          if (!mask) {
-            self.postMessage({ type: 'mask_skip', timestamp });
-            return;
-          }
-
-          const rawFloats = mask.getAsFloat32Array();
-          const w = mask.width;
-          const h = mask.height;
-          const pxCount = w * h;
-
-          if (smoothedBuffer.length !== pxCount) {
-            smoothedBuffer = new Float32Array(pxCount);
-            blurBuffer = new Float32Array(pxCount);
-            hasHistory = false;
-          }
-
-          const alpha = temporalAlpha;
-          const oneMinusAlpha = 1.0 - alpha;
-
-          // 1. Temporal EMA Smoothing
-          if (!hasHistory) {
-            for (let i = 0; i < pxCount; i++) {
-              smoothedBuffer[i] = rawFloats[i];
+            if (!mask) {
+              self.postMessage({ type: 'mask_skip', timestamp });
+              return;
             }
-            hasHistory = true;
-          } else {
-            for (let i = 0; i < pxCount; i++) {
-              smoothedBuffer[i] = alpha * rawFloats[i] + oneMinusAlpha * smoothedBuffer[i];
+
+            const rawFloats = mask.getAsFloat32Array();
+            const w = mask.width;
+            const h = mask.height;
+            const pxCount = w * h;
+
+            if (smoothedBuffer.length !== pxCount) {
+              smoothedBuffer = new Float32Array(pxCount);
+              blurBuffer = new Float32Array(pxCount);
+              hasHistory = false;
+            }
+
+            const alpha = temporalAlpha;
+            const oneMinusAlpha = 1.0 - alpha;
+
+            // 1. Temporal EMA Smoothing
+            if (!hasHistory) {
+              for (let i = 0; i < pxCount; i++) {
+                smoothedBuffer[i] = rawFloats[i];
+              }
+              hasHistory = true;
+            } else {
+              for (let i = 0; i < pxCount; i++) {
+                smoothedBuffer[i] = alpha * rawFloats[i] + oneMinusAlpha * smoothedBuffer[i];
+              }
+            }
+
+            // 2. Spatial 5-point Cross Filtering & Hysteresis LUT Edge Clamping
+            // Send lightweight 65KB alpha buffer (Zero GPU texture allocations, zero VRAM accumulation)
+            const alphaBuf = new Uint8Array(pxCount);
+            for (let y = 0; y < h; y++) {
+              const yOffset = y * w;
+              const yPrev = (y > 0 ? y - 1 : y) * w;
+              const yNext = (y < h - 1 ? y + 1 : y) * w;
+
+              for (let x = 0; x < w; x++) {
+                const xPrev = x > 0 ? x - 1 : x;
+                const xNext = x < w - 1 ? x + 1 : x;
+
+                const center = smoothedBuffer[yOffset + x];
+                const filtered = 0.5 * center + 0.125 * (
+                  smoothedBuffer[yOffset + xPrev] +
+                  smoothedBuffer[yOffset + xNext] +
+                  smoothedBuffer[yPrev + x] +
+                  smoothedBuffer[yNext + x]
+                );
+                blurBuffer[yOffset + x] = filtered;
+
+                const b = (filtered * 255) | 0;
+                alphaBuf[yOffset + x] = lut[b < 0 ? 0 : (b > 255 ? 255 : b)];
+              }
+            }
+
+            (self as any).postMessage({
+              type: 'mask_alpha',
+              buffer: alphaBuf.buffer,
+              width: w,
+              height: h,
+              timestamp,
+            }, [alphaBuf.buffer]);
+          } finally {
+            // CRITICAL MEMORY LEAK FIX:
+            // In MediaPipe Tasks Vision, confidenceMasks allocate WebAssembly and WebGL resources.
+            // They must be explicitly closed in finally to guarantee immediate linear heap deallocation!
+            if (result.confidenceMasks) {
+              for (let i = 0; i < result.confidenceMasks.length; i++) {
+                try {
+                  result.confidenceMasks[i].close();
+                } catch {}
+              }
             }
           }
-
-          // 2. Spatial 5-point Cross Filtering & Hysteresis LUT Edge Clamping
-          // Send lightweight 65KB alpha buffer (Zero GPU texture allocations, zero VRAM accumulation)
-          const alphaBuf = new Uint8Array(pxCount);
-          for (let y = 0; y < h; y++) {
-            const yOffset = y * w;
-            const yPrev = (y > 0 ? y - 1 : y) * w;
-            const yNext = (y < h - 1 ? y + 1 : y) * w;
-
-            for (let x = 0; x < w; x++) {
-              const xPrev = x > 0 ? x - 1 : x;
-              const xNext = x < w - 1 ? x + 1 : x;
-
-              const center = smoothedBuffer[yOffset + x];
-              const filtered = 0.5 * center + 0.125 * (
-                smoothedBuffer[yOffset + xPrev] +
-                smoothedBuffer[yOffset + xNext] +
-                smoothedBuffer[yPrev + x] +
-                smoothedBuffer[yNext + x]
-              );
-              blurBuffer[yOffset + x] = filtered;
-
-              const b = (filtered * 255) | 0;
-              alphaBuf[yOffset + x] = lut[b < 0 ? 0 : (b > 255 ? 255 : b)];
-            }
-          }
-
-          (self as any).postMessage({
-            type: 'mask_alpha',
-            buffer: alphaBuf.buffer,
-            width: w,
-            height: h,
-            timestamp,
-          }, [alphaBuf.buffer]);
         });
       } catch (segErr: any) {
         self.postMessage({

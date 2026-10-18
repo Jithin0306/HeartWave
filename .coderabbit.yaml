@@ -1,0 +1,80 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# HeartWave Virtual Camera CodeRabbit Configuration
+
+inheritance: false
+
+reviews:
+  profile: assertive
+  request_changes_workflow: true
+
+  pre_merge_checks:
+    title:
+      mode: error
+    description:
+      mode: error
+    custom_checks:
+      - name: Mobile Cam Service Immutability Guard
+        mode: error
+        instructions: |
+          Reject any modifications to `src/renderer/src/services/mobileCamService.ts` or
+          `src/renderer/src/components/mobile/MobileCamModal.tsx`. These files represent the
+          verified WebRTC wireless mobile pairing architecture and must NEVER be touched.
+      - name: UI Layout & Theme Integrity
+        mode: error
+        instructions: |
+          Verify that changes preserve 100% of UI layout, controls, gold and dark velvet themes,
+          sliders, HUD badges, gestures, and sound effects without unintended regressions.
+      - name: Zero-Latency Video Pipeline Invariants
+        mode: error
+        instructions: |
+          Ensure live capture presentation timestamps (pSample->SetTime(NULL, NULL) per the OBS
+          VirtualCam standard to prevent WebRTC Jitter Buffer expansion and 1-2s delay in Discord),
+          shared memory triple-buffering synchronization, and zero-copy SIMD color conversions
+          remain intact without introducing artificial latency or blocking calls.
+
+  review_status: true
+  review_details: true
+  enable_prompt_for_ai_agents: true
+
+  auto_review:
+    enabled: true
+    drafts: true
+    auto_incremental_review: true
+
+  tools:
+    actionlint:
+      enabled: true
+
+  path_instructions:
+    - path: "src/native/**"
+      instructions: |
+        - DirectShow COM: Verify AddRef and Release balance on all IUnknown implementations (HeartWaveFilter, HeartWavePin, HeartWaveClassFactory).
+        - DirectShow States: IPin::Connect must return VFW_E_ALREADY_CONNECTED if already connected.
+        - Shared Memory IPC: Sanitize all values read from shared memory headers (numSlots, slotStride, latestSlotIndex, width, height) against divide-by-zero, negative numbers, and memory bounds.
+        - Scaling & Conversions: Clamp all source buffer indices in ScaleYUY2, ScaleNV12, and YUY2ToNV12 to prevent buffer read overruns.
+        - Thread Safety: Ensure DoStream() stream loop exits promptly when m_hStopEvent is signaled.
+
+    - path: "src-tauri/src/**"
+      instructions: |
+        - Rust Memory Safety: Enforce bounds checking on all slice operations and raw pointers derived from view_ptr.
+        - Frame Ingestion: Validate w > 0, h > 0, w <= 1920, h <= 1080, and rgba.len() >= w * h * 4 before conversion.
+        - Ring Buffer: Guard frame_size <= MAX_SLOT_SIZE before std::slice::from_raw_parts_mut.
+        - Cross-Platform Compatibility: Maintain #[cfg(not(windows))] stubs for macOS and Linux CI builds.
+
+    - path: "src/renderer/src/**"
+      instructions: |
+        - Worker Management: Ensure URL.revokeObjectURL() is invoked immediately after Worker creation to prevent Chromium memory leaks.
+        - Component Lifecycle: Always clean up timers, requestAnimationFrame IDs, audio keep-alive nodes, and worker instances in useEffect unmount callbacks.
+        - Canvas States: Re-apply imageSmoothingEnabled = true whenever canvas dimensions are resized.
+        - Constraints: DO NOT edit src/renderer/src/services/mobileCamService.ts or src/renderer/src/components/mobile/MobileCamModal.tsx.
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  learnings:
+    scope: local
+  issues:
+    scope: local
+  pull_requests:
+    scope: local

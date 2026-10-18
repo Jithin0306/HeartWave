@@ -178,7 +178,7 @@ npm run dev
 
 **Windows (NSIS Setup, Portable EXE & MSI):**
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\build-release.ps1 -Version "1.3.24"
+powershell -ExecutionPolicy Bypass -File .\scripts\build-release.ps1 -Version "1.3.25"
 ```
 
 **Tauri Multi-Platform Build:**

@@ -590,7 +590,15 @@ STDMETHODIMP HeartWavePin::GetFormat(AM_MEDIA_TYPE** ppmt) {
     **ppmt = m_currentMediaType;
     if (m_currentMediaType.cbFormat > 0 && m_currentMediaType.pbFormat) {
         (*ppmt)->pbFormat = (BYTE*)CoTaskMemAlloc(m_currentMediaType.cbFormat);
+        if (!(*ppmt)->pbFormat) {
+            CoTaskMemFree(*ppmt);
+            *ppmt = NULL;
+            return E_OUTOFMEMORY;
+        }
         memcpy((*ppmt)->pbFormat, m_currentMediaType.pbFormat, m_currentMediaType.cbFormat);
+    } else {
+        (*ppmt)->pbFormat = NULL;
+        (*ppmt)->cbFormat = 0;
     }
     return S_OK;
 }
@@ -604,9 +612,11 @@ STDMETHODIMP HeartWavePin::GetNumberOfCapabilities(int* piCount, int* piSize) {
 
 STDMETHODIMP HeartWavePin::GetStreamCaps(int iIndex, AM_MEDIA_TYPE** ppmt, BYTE* pSCC) {
     if (!ppmt || !pSCC) return E_POINTER;
+    *ppmt = NULL;
     if (iIndex < 0 || iIndex >= 12) return S_FALSE;
 
     AM_MEDIA_TYPE* pmt = (AM_MEDIA_TYPE*)CoTaskMemAlloc(sizeof(AM_MEDIA_TYPE));
+    if (!pmt) return E_OUTOFMEMORY;
     if (FAILED(BuildMediaType(iIndex, pmt))) {
         CoTaskMemFree(pmt);
         return E_FAIL;
@@ -837,13 +847,15 @@ void HeartWaveFilter::RenderDefaultFrame(uint8_t* pDst, int width, int height, G
         int cx = width / 2;
         int cy = height / 2;
         int rSq = (height * height) / 4;
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                int dx = x - cx;
-                int dy = y - cy;
-                int dSq = dx * dx + dy * dy;
-                if (dSq < rSq) {
-                    pDst[y * width + x] = (uint8_t)(26 + (rSq - dSq) * 35 / rSq);
+        if (rSq > 0) {
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    int dx = x - cx;
+                    int dy = y - cy;
+                    int dSq = dx * dx + dy * dy;
+                    if (dSq < rSq) {
+                        pDst[y * width + x] = (uint8_t)(26 + (rSq - dSq) * 35 / rSq);
+                    }
                 }
             }
         }
@@ -987,7 +999,7 @@ static void NV12ToYUY2(const uint8_t* pSrc, int srcW, int srcH, uint8_t* pDst, i
 }
 
 static void ScaleYUY2(const uint8_t* pSrc, int srcW, int srcH, uint8_t* pDst, int dstW, int dstH) {
-    if (!pSrc || !pDst || srcW <= 0 || srcH <= 0 || dstW <= 0 || dstH <= 0) return;
+    if (!pSrc || !pDst || srcW < 2 || srcH <= 0 || dstW < 2 || dstH <= 0 || (srcW & 1) != 0 || (dstW & 1) != 0) return;
     int srcStride = srcW * 2;
     int dstStride = dstW * 2;
 
@@ -1000,17 +1012,23 @@ static void ScaleYUY2(const uint8_t* pSrc, int srcW, int srcH, uint8_t* pDst, in
             int sx0 = (x * srcW) / dstW;
             int sx1 = ((x + 1) * srcW) / dstW;
             int sx0_pair = (sx0 / 2) * 4;
+            if (sx0_pair > srcStride - 4) sx0_pair = srcStride - 4;
+            if (sx0_pair < 0) sx0_pair = 0;
+
+            int sx1_pair = (sx1 / 2) * 4;
+            if (sx1_pair > srcStride - 4) sx1_pair = srcStride - 4;
+            if (sx1_pair < 0) sx1_pair = 0;
 
             pDstRow[x * 2]     = pSrcRow[sx0_pair + ((sx0 & 1) ? 2 : 0)];
             pDstRow[x * 2 + 1] = pSrcRow[sx0_pair + 1];
-            pDstRow[x * 2 + 2] = pSrcRow[sx0_pair + ((sx1 & 1) ? 2 : 0)];
+            pDstRow[x * 2 + 2] = pSrcRow[sx1_pair + ((sx1 & 1) ? 2 : 0)];
             pDstRow[x * 2 + 3] = pSrcRow[sx0_pair + 3];
         }
     }
 }
 
 static void YUY2ToNV12(const uint8_t* pSrc, int srcW, int srcH, uint8_t* pDst, int dstW, int dstH) {
-    if (!pSrc || !pDst || srcW <= 0 || srcH <= 0 || dstW <= 0 || dstH <= 0) return;
+    if (!pSrc || !pDst || srcW < 2 || srcH <= 0 || dstW < 2 || dstH <= 0 || (srcW & 1) != 0 || (dstW & 1) != 0) return;
     uint8_t* pDstY = pDst;
     uint8_t* pDstUV = pDst + (dstW * dstH);
     int srcStride = srcW * 2;
@@ -1093,11 +1111,9 @@ void HeartWaveFilter::DoStream() {
     int frameSize = (subType == MEDIASUBTYPE_NV12) ? (width * height * 3 / 2) :
                     (subType == MEDIASUBTYPE_YUY2) ? (width * height * 2) : (width * height * 4);
 
-    // Dynamic frame interval in milliseconds (e.g. 16ms for 60 FPS, 33ms for 30 FPS)
-    DWORD frameIntervalMs = (DWORD)(interval / 10000);
-    if (frameIntervalMs < 10) frameIntervalMs = 16;
-    DWORD waitTimeout = frameIntervalMs;
+    const DWORD WAIT_SLICE_MS = 50;
     uint32_t lastDeliveredWriteIndex = 0xFFFFFFFF;
+    uint32_t consecutiveTimeoutCount = 0;
 
     while (m_bStreaming) {
         if (!m_hNewFrameEvent) {
@@ -1107,7 +1123,7 @@ void HeartWaveFilter::DoStream() {
         HANDLE waitHandles[2] = { m_hStopEvent, m_hNewFrameEvent };
         DWORD handleCount = m_hNewFrameEvent ? 2 : 1;
 
-        DWORD waitRes = WaitForMultipleObjects(handleCount, waitHandles, FALSE, waitTimeout);
+        DWORD waitRes = WaitForMultipleObjects(handleCount, waitHandles, FALSE, WAIT_SLICE_MS);
         if (waitRes == WAIT_OBJECT_0) {
             break; // Stop event signaled
         }
@@ -1136,6 +1152,21 @@ void HeartWaveFilter::DoStream() {
             }
         }
 
+        if (waitRes == WAIT_OBJECT_0 + 1) {
+            consecutiveTimeoutCount = 0;
+        } else if (waitRes == WAIT_TIMEOUT) {
+            consecutiveTimeoutCount++;
+            // During active streaming at native rate, suppress duplicate frames for up to 3 timeouts (~150ms).
+            // Once idle for >150ms, keep delivering duplicate/standby frames so downstream capture graph does not stall!
+            if (m_pSharedHeader && m_pSharedHeader->magic == HW_MAGIC) {
+                if (m_pSharedHeader->isPrivacyMuted != 1 && m_pSharedHeader->writeIndex == lastDeliveredWriteIndex) {
+                    if (consecutiveTimeoutCount < 3) {
+                        continue;
+                    }
+                }
+            }
+        }
+
         IMediaSample* pSample = NULL;
         HRESULT hr = pAlloc->GetBuffer(&pSample, NULL, NULL, 0);
         if (SUCCEEDED(hr) && pSample) {
@@ -1150,16 +1181,50 @@ void HeartWaveFilter::DoStream() {
                         hasFrame = true;
                     } else if (m_pSharedData && m_pSharedHeader->frameSize > 0) {
                         uint32_t slot = 0;
+                        uint32_t numSlots = m_pSharedHeader->numSlots;
                         uint32_t stride = m_pSharedHeader->slotStride;
-                        if (m_pSharedHeader->numSlots > 1 && stride > 0) {
-                            slot = m_pSharedHeader->latestSlotIndex % m_pSharedHeader->numSlots;
-                        }
-                        const uint8_t* pSlot = m_pSharedData + (slot * stride);
-                        int srcW = (int)m_pSharedHeader->width;
-                        int srcH = (int)m_pSharedHeader->height;
+                        const uint32_t headerW = m_pSharedHeader->width;
+                        const uint32_t headerH = m_pSharedHeader->height;
                         uint32_t srcFmt = m_pSharedHeader->format;
 
-                        if (srcW > 0 && srcH > 0) {
+                        // Validate dimensions and format before arithmetic to prevent integer overflow
+                        const bool validSource =
+                            srcFmt <= 2 &&
+                            headerW >= 2 && headerW <= 1920 &&
+                            headerH > 0 && headerH <= 1080 &&
+                            (headerW & 1) == 0 &&
+                            (srcFmt != 0 || (headerH & 1) == 0);
+
+                        int srcW = validSource ? (int)headerW : 0;
+                        int srcH = validSource ? (int)headerH : 0;
+
+                        // Validate required frame size using wider 64-bit arithmetic
+                        uint64_t requiredMinSize = 0;
+                        if (validSource) {
+                            if (srcFmt == 2) requiredMinSize = (uint64_t)headerW * headerH * 2;
+                            else if (srcFmt == 0) requiredMinSize = (uint64_t)headerW * headerH * 3 / 2;
+                            else if (srcFmt == 1) requiredMinSize = (uint64_t)headerW * headerH * 4;
+                        }
+
+                        if (stride < requiredMinSize || stride > HW_MAX_FRAME_SIZE) {
+                            stride = HW_MAX_FRAME_SIZE;
+                        }
+
+                        if (numSlots > 1 && numSlots <= HW_RING_BUFFER_SLOTS) {
+                            slot = (m_pSharedHeader->latestSlotIndex) % numSlots;
+                        } else {
+                            slot = 0;
+                        }
+
+                        // Validate slotStride, frameSize, and memory bounds against required frame size
+                        bool isValidSlot = validSource &&
+                                           (requiredMinSize > 0) &&
+                                           (stride >= requiredMinSize) &&
+                                           (m_pSharedHeader->frameSize >= requiredMinSize) &&
+                                           ((slot * stride) + requiredMinSize <= (HW_RING_BUFFER_SLOTS * HW_MAX_FRAME_SIZE));
+
+                        if (isValidSlot) {
+                            const uint8_t* pSlot = m_pSharedData + (slot * stride);
                             if (subType == MEDIASUBTYPE_YUY2) {
                                 if (srcFmt == 2) {
                                     // Direct zero-copy fast path for Discord/WebRTC:
@@ -1193,6 +1258,9 @@ void HeartWaveFilter::DoStream() {
                                 }
                                 hasFrame = true;
                             }
+                        } else {
+                            RenderDefaultFrame(pData, width, height, subType);
+                            hasFrame = true;
                         }
                     }
                 }
@@ -1200,33 +1268,14 @@ void HeartWaveFilter::DoStream() {
                     RenderDefaultFrame(pData, width, height, subType);
                 }
 
-                // Hardware-synchronized stream presentation timestamps (OBS VirtualCam & Camo standard):
-                // Syncs video stream timestamps directly to the DirectShow graph reference clock / system clock.
-                // In WebRTC (Discord/Google Meet) and OBS Studio, WASAPI microphone audio is locked to this exact clock.
-                // Providing stream presentation timestamps collapses WebRTC's playout jitter buffer from 1000-2000ms down to 0ms,
-                // eliminating the 1-2 second video delay and ensuring perfect real-time lip sync!
-                REFERENCE_TIME rtStart = 0;
-                REFERENCE_TIME rtEnd = 0;
-
-                if (m_pClock) {
-                    REFERENCE_TIME rtNow = 0;
-                    if (SUCCEEDED(m_pClock->GetTime(&rtNow))) {
-                        rtStart = (rtNow > m_tStart) ? (rtNow - m_tStart) : 0;
-                    } else {
-                        rtStart = (REFERENCE_TIME)(GetTickCount64() - m_startTick) * 10000;
-                    }
-                } else {
-                    rtStart = (REFERENCE_TIME)(GetTickCount64() - m_startTick) * 10000;
-                }
-
-                if (rtStart < m_rtLastTime) {
-                    rtStart = m_rtLastTime;
-                }
-                rtEnd = rtStart + interval;
-                m_rtLastTime = rtStart + 1;
-
-                pSample->SetTime(&rtStart, &rtEnd);
-
+                // Live capture delivery for WebRTC / Discord / OBS Studio / Zoom:
+                // (Follows the OBS VirtualCam vcam-filter.cpp production standard)
+                // DirectShow virtual cameras sending frames into Chromium / WebRTC must pass NULL sample times.
+                // When sample times are unset (VFW_E_SAMPLE_TIME_NOT_SET), Chromium's DirectShow capture
+                // sink immediately stamps the incoming frame with base::TimeTicks::Now() at the moment of arrival.
+                // This aligns video arrival perfectly with WASAPI microphone audio timestamps, collapsing WebRTC's
+                // StreamSynchronization jitter buffer from a 1-2 second delay down to 0 ms real-time playout.
+                pSample->SetTime(NULL, NULL);
                 pSample->SetMediaTime(NULL, NULL);
                 pSample->SetSyncPoint(TRUE);
                 pSample->SetPreroll(FALSE);
@@ -1273,9 +1322,14 @@ public:
         return c;
     }
     STDMETHODIMP CreateInstance(IUnknown* pUnkOuter, REFIID riid, void** ppv) {
+        if (!ppv) return E_POINTER;
+        *ppv = NULL;
         if (pUnkOuter) return CLASS_E_NOAGGREGATION;
         HeartWaveFilter* pFilter = new HeartWaveFilter();
-        return pFilter->QueryInterface(riid, ppv);
+        if (!pFilter) return E_OUTOFMEMORY;
+        HRESULT result = pFilter->QueryInterface(riid, ppv);
+        pFilter->Release();
+        return result;
     }
     STDMETHODIMP LockServer(BOOL fLock) {
         if (fLock) InterlockedIncrement(&g_cServerLocks);
@@ -1289,7 +1343,10 @@ STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, void** ppv) {
     *ppv = NULL;
     if (rclsid == CLSID_HeartWaveVirtualCam) {
         HeartWaveClassFactory* pFactory = new HeartWaveClassFactory();
-        return pFactory->QueryInterface(riid, ppv);
+        if (!pFactory) return E_OUTOFMEMORY;
+        HRESULT result = pFactory->QueryInterface(riid, ppv);
+        pFactory->Release();
+        return result;
     }
     return CLASS_E_CLASSNOTAVAILABLE;
 }

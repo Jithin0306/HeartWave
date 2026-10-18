@@ -25,7 +25,7 @@ export interface HeartwaveApi {
   startVirtualCamera: (width?: number, height?: number, fps?: number) => Promise<boolean>;
   stopVirtualCamera: () => Promise<boolean>;
   getVirtualCameraStatus: () => Promise<{ isRegistered: boolean; isBroadcasting: boolean }>;
-  sendFrame: (buffer: ArrayBuffer | Uint8Array | Uint8ClampedArray, width: number, height: number, isPrivacy?: boolean) => Promise<any> | void;
+  sendFrame: (buffer: ArrayBuffer | Uint8Array | Uint8ClampedArray, width: number, height: number, isPrivacy?: boolean) => Promise<any> | void | boolean;
   sendTrayState: (state: { isPrivacy: boolean; isBypass: boolean; isVirtualOutput: boolean }) => void;
   onHotkeyPrivacy: (callback: () => void) => () => void;
   onHotkeyBypass: (callback: () => void) => () => void;
