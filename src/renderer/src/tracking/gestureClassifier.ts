@@ -130,28 +130,29 @@ export class GestureClassifier {
         this.isFingerExtended(h2.landmarks, 16, 14, 13) &&
         this.isFingerExtended(h2.landmarks, 20, 18, 17);
 
-      // B. Birthday Cake Cupped Hands Pose:
-      // Both hands held together in lower/mid frame, all fingers extended flat/cupped holding cake platter
-      const wristsYDiff = Math.abs(h1.landmarks[0].y - h2.landmarks[0].y);
-      const indexKnuckleDist = dist2D(h1.landmarks[5], h2.landmarks[5]);
+      // B. Birthday Cake Wish / Prayer Pose:
+      // Both hands pressed together in front of chest in prayer/wish pose
+      const middleTipsDist = dist2D(h1.landmarks[12], h2.landmarks[12]);
+      const isUprightH1 = h1.landmarks[12].y < h1.landmarks[0].y - 0.08;
+      const isUprightH2 = h2.landmarks[12].y < h2.landmarks[0].y - 0.08;
 
       if (
         h1AllExt &&
         h2AllExt &&
-        wristsDist < 0.24 &&
-        indexKnuckleDist > 0.06 &&
-        indexKnuckleDist < 0.24 &&
-        thumbTipsDist > 0.08 &&
-        wristsYDiff < 0.10 &&
-        h1.landmarks[0].y > 0.38 &&
-        h2.landmarks[0].y > 0.38
+        wristsDist < 0.16 &&
+        indexTipsDist < 0.12 &&
+        middleTipsDist < 0.12 &&
+        isUprightH1 &&
+        isUprightH2 &&
+        h1.landmarks[0].y > 0.35 &&
+        h2.landmarks[0].y > 0.35
       ) {
         return {
           gesture: 'birthday_cake',
-          confidence: 0.95,
+          confidence: 0.96,
           anchor: {
             x: (h1.landmarks[9].x + h2.landmarks[9].x) / 2,
-            y: (h1.landmarks[9].y + h2.landmarks[9].y) / 2 - 0.10,
+            y: (h1.landmarks[9].y + h2.landmarks[9].y) / 2 - 0.08,
           },
           handsCount: 2,
           rawHands: validHands,
@@ -221,13 +222,13 @@ export class GestureClassifier {
         };
       }
 
-      // --- VICTORY / PEACE SIGN: Dedicated Celebration Trophy & Fireworks ---
+      // --- CELEBRATION CRACKERS: Victory / Peace Sign (✌️) ---
       // Index & middle extended in a V-shape, ring & pinky curled
       const vSpread = dist2D(lm[8], lm[12]) > 0.035;
       const thumbTucked = lm[4].y > lm[6].y - 0.02 || dist2D(lm[4], lm[14]) < 0.15;
       if (indexExt && middleExt && ringCurled && pinkyCurled && vSpread && thumbTucked) {
         return {
-          gesture: 'victory_fireworks',
+          gesture: 'celebration_crackers',
           confidence: 0.94,
           anchor: { x: (lm[8].x + lm[12].x) / 2, y: (lm[8].y + lm[12].y) / 2 },
           handsCount: validHands.length,
@@ -237,12 +238,10 @@ export class GestureClassifier {
 
       // --- ROCK-ON / DEVIL HORNS: Dedicated Elemental Flame & Frost ---
       if (this.isHornsPose(lm)) {
-        const hornsAnchors: Array<{ x: number; y: number }> = [];
-        for (const h of validHands) {
-          if (this.isHornsPose(h.landmarks)) {
-            hornsAnchors.push({ x: h.landmarks[9].x, y: h.landmarks[9].y });
-          }
-        }
+        const hornsAnchors = validHands
+          .filter((h) => this.isHornsPose(h.landmarks))
+          .map((h) => ({ x: h.landmarks[9].x, y: h.landmarks[9].y }));
+
         return {
           gesture: 'flame_frost',
           confidence: 0.95,
@@ -266,12 +265,12 @@ export class GestureClassifier {
         };
       }
 
-      // --- THUMBS UP: Dedicated Champagne Pop Gesture ---
+      // --- THUMBS UP: Dedicated Confetti Celebration Gesture ---
       // All 4 fingers curled into palm, thumb extended straight upwards
       const thumbIsUp = lm[4].y < lm[3].y - 0.03 && lm[3].y < lm[2].y && lm[4].y < lm[5].y - 0.04;
       if (indexCurled && middleCurled && ringCurled && pinkyCurled && thumbIsUp) {
         return {
-          gesture: 'champagne_pop',
+          gesture: 'confetti_celebration',
           confidence: 0.95,
           anchor: { x: lm[4].x, y: lm[4].y },
           handsCount: validHands.length,

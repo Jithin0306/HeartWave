@@ -44,6 +44,11 @@ export class FlameFrostEffect implements VisualEffect {
   }
 
   update(dt: number, intensity: number, currentAnchor?: EffectAnchor, currentAnchors?: EffectAnchor[]): void {
+    if (!this.isHolding && this.particles.length === 0 && this.scale < 0.02) {
+      if (this.scale !== 0) this.reset();
+      return;
+    }
+
     const activeAnchors = currentAnchors && currentAnchors.length > 0
       ? currentAnchors
       : (currentAnchor ? [currentAnchor] : this.anchors);

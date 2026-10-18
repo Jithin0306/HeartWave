@@ -51,6 +51,8 @@ export class BirthdayCakeEffect implements VisualEffect {
   id = 'birthday-cake';
   name = 'Birthday Cake & Candle Wish';
 
+  private static readonly TOP_TIER_SURFACE = 165;
+
   private width: number = 1280;
   private height: number = 720;
   private anchor: EffectAnchor = { x: 0.5, y: 0.65 };
@@ -59,11 +61,9 @@ export class BirthdayCakeEffect implements VisualEffect {
   private ageTime: number = 0;
 
   // Blow-out state machine
-  private state: 'spawning' | 'lit' | 'blowing' | 'extinguished' | 'celebration' = 'spawning';
+  private state: 'idle' | 'lit' | 'blowing' | 'celebration' = 'idle';
   private wishTimer: number = 0;
   private blowProgress: number = 0;
-  private bannerAlpha: number = 0;
-  private bannerText: string = '🎂 MAKE A WISH 🎂';
 
   // Candles on top tier
   private candles: CandleState[] = [
@@ -87,10 +87,9 @@ export class BirthdayCakeEffect implements VisualEffect {
     this.anchor = anchor;
     this.isHolding = true;
 
-    if (this.state === 'spawning') {
+    if (this.state === 'idle') {
       this.state = 'lit';
       this.wishTimer = 0;
-      this.bannerText = '🎂 MAKE A WISH 🎂';
       this.candles.forEach((c) => (c.isLit = true));
     }
   }
@@ -100,25 +99,27 @@ export class BirthdayCakeEffect implements VisualEffect {
   }
 
   hasActiveParticles(): boolean {
-    return this.cakeScale > 0.02 || this.confetti.length > 0 || this.sparklers.length > 0;
+    return this.cakeScale > 0.02 || this.confetti.length > 0 || this.sparklers.length > 0 || this.smoke.length > 0;
   }
 
   destroy(): void {
     this.reset();
   }
 
-  /**
-   * Signal blowing action (can be triggered by mouth tracking or hold duration)
-   */
-  triggerBlow(): void {
-    if (this.state === 'lit') {
-      this.state = 'blowing';
-    }
-  }
-
   update(dt: number, intensity: number, currentAnchor?: EffectAnchor): void {
+    // 0ms early return when completely idle to preserve 60 FPS
+    if (
+      !this.isHolding &&
+      this.cakeScale < 0.02 &&
+      this.confetti.length === 0 &&
+      this.smoke.length === 0 &&
+      this.sparklers.length === 0
+    ) {
+      if (this.state !== 'idle') this.reset();
+      return;
+    }
+
     if (currentAnchor && this.isHolding) {
-      // Smoothly interpolate anchor
       this.anchor.x += (currentAnchor.x - this.anchor.x) * Math.min(1.0, 10 * dt);
       this.anchor.y += (currentAnchor.y - this.anchor.y) * Math.min(1.0, 10 * dt);
     }
@@ -130,33 +131,16 @@ export class BirthdayCakeEffect implements VisualEffect {
     const target = this.isHolding ? 1.0 : 0.0;
     this.cakeScale += (target - this.cakeScale) * Math.min(1.0, 7 * dt);
 
-    // Fade banner in / out
-    const targetBannerAlpha = this.isHolding && this.cakeScale > 0.4 ? 1.0 : 0.0;
-    this.bannerAlpha += (targetBannerAlpha - this.bannerAlpha) * Math.min(1.0, 5 * dt);
-
-    if (
-      this.cakeScale < 0.02 &&
-      !this.isHolding &&
-      this.confetti.length === 0 &&
-      this.smoke.length === 0 &&
-      this.sparklers.length === 0
-    ) {
-      if (this.state !== 'spawning') this.reset();
-      return;
-    }
-
-    // State progression
+    // State progression: wish hold auto-extinguishes
     if (this.state === 'lit') {
       this.wishTimer += dt;
-      // Auto-trigger blow after holding wish for ~2.6 seconds if not already blown
-      if (this.wishTimer > 2.6) {
+      if (this.wishTimer > 2.5) {
         this.state = 'blowing';
       }
     }
 
     if (this.state === 'blowing') {
       this.blowProgress += dt * 3.5;
-      // Tilt flames horizontally as wind hits them
       this.candles.forEach((c) => {
         c.flameTilt = Math.sin(this.blowProgress * 8) * 0.4 + 0.35;
         c.flameFlicker += dt * 25;
@@ -166,7 +150,6 @@ export class BirthdayCakeEffect implements VisualEffect {
         // Extinguish candles!
         this.candles.forEach((c) => (c.isLit = false));
         this.state = 'celebration';
-        this.bannerText = '✨ HAPPY BIRTHDAY! ✨';
         this.spawnConfettiBurst(intensityMult);
       }
     }
@@ -174,19 +157,20 @@ export class BirthdayCakeEffect implements VisualEffect {
     // Update candles and smoke
     this.candles.forEach((candle) => {
       candle.flameFlicker += dt * 8;
-      if (!candle.isLit && this.state === 'celebration') {
+      if (!candle.isLit) {
         candle.smokeTimer += dt;
-        if (candle.smokeTimer < 3.0 && Math.random() < 0.6) {
-          const cx = this.anchor.x * this.width + candle.relX * (65 * this.cakeScale);
-          const cy = this.anchor.y * this.height - (65 + candle.height + 6) * this.cakeScale;
+        if (candle.smokeTimer < 2.5 && Math.random() < 0.6) {
+          const s = this.cakeScale;
+          const cx = this.anchor.x * this.width + candle.relX * (65 * s);
+          const cy = this.anchor.y * this.height - (BirthdayCakeEffect.TOP_TIER_SURFACE + candle.height + 7) * s;
           this.smoke.push({
-            x: cx + (Math.random() - 0.5) * 4,
+            x: cx + (Math.random() - 0.5) * 6,
             y: cy,
-            vx: (Math.random() - 0.5) * 12 + 8,
-            vy: -25 - Math.random() * 30,
-            size: 4 + Math.random() * 4,
-            alpha: 0.75,
-            curl: (Math.random() - 0.5) * 3,
+            vx: (Math.random() - 0.5) * 18,
+            vy: -40 - Math.random() * 35,
+            size: 6 + Math.random() * 6,
+            alpha: 0.65,
+            curl: (Math.random() - 0.5) * 2.5,
           });
         }
       }
@@ -210,7 +194,7 @@ export class BirthdayCakeEffect implements VisualEffect {
       const c = this.candles[Math.floor(Math.random() * this.candles.length)];
       if (c && c.isLit) {
         const cx = this.anchor.x * this.width + c.relX * (65 * this.cakeScale);
-        const cy = this.anchor.y * this.height - (65 + c.height + 6) * this.cakeScale;
+        const cy = this.anchor.y * this.height - (BirthdayCakeEffect.TOP_TIER_SURFACE + c.height + 12) * this.cakeScale;
         this.sparklers.push({
           x: cx,
           y: cy,
@@ -228,7 +212,7 @@ export class BirthdayCakeEffect implements VisualEffect {
       const p = this.sparklers[i];
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.vy += 60 * dt; // gravity
+      p.vy += 60 * dt;
       p.alpha -= p.decay * dt;
       if (p.alpha <= 0) {
         this.sparklers.splice(i, 1);
@@ -240,8 +224,8 @@ export class BirthdayCakeEffect implements VisualEffect {
       const p = this.confetti[i];
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.vy += 95 * dt; // gravity
-      p.vx *= 0.985; // air drag
+      p.vy += 95 * dt;
+      p.vx *= 0.985;
       p.rotation += p.rotationSpeed * dt;
       p.wobble += p.wobbleSpeed * dt;
       p.x += Math.sin(p.wobble) * 1.5;
@@ -302,129 +286,21 @@ export class BirthdayCakeEffect implements VisualEffect {
     const cy = this.anchor.y * height;
     const s = this.cakeScale;
 
-    // 1. Draw Celebration Head Party Hat / Crown
-    this.renderPartyHat(ctx, width, height, s);
-
-    // 2. Draw The 3D Layered Birthday Cake
+    // 1. Draw The 3D Layered Birthday Cake
     if (s > 0.05) {
       this.renderCake(ctx, cx, cy, s);
     }
 
-    // 3. Draw Smoke Wisps
+    // 2. Draw Smoke Wisps
     this.renderSmoke(ctx);
 
-    // 4. Draw Candle Flames & Embers
+    // 3. Draw Candle Flames & Embers
     if (s > 0.05) {
       this.renderCandles(ctx, cx, cy, s);
     }
 
-    // 5. Draw Confetti Ribbons
+    // 4. Draw Confetti Ribbons
     this.renderConfetti(ctx);
-
-    ctx.restore();
-
-    // 6. Draw Floating Celebration Banner (Rendered outside mirror transform so typography is not inverted)
-    if (this.bannerAlpha > 0.05) {
-      const screenX = isMirrored ? width - cx : cx;
-      this.renderBanner(ctx, screenX, cy - 230 * s, this.bannerAlpha);
-    }
-  }
-
-  private renderPartyHat(ctx: CanvasRenderingContext2D, width: number, height: number, s: number): void {
-    // Position party hat slightly above user head center (top ~16% of frame)
-    const hatX = width * 0.5;
-    const hatY = height * 0.14;
-    const hatScale = Math.min(1.0, s * 1.1);
-
-    ctx.save();
-    ctx.translate(hatX, hatY);
-    ctx.scale(hatScale, hatScale);
-
-    // Subtle breathing tilt
-    ctx.rotate(Math.sin(this.ageTime * 2.5) * 0.06);
-
-    // Party cone hat body
-    const hatH = 85;
-    const hatBaseW = 44;
-
-    const hatGrad = ctx.createLinearGradient(-hatBaseW, hatH, hatBaseW, -hatH * 0.4);
-    hatGrad.addColorStop(0, '#E5A83B'); // Champagne Gold
-    hatGrad.addColorStop(0.5, '#FFF2D6'); // Pearl highlight
-    hatGrad.addColorStop(1, '#C98B27'); // Deep Gold
-
-    ctx.beginPath();
-    ctx.moveTo(0, -hatH);
-    ctx.lineTo(-hatBaseW, hatH * 0.2);
-    ctx.quadraticCurveTo(0, hatH * 0.35, hatBaseW, hatH * 0.2);
-    ctx.closePath();
-    ctx.fillStyle = hatGrad;
-    ctx.fill();
-
-    // Spiral festive stripes
-    ctx.save();
-    ctx.clip();
-    ctx.strokeStyle = 'rgba(232, 44, 85, 0.75)'; // Rose accent
-    ctx.lineWidth = 9;
-    ctx.beginPath();
-    for (let i = -hatH; i < hatH; i += 24) {
-      ctx.moveTo(-hatBaseW * 1.5, i);
-      ctx.lineTo(hatBaseW * 1.5, i + 35);
-    }
-    ctx.stroke();
-    ctx.restore();
-
-    // Shiny gold pompom on top
-    const pompomGrad = ctx.createRadialGradient(0, -hatH - 4, 1, 0, -hatH - 4, 12);
-    pompomGrad.addColorStop(0, '#FFF9C4');
-    pompomGrad.addColorStop(0.7, '#FFD700');
-    pompomGrad.addColorStop(1, 'rgba(255, 215, 0, 0)');
-    ctx.fillStyle = pompomGrad;
-    ctx.beginPath();
-    ctx.arc(0, -hatH - 4, 11, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Ruffled trim at base
-    ctx.fillStyle = '#FFF8E7';
-    for (let bx = -hatBaseW; bx <= hatBaseW; bx += 9) {
-      ctx.beginPath();
-      ctx.arc(bx, hatH * 0.22, 5, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    ctx.restore();
-  }
-
-  private renderBanner(ctx: CanvasRenderingContext2D, x: number, y: number, alpha: number): void {
-    ctx.save();
-    ctx.globalAlpha = alpha;
-
-    // Glowing pill backdrop
-    ctx.font = 'bold 20px "Segoe UI", system-ui, sans-serif';
-    const textMetrics = ctx.measureText(this.bannerText);
-    const boxW = textMetrics.width + 48;
-    const boxH = 40;
-
-    const bgGrad = ctx.createLinearGradient(x - boxW / 2, y, x + boxW / 2, y);
-    bgGrad.addColorStop(0, 'rgba(28, 24, 23, 0.88)');
-    bgGrad.addColorStop(0.5, 'rgba(48, 39, 37, 0.94)');
-    bgGrad.addColorStop(1, 'rgba(28, 24, 23, 0.88)');
-
-    ctx.fillStyle = bgGrad;
-    ctx.beginPath();
-    ctx.roundRect(x - boxW / 2, y - boxH / 2, boxW, boxH, 20);
-    ctx.fill();
-
-    ctx.strokeStyle = 'rgba(229, 168, 59, 0.7)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // Glowing gold typography
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(229, 168, 59, 0.8)';
-    ctx.shadowBlur = 10;
-    ctx.fillStyle = '#FFF4E0';
-    ctx.fillText(this.bannerText, x, y);
 
     ctx.restore();
   }
@@ -438,114 +314,157 @@ export class BirthdayCakeEffect implements VisualEffect {
     const platterW = 150;
     const platterH = 24;
     const platterGrad = ctx.createLinearGradient(-platterW, 10, platterW, 10);
-    platterGrad.addColorStop(0, '#D4AF37');
-    platterGrad.addColorStop(0.5, '#FFF9E6');
-    platterGrad.addColorStop(1, '#AA8010');
+    platterGrad.addColorStop(0, '#B8860B');
+    platterGrad.addColorStop(0.3, '#FFF8DC');
+    platterGrad.addColorStop(0.7, '#DAA520');
+    platterGrad.addColorStop(1, '#8B6508');
+
     ctx.fillStyle = platterGrad;
     ctx.beginPath();
     ctx.ellipse(0, 10, platterW, platterH, 0, 0, Math.PI * 2);
     ctx.fill();
+    ctx.strokeStyle = '#FFE082';
+    ctx.lineWidth = 2;
+    ctx.stroke();
 
-    // 2. Bottom Tier (Large Vanilla Cream Tier)
-    const bW = 120;
+    // 2. Bottom Tier: Rich Vanilla & Gold Velvet
+    const bW = 125;
     const bH = 65;
-    const bY = -15;
+    const bY = -10;
 
-    // Tier cylinder body
-    const bodyGrad = ctx.createLinearGradient(-bW, 0, bW, 0);
-    bodyGrad.addColorStop(0, '#F5EDE0');
-    bodyGrad.addColorStop(0.4, '#FFFDF9');
-    bodyGrad.addColorStop(0.8, '#F0E4D2');
-    bodyGrad.addColorStop(1, '#D9C8B0');
+    const bGrad = ctx.createLinearGradient(-bW, 0, bW, 0);
+    bGrad.addColorStop(0, '#D4A373');
+    bGrad.addColorStop(0.3, '#FAEDCD');
+    bGrad.addColorStop(0.7, '#E9D8A6');
+    bGrad.addColorStop(1, '#CCD5AE');
 
-    ctx.fillStyle = bodyGrad;
+    ctx.fillStyle = bGrad;
     ctx.beginPath();
-    ctx.moveTo(-bW, bY);
-    ctx.lineTo(-bW, bY + bH);
-    ctx.ellipse(0, bY + bH, bW, 20, 0, Math.PI, 0, true);
-    ctx.lineTo(bW, bY);
+    ctx.roundRect(-bW, bY - bH, bW * 2, bH, [10, 10, 24, 24]);
+    ctx.fill();
+
+    // Bottom tier decorative dripping icing
+    ctx.fillStyle = '#FFFDF0';
+    ctx.beginPath();
+    ctx.moveTo(-bW, bY - bH + 2);
+    for (let x = -bW; x <= bW; x += 18) {
+      const drip = Math.sin((x + this.ageTime * 30) * 0.15) * 8 + 14;
+      ctx.quadraticCurveTo(x + 9, bY - bH + drip, x + 18, bY - bH + 2);
+    }
+    ctx.lineTo(bW, bY - bH);
+    ctx.lineTo(-bW, bY - bH);
     ctx.closePath();
     ctx.fill();
 
-    // Strawberry cream drip decoration
-    ctx.fillStyle = '#FF6B8B';
+    // 3. Middle Tier: Rose Gold Strawberry
+    const mW = 95;
+    const mH = 55;
+    const mY = bY - bH + 6;
+
+    const mGrad = ctx.createLinearGradient(-mW, 0, mW, 0);
+    mGrad.addColorStop(0, '#E07A5F');
+    mGrad.addColorStop(0.4, '#F4A261');
+    mGrad.addColorStop(0.8, '#E76F51');
+    mGrad.addColorStop(1, '#D94E34');
+
+    ctx.fillStyle = mGrad;
     ctx.beginPath();
-    ctx.ellipse(0, bY, bW, 20, 0, 0, Math.PI * 2);
+    ctx.roundRect(-mW, mY - mH, mW * 2, mH, [8, 8, 16, 16]);
     ctx.fill();
 
-    // 3. Top Tier (Smaller Tier)
-    const tW = 80;
-    const tH = 50;
-    const tY = -65;
-
-    ctx.fillStyle = bodyGrad;
+    // Middle tier icing drip
+    ctx.fillStyle = '#FFF5EB';
     ctx.beginPath();
-    ctx.moveTo(-tW, tY);
-    ctx.lineTo(-tW, tY + tH);
-    ctx.ellipse(0, tY + tH, tW, 15, 0, Math.PI, 0, true);
-    ctx.lineTo(tW, tY);
+    ctx.moveTo(-mW, mY - mH + 2);
+    for (let x = -mW; x <= mW; x += 15) {
+      const drip = Math.cos((x - this.ageTime * 25) * 0.2) * 6 + 11;
+      ctx.quadraticCurveTo(x + 7.5, mY - mH + drip, x + 15, mY - mH + 2);
+    }
+    ctx.lineTo(mW, mY - mH);
+    ctx.lineTo(-mW, mY - mH);
     ctx.closePath();
     ctx.fill();
 
-    // Golden icing top surface
-    const topIcing = ctx.createRadialGradient(0, tY, 5, 0, tY, tW);
-    topIcing.addColorStop(0, '#FFFBF2');
-    topIcing.addColorStop(0.85, '#FCE8C5');
-    topIcing.addColorStop(1, '#E5A83B');
-    ctx.fillStyle = topIcing;
+    // 4. Top Tier: Pure Pearl White & Gold Ganache
+    const tW = 65;
+    const tH = 45;
+    const tY = mY - mH + 4;
+
+    const tGrad = ctx.createLinearGradient(-tW, 0, tW, 0);
+    tGrad.addColorStop(0, '#FAF0CA');
+    tGrad.addColorStop(0.5, '#FFFFFF');
+    tGrad.addColorStop(1, '#F4D35E');
+
+    ctx.fillStyle = tGrad;
     ctx.beginPath();
-    ctx.ellipse(0, tY, tW, 15, 0, 0, Math.PI * 2);
+    ctx.roundRect(-tW, tY - tH, tW * 2, tH, [6, 6, 12, 12]);
     ctx.fill();
+
+    // Top tier rosettes
+    ctx.fillStyle = '#FFB703';
+    for (let rx = -tW + 8; rx <= tW - 8; rx += 14) {
+      ctx.beginPath();
+      ctx.arc(rx, tY - tH, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     ctx.restore();
   }
 
   private renderCandles(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: number): void {
-    const tY = cy - 65 * s;
-    const spreadW = 65 * s;
+    const topTierY = cy - BirthdayCakeEffect.TOP_TIER_SURFACE * s;
 
     this.candles.forEach((candle) => {
-      const candleX = cx + candle.relX * spreadW;
-      const candleBaseY = tY;
+      const candleX = cx + candle.relX * (65 * s);
+      const candleW = 9 * s;
       const candleH = candle.height * s;
-      const candleW = 6 * s;
+      const candleTopY = topTierY - candleH;
 
       ctx.save();
 
-      // Candle body (gold/white striped cylinder)
-      const cGrad = ctx.createLinearGradient(candleX - candleW, 0, candleX + candleW, 0);
-      cGrad.addColorStop(0, '#FFE082');
-      cGrad.addColorStop(0.5, '#FFFDE7');
-      cGrad.addColorStop(1, '#FFB300');
+      // Wax candle body with festive spiral pattern
+      const waxGrad = ctx.createLinearGradient(candleX - candleW / 2, 0, candleX + candleW / 2, 0);
+      waxGrad.addColorStop(0, '#E63946');
+      waxGrad.addColorStop(0.5, '#FFF1F2');
+      waxGrad.addColorStop(1, '#D90429');
 
-      ctx.fillStyle = cGrad;
+      ctx.fillStyle = waxGrad;
       ctx.beginPath();
-      ctx.roundRect(candleX - candleW / 2, candleBaseY - candleH, candleW, candleH, 2 * s);
+      ctx.roundRect(candleX - candleW / 2, candleTopY, candleW, candleH, 2 * s);
       ctx.fill();
 
       // Black wick
-      const wickTopY = candleBaseY - candleH - 6 * s;
-      ctx.strokeStyle = '#212121';
-      ctx.lineWidth = 1.5 * s;
+      const wickH = 7 * s;
+      const wickTopY = candleTopY - wickH;
+      ctx.strokeStyle = '#222222';
+      ctx.lineWidth = 1.8 * s;
       ctx.beginPath();
-      ctx.moveTo(candleX, candleBaseY - candleH);
-      ctx.lineTo(candleX, wickTopY);
+      ctx.moveTo(candleX, candleTopY);
+      ctx.lineTo(candleX + candle.flameTilt * 4 * s, wickTopY);
       ctx.stroke();
 
       // Flame
       if (candle.isLit) {
         const flicker = Math.sin(candle.flameFlicker) * 2 * s;
-        const tiltX = candle.flameTilt * 12 * s;
-        const flameH = (16 + flicker) * s;
         const flameW = (7 + flicker * 0.4) * s;
-        const flameCenterY = wickTopY - flameH * 0.7;
+        const flameH = (22 + flicker) * s;
+        const tiltX = candle.flameTilt * 12 * s;
+        const flameCenterY = wickTopY - flameH * 0.55;
 
-        // Outer warm ambient aura
-        const auraGrad = ctx.createRadialGradient(candleX + tiltX, flameCenterY, 2 * s, candleX + tiltX, flameCenterY, 28 * s);
-        auraGrad.addColorStop(0, 'rgba(255, 183, 77, 0.6)');
-        auraGrad.addColorStop(0.6, 'rgba(255, 138, 101, 0.25)');
-        auraGrad.addColorStop(1, 'rgba(255, 112, 67, 0)');
-        ctx.fillStyle = auraGrad;
+        // Radiant heat haze
+        const glowGrad = ctx.createRadialGradient(
+          candleX + tiltX,
+          flameCenterY,
+          1,
+          candleX + tiltX,
+          flameCenterY,
+          28 * s
+        );
+        glowGrad.addColorStop(0, 'rgba(255, 200, 50, 0.55)');
+        glowGrad.addColorStop(0.6, 'rgba(255, 120, 20, 0.2)');
+        glowGrad.addColorStop(1, 'rgba(255, 60, 0, 0)');
+
+        ctx.fillStyle = glowGrad;
         ctx.beginPath();
         ctx.arc(candleX + tiltX, flameCenterY, 28 * s, 0, Math.PI * 2);
         ctx.fill();
@@ -615,11 +534,9 @@ export class BirthdayCakeEffect implements VisualEffect {
 
   reset(): void {
     this.cakeScale = 0;
-    this.state = 'spawning';
+    this.state = 'idle';
     this.wishTimer = 0;
     this.blowProgress = 0;
-    this.bannerAlpha = 0;
-    this.bannerText = '🎂 MAKE A WISH 🎂';
     this.candles.forEach((c) => {
       c.isLit = true;
       c.smokeTimer = 0;

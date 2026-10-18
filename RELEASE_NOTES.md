@@ -1,3 +1,27 @@
+# HeartWave v1.3.28 Release Notes
+
+## ⚡ 60 FPS Streaming Optimization & Connection Stability
+- **0ms Idle Return Gates**: Eliminated renderer frame rate drops and restored rock-solid 60 FPS delivery to DirectShow Virtual Camera, OBS, and Discord. Idle effects now bypass physics and rendering checks in `< 0.002ms`.
+- **Hold State Synchronization**: Unified hold state tracking across `CupidSparkEffect`, `PetalRainEffect`, and all celebration effects with `EffectManager.update()`, ensuring continuous effects remain active while held and reset cleanly when released.
+- **Active State Transition Tracking**: `EffectManager` now monitors effect activity transitions and triggers `effect.reset()` exactly once when an effect finishes its particle lifecycle, preventing state locks and re-arming gestures for subsequent triggers.
+
+## 🎂 Refined Celebration Effects Suite
+- **Birthday Cake & Candle Wish (`birthday_cake`)**:
+  - **New Prayer / Wish Gesture**: Triggered naturally by pressing palms and fingertips together in front of the chest (`prayer_wish`), completely eliminating gesture overlap with two-hand hearts or petal rain.
+  - **Clean Presentation**: Removed the static party cone hat and text banner overlays. The focus is placed entirely on the 3D tiered celebration cake with animated dripping frosting, flickering flame shaders, realistic wick alignment, and wish candle extinguishing with smoke wisps and confetti.
+- **Confetti Celebration (`confetti_celebration`)**:
+  - Replaces the champagne bottle celebration with a grand, full-screen celebration confetti cannon triggered by a **Thumbs Up (👍)**.
+  - Blasts 110+ multi-colored metallic foil ribbons and golden star sparkles drifting gently downward with 3D wobble physics and air drag.
+- **Celebration Crackers (`celebration_crackers`)**:
+  - Triggered by the **Victory / Peace Sign (✌️)**.
+  - Streamlined into pure, high-performance festive fireworks crackers. The 3D trophy cup and "VICTORY" text overlays have been completely removed, delivering vibrant, sparkling firecracker detonations and sparkling particle trails at full frame rate.
+- **Elemental Flame & Frost (`flame_frost`)**:
+  - Triggered by **Rock-On / Horns (🤘)**.
+  - Optimized landmark iteration and particle caps to eliminate CPU/GPU overhead.
+- **CodeRabbit CLI Validated**: All changes verified by CodeRabbit with **0 findings** across all 14 files.
+
+---
+
 # HeartWave v1.3.27 Release Notes
 
 ## 🎉 Celebration & Streamer Hype Suite

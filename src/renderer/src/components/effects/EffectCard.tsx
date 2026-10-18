@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, Sparkles, Heart, Flower2, Flame, CloudRain, Cake, PartyPopper, Trophy, Zap } from 'lucide-react';
+import { Star, Sparkles, Heart, Flower2, Flame, CloudRain, Cake, PartyPopper, Zap } from 'lucide-react';
 import { EffectItem } from '../../types/effect';
 
 interface EffectCardProps {
@@ -165,7 +165,7 @@ export const EffectCard: React.FC<EffectCardProps> = ({
           </div>
         );
 
-      case 'champagne_pop':
+      case 'confetti_celebration':
         return (
           <div
             style={{
@@ -184,7 +184,7 @@ export const EffectCard: React.FC<EffectCardProps> = ({
           </div>
         );
 
-      case 'victory_fireworks':
+      case 'celebration_crackers':
         return (
           <div
             style={{
@@ -199,7 +199,7 @@ export const EffectCard: React.FC<EffectCardProps> = ({
               overflow: 'hidden',
             }}
           >
-            <Trophy size={36} color="#FFB300" strokeWidth={1.8} />
+            <Sparkles size={36} color="#FFB300" strokeWidth={1.8} />
           </div>
         );
 

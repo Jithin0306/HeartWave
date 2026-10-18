@@ -8,8 +8,8 @@ export type GestureType =
   | 'index_point'
   | 'petal_rain_pose'
   | 'birthday_cake'
-  | 'champagne_pop'
-  | 'victory_fireworks'
+  | 'confetti_celebration'
+  | 'celebration_crackers'
   | 'flame_frost';
 
 export interface EffectItem {
@@ -30,8 +30,8 @@ export interface EffectItem {
     | 'cupid_spark'
     | 'petal_rain'
     | 'birthday_cake'
-    | 'champagne_pop'
-    | 'victory_fireworks'
+    | 'confetti_celebration'
+    | 'celebration_crackers'
     | 'flame_frost';
   previewIcon: string;
   phaseAvailability: string;

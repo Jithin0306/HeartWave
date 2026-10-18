@@ -7,8 +7,8 @@ import { FloatingHeartsEffect } from './romantic/floatingHearts';
 import { CupidSparkEffect } from './romantic/cupidSpark';
 import { PetalRainEffect } from './romantic/petalRain';
 import { BirthdayCakeEffect } from './celebration/birthdayCake';
-import { ChampagnePopEffect } from './celebration/champagnePop';
-import { VictoryFireworksEffect } from './celebration/victoryFireworks';
+import { ConfettiCelebrationEffect } from './celebration/confettiCelebration';
+import { CelebrationCrackersEffect } from './celebration/celebrationCrackers';
 import { FlameFrostEffect } from './celebration/flameFrost';
 
 export class EffectManager {
@@ -21,13 +21,14 @@ export class EffectManager {
     ['index_point', 'cupid-spark'],
     ['petal_rain_pose', 'petal-rain'],
     ['birthday_cake', 'birthday-cake'],
-    ['champagne_pop', 'champagne-pop'],
-    ['victory_fireworks', 'victory-fireworks'],
+    ['confetti_celebration', 'confetti-celebration'],
+    ['celebration_crackers', 'celebration-crackers'],
     ['flame_frost', 'flame-frost'],
   ]);
 
   private activeEffectId: string = 'golden-finger-heart';
   private lastTime: number = performance.now();
+  private wasActive: Set<string> = new Set();
 
   constructor() {
     this.registerEffect(new GoldenFingerHeartEffect());
@@ -37,8 +38,8 @@ export class EffectManager {
     this.registerEffect(new CupidSparkEffect());
     this.registerEffect(new PetalRainEffect());
     this.registerEffect(new BirthdayCakeEffect());
-    this.registerEffect(new ChampagnePopEffect());
-    this.registerEffect(new VictoryFireworksEffect());
+    this.registerEffect(new ConfettiCelebrationEffect());
+    this.registerEffect(new CelebrationCrackersEffect());
     this.registerEffect(new FlameFrostEffect());
   }
 
@@ -103,23 +104,36 @@ export class EffectManager {
 
   /**
    * Advance animations and physics.
+   * High-performance gatekeeper: only updates active/holding effects or effects with live particles.
    */
   update(intensity: number, currentAnchor?: EffectAnchor, now: number = performance.now(), currentAnchors?: EffectAnchor[]): void {
     const dt = Math.min(0.05, (now - this.lastTime) / 1000);
     this.lastTime = now;
 
-    this.effects.forEach((effect) => {
+    this.effects.forEach((effect, id) => {
+      const isHolding = 'isHolding' in effect && (effect as any).isHolding;
+      if (!isHolding && !effect.hasActiveParticles()) {
+        if (this.wasActive.delete(id)) {
+          effect.reset();
+        }
+        return;
+      }
+      this.wasActive.add(id);
+
       effect.update(dt, intensity, currentAnchor, currentAnchors);
     });
   }
 
   /**
    * Render active effect particles to canvas.
+   * High-performance gatekeeper: only renders effects that actually have active particles.
    */
   render(ctx: CanvasRenderingContext2D, width: number, height: number, isMirrored: boolean): void {
     ctx.clearRect(0, 0, width, height);
 
     this.effects.forEach((effect) => {
+      if (!effect.hasActiveParticles()) return;
+
       effect.render(ctx, width, height, isMirrored);
     });
   }
@@ -128,6 +142,7 @@ export class EffectManager {
    * Reset all effects.
    */
   resetAll(): void {
+    this.wasActive.clear();
     this.effects.forEach((effect) => effect.reset());
   }
 }

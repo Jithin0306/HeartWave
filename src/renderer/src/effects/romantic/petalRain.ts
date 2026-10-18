@@ -8,7 +8,7 @@ export class PetalRainEffect implements VisualEffect {
   private petals: Particle[] = [];
   private width: number = 1280;
   private height: number = 720;
-  private isRaining: boolean = false;
+  private isHolding: boolean = false;
   private spawnTimer: number = 0;
 
   init(width: number, height: number): void {
@@ -18,7 +18,7 @@ export class PetalRainEffect implements VisualEffect {
   }
 
   onGestureTrigger(_anchor: EffectAnchor, _confidence: number): void {
-    this.isRaining = true;
+    this.isHolding = true;
 
     // Controlled burst across width (delicate & cinematic)
     if (this.petals.length === 0) {
@@ -44,7 +44,7 @@ export class PetalRainEffect implements VisualEffect {
     const intensityMult = Math.max(0.5, intensity / 100);
 
     // Controlled spawn rate: max 10 petals on screen to eliminate GPU / canvas lag
-    if (this.isRaining && this.petals.length < 10) {
+    if (this.isHolding && this.petals.length < 10) {
       this.spawnTimer += dt;
       if (this.spawnTimer >= Math.max(0.40, 0.70 / intensityMult)) {
         this.spawnTimer = 0;
@@ -95,7 +95,7 @@ export class PetalRainEffect implements VisualEffect {
   }
 
   setHolding(holding: boolean): void {
-    this.isRaining = holding;
+    this.isHolding = holding;
   }
 
   hasActiveParticles(): boolean {
@@ -104,7 +104,7 @@ export class PetalRainEffect implements VisualEffect {
 
   reset(): void {
     this.petals = [];
-    this.isRaining = false;
+    this.isHolding = false;
     this.spawnTimer = 0;
   }
 

@@ -9,7 +9,7 @@ export class CupidSparkEffect implements VisualEffect {
   private width: number = 1280;
   private height: number = 720;
   private lastAnchor: EffectAnchor = { x: 0.5, y: 0.5 };
-  private isPointing: boolean = false;
+  private isHolding: boolean = false;
   private sparkTimer: number = 0;
 
   init(width: number, height: number): void {
@@ -20,7 +20,7 @@ export class CupidSparkEffect implements VisualEffect {
 
   onGestureTrigger(anchor: EffectAnchor, _confidence: number): void {
     this.lastAnchor = anchor;
-    this.isPointing = true;
+    this.isHolding = true;
 
     // Controlled burst at fingertip (restrained & sharp)
     if (this.particles.length === 0) {
@@ -50,7 +50,7 @@ export class CupidSparkEffect implements VisualEffect {
     const intensityMult = Math.max(0.5, intensity / 100);
 
     // Follow moving fingertip and emit delicate sparkle trail (max 8 particles)
-    if (this.isPointing && this.particles.length < 8) {
+    if (this.isHolding && this.particles.length < 8) {
       this.sparkTimer += dt;
       if (this.sparkTimer >= Math.max(0.18, 0.32 / intensityMult)) {
         this.sparkTimer = 0;
@@ -103,7 +103,7 @@ export class CupidSparkEffect implements VisualEffect {
   }
 
   setHolding(holding: boolean): void {
-    this.isPointing = holding;
+    this.isHolding = holding;
   }
 
   hasActiveParticles(): boolean {
@@ -112,7 +112,7 @@ export class CupidSparkEffect implements VisualEffect {
 
   reset(): void {
     this.particles = [];
-    this.isPointing = false;
+    this.isHolding = false;
     this.sparkTimer = 0;
   }
 
