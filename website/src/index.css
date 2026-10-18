@@ -1,0 +1,145 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --hw-bg-canvas: #0A0A0C;
+  --hw-bg-surface: #131317;
+  --hw-bg-surface-elevated: #1A1A22;
+  --hw-text-primary: #F5F2EB;
+  --hw-text-secondary: #CBD5E1;
+  --hw-text-muted: #8E8B85;
+  --hw-brand-rose: #E05260;
+  --hw-brand-rose-hover: #EC6472;
+  --hw-brand-champagne: #E2B77A;
+  --hw-border-hairline: rgba(245, 242, 235, 0.08);
+  --hw-border-hover: rgba(245, 242, 235, 0.16);
+}
+
+@layer base {
+  body {
+    background-color: var(--hw-bg-canvas);
+    color: var(--hw-text-secondary);
+    font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Instrument Serif', Georgia, serif;
+    color: var(--hw-text-primary);
+    letter-spacing: -0.015em;
+    font-weight: 400;
+  }
+}
+
+/* Atelier Surface Utilities */
+.atelier-surface {
+  background: rgba(19, 19, 23, 0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--hw-border-hairline);
+}
+
+.atelier-card {
+  background: #14141A;
+  border: 1px solid var(--hw-border-hairline);
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.atelier-card:hover {
+  background: #191921;
+  border-color: var(--hw-border-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px -12px rgba(0, 0, 0, 0.6);
+}
+
+/* Camera Viewfinder Reticle Corners */
+.viewfinder-corner-tl {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 14px;
+  height: 14px;
+  border-top: 2px solid rgba(245, 242, 235, 0.4);
+  border-left: 2px solid rgba(245, 242, 235, 0.4);
+  pointer-events: none;
+}
+.viewfinder-corner-tr {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 14px;
+  height: 14px;
+  border-top: 2px solid rgba(245, 242, 235, 0.4);
+  border-right: 2px solid rgba(245, 242, 235, 0.4);
+  pointer-events: none;
+}
+.viewfinder-corner-bl {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  width: 14px;
+  height: 14px;
+  border-bottom: 2px solid rgba(245, 242, 235, 0.4);
+  border-left: 2px solid rgba(245, 242, 235, 0.4);
+  pointer-events: none;
+}
+.viewfinder-corner-br {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  width: 14px;
+  height: 14px;
+  border-bottom: 2px solid rgba(245, 242, 235, 0.4);
+  border-right: 2px solid rgba(245, 242, 235, 0.4);
+  pointer-events: none;
+}
+
+/* Subtle Editorial Eyebrow Tag */
+.editorial-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'Geist Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--hw-brand-champagne);
+  padding: 0.2rem 0;
+  border-bottom: 1px solid rgba(226, 183, 122, 0.3);
+}
+
+/* Tactile Physical Keycap */
+.keycap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Geist Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  color: #F5F2EB;
+  background: linear-gradient(180deg, #22222B 0%, #16161D 100%);
+  border: 1px solid rgba(245, 242, 235, 0.14);
+  border-bottom: 2px solid rgba(245, 242, 235, 0.22);
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(245, 242, 235, 0.08);
+}
+
+/* Sleek Scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+}
+::-webkit-scrollbar-track {
+  background: #0A0A0C;
+}
+::-webkit-scrollbar-thumb {
+  background: #1C1C24;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #282834;
+}

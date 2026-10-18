@@ -11,11 +11,13 @@ resources/bin/*.bak
 *.lib
 *.exp
 *.key
-HeartWave-Portable.exe
-HeartWave-Portable-New.exe
-HeartWave-Portable*.exe
+/HeartWave-Portable.exe
+/HeartWave-Portable-New.exe
+/HeartWave-Portable*.exe
 _backup_pre_arch2/
 src-tauri/target/
 /*.dll
 release-*/
+__pycache__/
+*.pyc
 
