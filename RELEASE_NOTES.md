@@ -1,3 +1,16 @@
+# HeartWave v1.3.30 Release Notes
+
+## 🧈 Silky-Smooth Movement & Video Pipeline Refinement
+- **Framerate-Independent Anchor Interpolation**: Added continuous exponential LERP smoothing (`1 - Math.exp(-22 * dt)`) updated on every render frame with dedicated delta-time tracking (`lastAnchorSmoothTimeRef`). Bridges the gap between ~30 Hz MediaPipe tracking and 60–180 FPS viewport rendering, converting stepped jumps into fluid, continuous gliding motion.
+- **Multi-Anchor Slot Stability**: Upgraded anchor association to match incoming multi-anchors to their nearest unclaimed previous slots before smoothing. Prevents multi-hand effects (such as Elemental Flame & Frost and Two-Hand Hearts) from jittering or crossing hands when detector order shifts.
+- **Adaptive Smoothstep Landmark Filtering**: Enhanced `LandmarkSmoother` with a smooth cubic smoothstep transition (`0.0001` to `0.0012` `distSq`), incorporating `baseAlpha`. Eliminates high-frequency camera sensor jitter and hand trembling during slow movements while ramping to $\alpha \approx 0.88 - 0.92$ during fast sweeps for zero perceived latency.
+- **In-Effect Inertia & Anchor LERP**: Added continuous LERP anchor following in `FlameFrostEffect` (`16 * dt`) and tuned follow speed (`14 * dt`) in `BirthdayCakeEffect`, eliminating abrupt aura snapping when moving hands.
+- **Anti-Aliasing & High-Quality Compositor Scaling**: Configured `imageSmoothingEnabled = true` and `imageSmoothingQuality = 'high'` across foreground segmentation cutouts, blur scaling, effects canvas, and output display to soften cutout edges and eliminate pixel crawling.
+- **Cadence-Paced Virtual Camera Dispatch**: Paced dispatch to a 12ms minimum threshold within the render cadence to absorb vsync jitter and prevent alternate dropped frames in OBS and Discord.
+- **CodeRabbit CLI Validated**: All changes verified by CodeRabbit with **0 findings** across all reviewed files.
+
+---
+
 # HeartWave v1.3.29 Release Notes
 
 ## ⚡ High-Refresh 180–200 FPS Performance & Compositor Overhaul

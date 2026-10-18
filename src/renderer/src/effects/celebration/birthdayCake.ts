@@ -125,8 +125,8 @@ export class BirthdayCakeEffect implements VisualEffect {
     }
 
     if (currentAnchor && this.isHolding) {
-      this.anchor.x += (currentAnchor.x - this.anchor.x) * Math.min(1.0, 10 * dt);
-      this.anchor.y += (currentAnchor.y - this.anchor.y) * Math.min(1.0, 10 * dt);
+      this.anchor.x += (currentAnchor.x - this.anchor.x) * Math.min(1.0, 14 * dt);
+      this.anchor.y += (currentAnchor.y - this.anchor.y) * Math.min(1.0, 14 * dt);
     }
 
     this.ageTime += dt;

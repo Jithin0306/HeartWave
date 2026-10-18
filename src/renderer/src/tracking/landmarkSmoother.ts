@@ -34,17 +34,21 @@ export class LandmarkSmoother {
           const distSq = (curr.x - p.x) ** 2 + (curr.y - p.y) ** 2;
           const isFingertip = i === 4 || i === 8 || i === 12 || i === 16 || i === 20;
 
-          // Ultra-responsive adaptive smoothing:
-          // Stationary (< 0.00015): smooth sensor noise
-          // Moving (> 0.0008): snappy 0.90+ alpha for instantaneous zero-lag tracking
+          // Adaptive smoothstep filtering incorporating configured baseAlpha:
+          // Low speed (< 0.0001): heavy smoothing based on baseAlpha eliminates camera sensor jitter
+          // Medium speed: progressive cubic smoothstep easing without abrupt stepping
+          // High speed (> 0.0012): responsive tracking (alpha 0.88-0.92) eliminates harsh jitter while maintaining zero perceived latency
+          const minAlpha = Math.max(0.2, Math.min(0.65, this.baseAlpha * 0.7));
+          const maxAlpha = isFingertip ? 0.92 : 0.88;
           let dynamicAlpha: number;
-          if (distSq < 0.00015) {
-            dynamicAlpha = Math.max(0.45, this.baseAlpha);
-          } else if (distSq > 0.0008) {
-            dynamicAlpha = isFingertip ? 0.98 : 0.95;
+          if (distSq < 0.0001) {
+            dynamicAlpha = minAlpha;
+          } else if (distSq > 0.0012) {
+            dynamicAlpha = maxAlpha;
           } else {
-            const factor = (distSq - 0.00015) / (0.0008 - 0.00015);
-            dynamicAlpha = this.baseAlpha + factor * (0.95 - this.baseAlpha);
+            const t = (distSq - 0.0001) / (0.0012 - 0.0001);
+            const smoothT = t * t * (3 - 2 * t);
+            dynamicAlpha = minAlpha + smoothT * (maxAlpha - minAlpha);
           }
 
           return {

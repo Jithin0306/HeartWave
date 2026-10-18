@@ -91,10 +91,6 @@ export class VideoCompositor {
 
     // Pre-cache built-in studio backdrop SVGs
     this.preloadBackdrops();
-
-    try {
-      this.outputStream = this.canvas.captureStream(30);
-    } catch {}
   }
 
   private preloadBackdrops(): void {
@@ -120,9 +116,18 @@ export class VideoCompositor {
       this.blurCanvas.height = Math.max(90, Math.round(height / 4));
 
       // Re-apply smoothing states as resizing canvas resets 2D context states to browser defaults
-      if (this.ctx) this.ctx.imageSmoothingEnabled = true;
-      if (this.fgCtx) this.fgCtx.imageSmoothingEnabled = true;
-      if (this.blurCtx) this.blurCtx.imageSmoothingEnabled = true;
+      if (this.ctx) {
+        this.ctx.imageSmoothingEnabled = true;
+        this.ctx.imageSmoothingQuality = 'high';
+      }
+      if (this.fgCtx) {
+        this.fgCtx.imageSmoothingEnabled = true;
+        this.fgCtx.imageSmoothingQuality = 'high';
+      }
+      if (this.blurCtx) {
+        this.blurCtx.imageSmoothingEnabled = true;
+        this.blurCtx.imageSmoothingQuality = 'high';
+      }
     }
   }
 
@@ -176,6 +181,7 @@ export class VideoCompositor {
         // Pass 1: Prepare foreground subject cutout in offscreen buffer
         if (this.fgCtx) {
           this.fgCtx.imageSmoothingEnabled = true;
+          this.fgCtx.imageSmoothingQuality = 'high';
           this.fgCtx.clearRect(0, 0, this.width, this.height);
           this.fgCtx.drawImage(video, 0, 0, this.width, this.height);
           this.fgCtx.globalCompositeOperation = 'destination-in';
@@ -193,6 +199,8 @@ export class VideoCompositor {
           const blurPx = Math.max(2, Math.round(2 + (bokehIntensity / 100) * 8));
 
           if (this.blurCtx) {
+            this.blurCtx.imageSmoothingEnabled = true;
+            this.blurCtx.imageSmoothingQuality = 'high';
             this.blurCtx.clearRect(0, 0, blurW, blurH);
             this.blurCtx.filter = `blur(${blurPx}px)`;
             this.blurCtx.drawImage(video, 0, 0, blurW, blurH);
@@ -204,6 +212,8 @@ export class VideoCompositor {
             ctx.translate(this.width, 0);
             ctx.scale(-1, 1);
           }
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
           // Bilinear upscale to full frame
           ctx.drawImage(this.blurCanvas, 0, 0, this.width, this.height);
 
@@ -221,6 +231,8 @@ export class VideoCompositor {
             ctx.translate(this.width, 0);
             ctx.scale(-1, 1);
           }
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
           ctx.drawImage(this.foregroundCanvas, 0, 0, this.width, this.height);
           ctx.restore();
         } else if (backgroundMode === 'greenscreen') {
@@ -234,6 +246,8 @@ export class VideoCompositor {
             ctx.translate(this.width, 0);
             ctx.scale(-1, 1);
           }
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
           ctx.drawImage(this.foregroundCanvas, 0, 0, this.width, this.height);
           ctx.restore();
         }
@@ -241,7 +255,8 @@ export class VideoCompositor {
 
       // 3. Overlay procedural effects canvas (unless user activated bypass)
       if (!bypassEffects && effectsCanvas && effectsCanvas.width > 0 && effectsCanvas.height > 0) {
-        // Effects canvas already has internal mirror orientation applied
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(effectsCanvas, 0, 0, this.width, this.height);
       }
     }

@@ -40,7 +40,8 @@ export class FlameFrostEffect implements VisualEffect {
   }
 
   onGestureTrigger(anchor: EffectAnchor, _confidence: number, anchors?: EffectAnchor[]): void {
-    this.anchors = anchors && anchors.length > 0 ? anchors : [anchor];
+    const rawList = anchors && anchors.length > 0 ? anchors : [anchor];
+    this.anchors = rawList.map((a) => ({ x: a.x, y: a.y }));
     this.isHolding = true;
   }
 
@@ -59,7 +60,15 @@ export class FlameFrostEffect implements VisualEffect {
       : (currentAnchor ? [currentAnchor] : this.anchors);
 
     if (activeAnchors.length > 0 && this.isHolding) {
-      this.anchors = activeAnchors;
+      if (this.anchors.length !== activeAnchors.length) {
+        this.anchors = activeAnchors.map((a) => ({ ...a }));
+      } else {
+        const lerpFactor = Math.min(1.0, 16 * dt);
+        for (let i = 0; i < this.anchors.length; i++) {
+          this.anchors[i].x += (activeAnchors[i].x - this.anchors[i].x) * lerpFactor;
+          this.anchors[i].y += (activeAnchors[i].y - this.anchors[i].y) * lerpFactor;
+        }
+      }
     }
 
     this.ageTime += dt;

@@ -60,6 +60,10 @@ export const CameraPreviewViewport: React.FC = () => {
   const activeNativeAnchorsRef = useRef<Array<{ x: number; y: number }>>([]);
   const lastDispatchedAnchorsRef = useRef<Array<{ x: number; y: number }>>([]);
   const lastAnchorIpcTimesRef = useRef<number[]>([]);
+  const smoothedAnchorRef = useRef<{ x: number; y: number }>({ x: 0.5, y: 0.5 });
+  const smoothedAnchorsRef = useRef<Array<{ x: number; y: number }>>([]);
+  const hasInitialAnchorRef = useRef<boolean>(false);
+  const lastAnchorSmoothTimeRef = useRef<number>(0);
   const hadActiveEffectsRef = useRef<boolean>(false);
   const audioKeepAliveRef = useRef<AudioKeepAlive | null>(null);
   const framesSentCountRef = useRef<number>(0);
@@ -391,6 +395,9 @@ export const CameraPreviewViewport: React.FC = () => {
           const prevGestureName = lastReportedGestureRef.current;
           lastReportedGestureRef.current = curGestureName;
           useAppStore.getState().setActiveGestureEvent(ev);
+          hasInitialAnchorRef.current = false;
+          smoothedAnchorRef.current = ev?.anchor ? { x: ev.anchor.x, y: ev.anchor.y } : { x: 0.5, y: 0.5 };
+          smoothedAnchorsRef.current = ev?.anchors ? ev.anchors.map((a) => ({ x: a.x, y: a.y })) : [];
           if (curGestureName && ev) {
             if (prevGestureName) {
               window.heartwaveApi?.releaseEffect?.(prevGestureName);
@@ -413,13 +420,17 @@ export const CameraPreviewViewport: React.FC = () => {
           const nextDispatched: Array<{ x: number; y: number }> = [];
           const nextIpcTimes: number[] = [];
 
+          // Robust anchor association:
+          // Clamped to 0.38 to allow natural fast motion while preventing distinct hands across the frame from matching
+          const maxMatchDist = 0.38;
+
           for (const anchor of currentAnchors) {
             let foundIdx = -1;
             let bestDist = Infinity;
             for (let i = 0; i < prevAnchors.length; i++) {
               if (matchedPrev.has(i)) continue;
               const d = Math.hypot(prevAnchors[i].x - anchor.x, prevAnchors[i].y - anchor.y);
-              if (d < 0.25 && d < bestDist) {
+              if (d < maxMatchDist && d < bestDist) {
                 bestDist = d;
                 foundIdx = i;
               }
@@ -501,8 +512,66 @@ export const CameraPreviewViewport: React.FC = () => {
           }
         }
 
-        // 2. Render romantic effects overlay (skip if in Bypass mode or Privacy mode)
-        const hasEffects = effectManager.hasActiveParticles();
+        // 2. Framerate-independent continuous anchor interpolation for buttery-smooth movement
+        const prevSmoothTime = lastAnchorSmoothTimeRef.current || now;
+        const dtSec = Math.min(0.05, Math.max(0.001, (now - prevSmoothTime) / 1000));
+        lastAnchorSmoothTimeRef.current = now;
+        const anchorLerp = 1 - Math.exp(-22 * dtSec);
+
+        let currentSmoothAnchor = ev?.anchor;
+        let currentSmoothAnchors = ev?.anchors;
+
+        if (ev?.anchor) {
+          if (!hasInitialAnchorRef.current) {
+            smoothedAnchorRef.current = { x: ev.anchor.x, y: ev.anchor.y };
+            hasInitialAnchorRef.current = true;
+          } else {
+            smoothedAnchorRef.current.x += (ev.anchor.x - smoothedAnchorRef.current.x) * anchorLerp;
+            smoothedAnchorRef.current.y += (ev.anchor.y - smoothedAnchorRef.current.y) * anchorLerp;
+          }
+          currentSmoothAnchor = smoothedAnchorRef.current;
+        } else {
+          hasInitialAnchorRef.current = false;
+        }
+
+        if (ev?.anchors && ev.anchors.length > 0) {
+          if (smoothedAnchorsRef.current.length !== ev.anchors.length) {
+            smoothedAnchorsRef.current = ev.anchors.map((a) => ({ x: a.x, y: a.y }));
+          } else {
+            const matchedAnchors: Array<{ x: number; y: number } | undefined> = new Array(ev.anchors.length);
+            const claimed = new Set<number>();
+            for (const anchor of ev.anchors) {
+              let bestIndex = -1;
+              let bestDistance = Infinity;
+              for (let i = 0; i < smoothedAnchorsRef.current.length; i++) {
+                if (claimed.has(i)) continue;
+                const distance = Math.hypot(
+                  smoothedAnchorsRef.current[i].x - anchor.x,
+                  smoothedAnchorsRef.current[i].y - anchor.y
+                );
+                if (distance < bestDistance) {
+                  bestDistance = distance;
+                  bestIndex = i;
+                }
+              }
+              if (bestIndex !== -1) {
+                claimed.add(bestIndex);
+                matchedAnchors[bestIndex] = anchor;
+              }
+            }
+            for (let i = 0; i < ev.anchors.length; i++) {
+              const anchor = matchedAnchors[i] ?? ev.anchors[i];
+              smoothedAnchorsRef.current[i].x += (anchor.x - smoothedAnchorsRef.current[i].x) * anchorLerp;
+              smoothedAnchorsRef.current[i].y += (anchor.y - smoothedAnchorsRef.current[i].y) * anchorLerp;
+            }
+          }
+          currentSmoothAnchors = smoothedAnchorsRef.current;
+        } else {
+          smoothedAnchorsRef.current = [];
+        }
+
+        // 3. Render effects overlay with interpolated anchors (skip if in Bypass mode or Privacy mode)
+        let hasEffects = false;
         if (effectsCanvasRef.current && !liveBypassActive && !livePrivacyActive) {
           const effectsCanvas = effectsCanvasRef.current;
           const targetW = (video && video.videoWidth) || liveResolution?.width || 1280;
@@ -514,7 +583,10 @@ export const CameraPreviewViewport: React.FC = () => {
 
           const eCtx = effectsCanvas.getContext('2d');
           if (eCtx) {
-            effectManager.update(liveIntensity, gestureResult?.gestureEvent?.anchor, now, gestureResult?.gestureEvent?.anchors);
+            eCtx.imageSmoothingEnabled = true;
+            eCtx.imageSmoothingQuality = 'high';
+            effectManager.update(liveIntensity, currentSmoothAnchor, now, currentSmoothAnchors);
+            hasEffects = effectManager.hasActiveParticles();
             if (hasEffects || hadActiveEffectsRef.current) {
               effectManager.render(eCtx, effectsCanvas.width, effectsCanvas.height, liveMirrored);
               hadActiveEffectsRef.current = hasEffects;
@@ -560,6 +632,8 @@ export const CameraPreviewViewport: React.FC = () => {
           }
           const outCtx = outCanvas.getContext('2d');
           if (outCtx) {
+            outCtx.imageSmoothingEnabled = true;
+            outCtx.imageSmoothingQuality = 'high';
             outCtx.drawImage(videoCompositor.getCanvas(), 0, 0);
           }
         }
@@ -569,9 +643,8 @@ export const CameraPreviewViewport: React.FC = () => {
           useAppStore.getState().setCompositorMetrics(compMetrics);
         }
 
-        // Real-time Virtual Camera dispatch: Paced to 60 FPS (16.6ms) matching DirectShow driver rate
-        // Eliminates 100 FPS frame flood, reducing ImageData allocations and memory pressure by >50%
-        const minFrameInterval = 16;
+        // Virtual Camera dispatch interval: 12ms minimum interval applied within the RAF/ticker cadence to absorb timer jitter without dropping frames
+        const minFrameInterval = 12;
 
         // Reset hung sender guard after 1000ms deadline to match tauriBridge recovery
         if (isSendingFrameRef.current && (now - lastFrameDispatchStartTimeRef.current >= 1000)) {
