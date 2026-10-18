@@ -23,6 +23,7 @@ if (Test-Path $keyPath) {
 
 # 3. Build Production Bundle
 Write-Host " Running Tauri build..." -ForegroundColor Yellow
+$env:CARGO_BUILD_JOBS = "2"
 npx tauri build
 
 # 4. Generate latest.json manifest for GitHub Release
