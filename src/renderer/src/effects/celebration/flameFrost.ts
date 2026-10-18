@@ -28,6 +28,11 @@ export class FlameFrostEffect implements VisualEffect {
 
   private particles: ElementalParticle[] = [];
 
+  // Hardware-accelerated cached canvas sprites (Zero per-frame allocation)
+  private fireAuraSprite: HTMLCanvasElement | null = null;
+  private frostAuraSprite: HTMLCanvasElement | null = null;
+  private iceCrystalSprite: HTMLCanvasElement | null = null;
+
   init(width: number, height: number): void {
     this.width = width;
     this.height = height;
@@ -68,8 +73,8 @@ export class FlameFrostEffect implements VisualEffect {
 
     const intensityMult = 0.8 + (intensity / 100) * 0.4;
 
-    // Emit elemental particles per anchor
-    if (this.isHolding && this.anchors.length > 0) {
+    // Emit elemental particles per anchor (hard capped to 24 particles max)
+    if (this.isHolding && this.anchors.length > 0 && this.particles.length < 24) {
       const isDual = this.anchors.length >= 2;
 
       this.anchors.forEach((anc, idx) => {
@@ -81,8 +86,8 @@ export class FlameFrostEffect implements VisualEffect {
         const ax = anc.x * this.width;
         const ay = anc.y * this.height;
 
-        // Spawn particles
-        const count = Math.floor(3 * intensityMult);
+        // Spawn particles (scales with intensity, capped at 2)
+        const count = Math.min(2, Math.max(1, Math.round((intensity / 100) * 2)));
         for (let c = 0; c < count; c++) {
           if (element === 'fire') {
             const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.4;
@@ -182,15 +187,95 @@ export class FlameFrostEffect implements VisualEffect {
         ctx.arc(0, 0, p.size, 0, Math.PI * 2);
         ctx.fill();
       } else {
-        // Hexagonal ice crystal star
-        ctx.strokeStyle = p.color;
-        ctx.lineWidth = 1.8;
-        this.drawIceCrystal(ctx, p.size);
+        // Hexagonal ice crystal star from cached sprite
+        const sprite = this.getIceCrystalSprite();
+        const sz = p.size * 2;
+        ctx.drawImage(sprite, -sz / 2, -sz / 2, sz, sz);
       }
       ctx.restore();
     });
 
     ctx.restore();
+  }
+
+  private getFireAuraSprite(): HTMLCanvasElement {
+    if (!this.fireAuraSprite) {
+      const c = document.createElement('canvas');
+      c.width = 128;
+      c.height = 128;
+      const ctx = c.getContext('2d');
+      if (ctx) {
+        ctx.imageSmoothingEnabled = true;
+        const grad = ctx.createRadialGradient(64, 64, 4, 64, 64, 60);
+        grad.addColorStop(0, 'rgba(255, 179, 0, 0.45)');
+        grad.addColorStop(0.5, 'rgba(244, 81, 30, 0.25)');
+        grad.addColorStop(1, 'rgba(191, 54, 12, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(64, 64, 60, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      this.fireAuraSprite = c;
+    }
+    return this.fireAuraSprite;
+  }
+
+  private getFrostAuraSprite(): HTMLCanvasElement {
+    if (!this.frostAuraSprite) {
+      const c = document.createElement('canvas');
+      c.width = 128;
+      c.height = 128;
+      const ctx = c.getContext('2d');
+      if (ctx) {
+        ctx.imageSmoothingEnabled = true;
+        const grad = ctx.createRadialGradient(64, 64, 4, 64, 64, 60);
+        grad.addColorStop(0, 'rgba(0, 229, 255, 0.45)');
+        grad.addColorStop(0.5, 'rgba(2, 136, 209, 0.25)');
+        grad.addColorStop(1, 'rgba(1, 87, 155, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(64, 64, 60, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      this.frostAuraSprite = c;
+    }
+    return this.frostAuraSprite;
+  }
+
+  private getIceCrystalSprite(): HTMLCanvasElement {
+    if (!this.iceCrystalSprite) {
+      const c = document.createElement('canvas');
+      c.width = 32;
+      c.height = 32;
+      const ctx = c.getContext('2d');
+      if (ctx) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.translate(16, 16);
+        ctx.strokeStyle = '#80DEEA';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        const size = 12;
+        for (let i = 0; i < 6; i++) {
+          const angle = (i * Math.PI) / 3;
+          const x = Math.cos(angle) * size;
+          const y = Math.sin(angle) * size;
+          ctx.moveTo(0, 0);
+          ctx.lineTo(x, y);
+
+          const bx = Math.cos(angle) * size * 0.6;
+          const by = Math.sin(angle) * size * 0.6;
+          const bAngle1 = angle + Math.PI / 6;
+          const bAngle2 = angle - Math.PI / 6;
+          ctx.moveTo(bx, by);
+          ctx.lineTo(bx + Math.cos(bAngle1) * size * 0.35, by + Math.sin(bAngle1) * size * 0.35);
+          ctx.moveTo(bx, by);
+          ctx.lineTo(bx + Math.cos(bAngle2) * size * 0.35, by + Math.sin(bAngle2) * size * 0.35);
+        }
+        ctx.stroke();
+      }
+      this.iceCrystalSprite = c;
+    }
+    return this.iceCrystalSprite;
   }
 
   private renderAura(
@@ -200,54 +285,13 @@ export class FlameFrostEffect implements VisualEffect {
     element: 'fire' | 'frost' | 'both',
     s: number
   ): void {
-    ctx.save();
     const radius = 75 * s;
-
     if (element === 'fire' || element === 'both') {
-      const fireGrad = ctx.createRadialGradient(x, y, 5, x, y, radius);
-      fireGrad.addColorStop(0, 'rgba(255, 179, 0, 0.45)');
-      fireGrad.addColorStop(0.5, 'rgba(244, 81, 30, 0.25)');
-      fireGrad.addColorStop(1, 'rgba(191, 54, 12, 0)');
-      ctx.fillStyle = fireGrad;
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.drawImage(this.getFireAuraSprite(), x - radius, y - radius, radius * 2, radius * 2);
     }
-
     if (element === 'frost' || element === 'both') {
-      const frostGrad = ctx.createRadialGradient(x, y, 5, x, y, radius);
-      frostGrad.addColorStop(0, 'rgba(0, 229, 255, 0.45)');
-      frostGrad.addColorStop(0.5, 'rgba(2, 136, 209, 0.25)');
-      frostGrad.addColorStop(1, 'rgba(1, 87, 155, 0)');
-      ctx.fillStyle = frostGrad;
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.drawImage(this.getFrostAuraSprite(), x - radius, y - radius, radius * 2, radius * 2);
     }
-
-    ctx.restore();
-  }
-
-  private drawIceCrystal(ctx: CanvasRenderingContext2D, size: number): void {
-    ctx.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const angle = (i * Math.PI) / 3;
-      const x = Math.cos(angle) * size;
-      const y = Math.sin(angle) * size;
-      ctx.moveTo(0, 0);
-      ctx.lineTo(x, y);
-
-      // Branchlets
-      const bx = Math.cos(angle) * size * 0.6;
-      const by = Math.sin(angle) * size * 0.6;
-      const bAngle1 = angle + Math.PI / 6;
-      const bAngle2 = angle - Math.PI / 6;
-      ctx.moveTo(bx, by);
-      ctx.lineTo(bx + Math.cos(bAngle1) * size * 0.35, by + Math.sin(bAngle1) * size * 0.35);
-      ctx.moveTo(bx, by);
-      ctx.lineTo(bx + Math.cos(bAngle2) * size * 0.35, by + Math.sin(bAngle2) * size * 0.35);
-    }
-    ctx.stroke();
   }
 
   hasActiveParticles(): boolean {

@@ -194,24 +194,9 @@ export class VideoCompositor {
 
           if (this.blurCtx) {
             this.blurCtx.clearRect(0, 0, blurW, blurH);
-            this.blurCtx.drawImage(video, 0, 0, blurW, blurH);
-
-            // 1. Exclude foreground subject from background blur samples
-            this.blurCtx.globalCompositeOperation = 'destination-out';
-            this.blurCtx.drawImage(maskCanvas, 0, 0, blurW, blurH);
-            this.blurCtx.globalCompositeOperation = 'source-over';
-
-            // 2. Convolution blur on pure background pixels (Zero foreground bleeding)
             this.blurCtx.filter = `blur(${blurPx}px)`;
-            this.blurCtx.drawImage(this.blurCanvas, 0, 0, blurW, blurH);
-            this.blurCtx.filter = 'none';
-
-            // 3. Infill center under subject with wider blur to guarantee continuous coverage
-            this.blurCtx.globalCompositeOperation = 'destination-over';
-            this.blurCtx.filter = `blur(${blurPx * 2}px)`;
             this.blurCtx.drawImage(video, 0, 0, blurW, blurH);
             this.blurCtx.filter = 'none';
-            this.blurCtx.globalCompositeOperation = 'source-over';
           }
 
           ctx.save();

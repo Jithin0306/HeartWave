@@ -25,7 +25,7 @@ const TAG = `v${VERSION}`;
 const REPO = 'jithin0306/HeartWave';
 const TOKEN = getGithubToken();
 
-const RELEASE_TITLE = `HeartWave v${VERSION} - Real-Time Discord WebRTC Lip Sync, Driver Optimization & Memory Leak Prevention`;
+const RELEASE_TITLE = `HeartWave v${VERSION} - 180–200 FPS High-Refresh Engine, IPC Decoupling & Compositor Overhaul`;
 const RELEASE_NOTES = fs.existsSync(path.resolve('RELEASE_NOTES.md'))
   ? fs.readFileSync(path.resolve('RELEASE_NOTES.md'), 'utf-8')
   : `## HeartWave v${VERSION} Release Notes\n\n- Zero-latency A/V lip sync with DirectShow hardware timestamps\n- Unthrottled real-time Virtual Camera dispatch\n- Unified Viewport HUD flex row (eliminated overlapping badges)\n- Multi-platform GitHub Actions build matrix for Windows, macOS, and Linux\n`;

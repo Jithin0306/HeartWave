@@ -58,6 +58,9 @@ export const CameraPreviewViewport: React.FC = () => {
   const lastGestureResultRef = useRef<any>(null);
   const lastReportedGestureRef = useRef<string | null>(null);
   const activeNativeAnchorsRef = useRef<Array<{ x: number; y: number }>>([]);
+  const lastDispatchedAnchorsRef = useRef<Array<{ x: number; y: number }>>([]);
+  const lastAnchorIpcTimesRef = useRef<number[]>([]);
+  const hadActiveEffectsRef = useRef<boolean>(false);
   const audioKeepAliveRef = useRef<AudioKeepAlive | null>(null);
   const framesSentCountRef = useRef<number>(0);
   const lastTelemetryLogRef = useRef<number>(0);
@@ -407,6 +410,8 @@ export const CameraPreviewViewport: React.FC = () => {
           const prevAnchors = activeNativeAnchorsRef.current;
           const matchedPrev = new Set<number>();
           const nextActiveAnchors: Array<{ x: number; y: number }> = [];
+          const nextDispatched: Array<{ x: number; y: number }> = [];
+          const nextIpcTimes: number[] = [];
 
           for (const anchor of currentAnchors) {
             let foundIdx = -1;
@@ -423,25 +428,46 @@ export const CameraPreviewViewport: React.FC = () => {
             if (foundIdx !== -1) {
               matchedPrev.add(foundIdx);
               // Anchor already active: smoothly update its position without re-triggering
-              window.heartwaveApi?.updateEffectAnchor?.(ev.gesture, anchor.x, anchor.y);
+              // Measure motion from the last dispatched position to allow cumulative micro-movements to accumulate
+              const lastDispatched = lastDispatchedAnchorsRef.current[foundIdx] ?? prevAnchors[foundIdx];
+              const lastIpcTime = lastAnchorIpcTimesRef.current[foundIdx] ?? 0;
+              const distMoved = Math.hypot(lastDispatched.x - anchor.x, lastDispatched.y - anchor.y);
+              if (now - lastIpcTime >= 33 && distMoved >= 0.005) {
+                window.heartwaveApi?.updateEffectAnchor?.(ev.gesture, anchor.x, anchor.y, foundIdx);
+                nextIpcTimes.push(now);
+                nextDispatched.push({ x: anchor.x, y: anchor.y });
+              } else {
+                nextIpcTimes.push(lastIpcTime);
+                nextDispatched.push({ x: lastDispatched.x, y: lastDispatched.y });
+              }
             } else {
               // Brand new anchor formed (either initial gesture or 2nd hand joined while holding)
               window.heartwaveApi?.triggerEffect?.(ev.gesture, anchor.x, anchor.y, 1.0);
+              nextIpcTimes.push(now);
+              nextDispatched.push({ x: anchor.x, y: anchor.y });
             }
             nextActiveAnchors.push({ x: anchor.x, y: anchor.y });
           }
           // If any previous anchor disappeared (e.g. user lowered one hand while holding the other)
           if (matchedPrev.size < prevAnchors.length) {
             window.heartwaveApi?.releaseEffect?.(ev.gesture);
+            nextDispatched.length = 0;
+            nextIpcTimes.length = 0;
             for (const a of nextActiveAnchors) {
               window.heartwaveApi?.triggerEffect?.(ev.gesture, a.x, a.y, 1.0);
+              nextIpcTimes.push(now);
+              nextDispatched.push({ x: a.x, y: a.y });
             }
           }
 
           activeNativeAnchorsRef.current = nextActiveAnchors;
+          lastDispatchedAnchorsRef.current = nextDispatched;
+          lastAnchorIpcTimesRef.current = nextIpcTimes;
         } else if (!curGestureName && activeNativeAnchorsRef.current.length > 0) {
           window.heartwaveApi?.releaseEffect?.('all');
           activeNativeAnchorsRef.current = [];
+          lastDispatchedAnchorsRef.current = [];
+          lastAnchorIpcTimesRef.current = [];
         }
 
         if (gestureResult && curGestureName) {
@@ -476,6 +502,7 @@ export const CameraPreviewViewport: React.FC = () => {
         }
 
         // 2. Render romantic effects overlay (skip if in Bypass mode or Privacy mode)
+        const hasEffects = effectManager.hasActiveParticles();
         if (effectsCanvasRef.current && !liveBypassActive && !livePrivacyActive) {
           const effectsCanvas = effectsCanvasRef.current;
           const targetW = (video && video.videoWidth) || liveResolution?.width || 1280;
@@ -488,11 +515,15 @@ export const CameraPreviewViewport: React.FC = () => {
           const eCtx = effectsCanvas.getContext('2d');
           if (eCtx) {
             effectManager.update(liveIntensity, gestureResult?.gestureEvent?.anchor, now, gestureResult?.gestureEvent?.anchors);
-            effectManager.render(eCtx, effectsCanvas.width, effectsCanvas.height, liveMirrored);
+            if (hasEffects || hadActiveEffectsRef.current) {
+              effectManager.render(eCtx, effectsCanvas.width, effectsCanvas.height, liveMirrored);
+              hadActiveEffectsRef.current = hasEffects;
+            }
           }
-        } else if (effectsCanvasRef.current) {
+        } else if (effectsCanvasRef.current && hadActiveEffectsRef.current) {
           const eCtx = effectsCanvasRef.current.getContext('2d');
           if (eCtx) eCtx.clearRect(0, 0, effectsCanvasRef.current.width, effectsCanvasRef.current.height);
+          hadActiveEffectsRef.current = false;
         }
 
         // Keep physical video playing
@@ -508,7 +539,7 @@ export const CameraPreviewViewport: React.FC = () => {
         videoCompositor.setResolution(frameW, frameH);
         const compMetrics = videoCompositor.compositeFrame(
           video || videoCompositor.getCanvas(),
-          effectsCanvasRef.current,
+          hasEffects ? effectsCanvasRef.current : null,
           liveMirrored,
           liveBypassActive,
           livePrivacyActive,

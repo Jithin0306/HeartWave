@@ -83,7 +83,7 @@ export class ConfettiCelebrationEffect implements VisualEffect {
   private spawnGrandBurst(intensityMult: number = 1.0): void {
     const originX = this.anchor.x * this.width;
     const originY = Math.max(80, this.anchor.y * this.height - 20);
-    const count = Math.floor(110 * intensityMult);
+    const count = Math.min(32, Math.floor(26 * intensityMult));
 
     for (let i = 0; i < count; i++) {
       const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.5;
@@ -105,16 +105,16 @@ export class ConfettiCelebrationEffect implements VisualEffect {
       });
     }
 
-    // Golden star sparkles at origin
-    for (let i = 0; i < 40; i++) {
+    // Golden star sparkles at origin (capped to 12)
+    for (let i = 0; i < 12; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = 60 + Math.random() * 200;
+      const speed = 60 + Math.random() * 180;
       this.sparkles.push({
         x: originX,
         y: originY,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        size: 2.5 + Math.random() * 3,
+        size: 2.5 + Math.random() * 2.5,
         color: Math.random() > 0.4 ? '#FFE082' : '#FFFFFF',
         alpha: 1.0,
         decay: 1.5 + Math.random() * 1.8,
@@ -136,17 +136,17 @@ export class ConfettiCelebrationEffect implements VisualEffect {
 
     const intensityMult = 0.8 + (intensity / 100) * 0.4;
 
-    // Continuous festive rain while holding
-    if (this.isHolding) {
+    // Controlled festive rain while holding (hard cap 32 particles to guarantee 180+ FPS)
+    if (this.isHolding && this.ribbons.length < 32) {
       this.spawnCooldown += dt;
-      if (this.spawnCooldown > 0.16 / intensityMult) {
+      if (this.spawnCooldown > 0.28 / intensityMult) {
         this.spawnCooldown = 0;
-        const originX = this.anchor.x * this.width + (Math.random() - 0.5) * 80;
-        const originY = Math.max(60, this.anchor.y * this.height - 40);
+        const originX = this.anchor.x * this.width + (Math.random() - 0.5) * 60;
+        const originY = Math.max(60, this.anchor.y * this.height - 30);
 
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < 3; i++) {
           const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.2;
-          const speed = 140 + Math.random() * 220;
+          const speed = 140 + Math.random() * 200;
           this.ribbons.push({
             x: originX,
             y: originY,
@@ -224,16 +224,16 @@ export class ConfettiCelebrationEffect implements VisualEffect {
       ctx.restore();
     });
 
-    // Render sparkles
-    this.sparkles.forEach((s) => {
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, s.alpha);
-      ctx.fillStyle = s.color;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    });
+    // Render sparkles (batched without per-particle state saves)
+    if (this.sparkles.length > 0) {
+      this.sparkles.forEach((s) => {
+        ctx.globalAlpha = Math.max(0, s.alpha);
+        ctx.fillStyle = s.color;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
 
     ctx.restore();
   }

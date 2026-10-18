@@ -27,6 +27,8 @@ let cachedDataView: DataView | null = null;
 let isFrameInFlight = false;
 let lastFlightStartTime = 0;
 let flightToken = 0;
+let isAnchorUpdateInFlight = false;
+const pendingAnchors = new Map<string, { effectId: string; x: number; y: number }>();
 
 export function initTauriBridge(): void {
   if (typeof window === 'undefined') return;
@@ -109,16 +111,58 @@ export function initTauriBridge(): void {
     },
     triggerEffect: async (effectId: string, x: number, y: number, confidence: number = 1.0) => {
       if (!effectId || effectId === 'none' || effectId === 'all') {
+        pendingAnchors.clear();
         await invoke<void>('engine_release_effect', { effectId: 'all' }).catch(() => {});
         return;
       }
+      // Preserve queued positions for this effect if a second anchor joins; clear stale updates for other effects
+      for (const k of pendingAnchors.keys()) {
+        if (!k.startsWith(`${effectId}:`)) {
+          pendingAnchors.delete(k);
+        }
+      }
       await invoke<void>('engine_trigger_effect', { effectId, x, y, confidence }).catch(() => {});
     },
-    updateEffectAnchor: async (effectId: string, x: number, y: number) => {
+    updateEffectAnchor: async (effectId: string, x: number, y: number, anchorIndex: number = 0) => {
       if (!effectId || effectId === 'none') return;
-      await invoke<void>('engine_update_anchor', { effectId, x, y }).catch(() => {});
+      const key = `${effectId}:${anchorIndex}`;
+      if (isAnchorUpdateInFlight) {
+        pendingAnchors.set(key, { effectId, x, y });
+        return;
+      }
+      isAnchorUpdateInFlight = true;
+      try {
+        let currentItem: { effectId: string; x: number; y: number } | undefined = { effectId, x, y };
+        while (currentItem) {
+          try {
+            await invoke<void>('engine_update_anchor', currentItem);
+          } catch {}
+          if (pendingAnchors.size > 0) {
+            const nextKey = pendingAnchors.keys().next().value;
+            if (nextKey !== undefined) {
+              currentItem = pendingAnchors.get(nextKey);
+              pendingAnchors.delete(nextKey);
+            } else {
+              currentItem = undefined;
+            }
+          } else {
+            currentItem = undefined;
+          }
+        }
+      } finally {
+        isAnchorUpdateInFlight = false;
+      }
     },
     releaseEffect: async (effectId: string) => {
+      if (!effectId || effectId === 'all') {
+        pendingAnchors.clear();
+      } else {
+        for (const k of pendingAnchors.keys()) {
+          if (k.startsWith(`${effectId}:`)) {
+            pendingAnchors.delete(k);
+          }
+        }
+      }
       await invoke<void>('engine_release_effect', { effectId: effectId || 'all' }).catch(() => {});
     },
     sendTrayState: (_state) => {},

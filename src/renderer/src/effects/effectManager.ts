@@ -29,6 +29,7 @@ export class EffectManager {
   private activeEffectId: string = 'golden-finger-heart';
   private lastTime: number = performance.now();
   private wasActive: Set<string> = new Set();
+  private canvasDirty: boolean = false;
 
   constructor() {
     this.registerEffect(new GoldenFingerHeartEffect());
@@ -125,15 +126,37 @@ export class EffectManager {
   }
 
   /**
+   * Returns true if any effect is holding or has active particles on screen.
+   */
+  hasActiveParticles(): boolean {
+    for (const effect of this.effects.values()) {
+      const isHolding = 'isHolding' in effect && (effect as any).isHolding;
+      if (isHolding || effect.hasActiveParticles()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Render active effect particles to canvas.
    * High-performance gatekeeper: only renders effects that actually have active particles.
+   * When idle, skips clearRect and draw calls entirely (0ms overhead).
    */
   render(ctx: CanvasRenderingContext2D, width: number, height: number, isMirrored: boolean): void {
+    if (!this.hasActiveParticles()) {
+      if (this.canvasDirty) {
+        ctx.clearRect(0, 0, width, height);
+        this.canvasDirty = false;
+      }
+      return;
+    }
+
+    this.canvasDirty = true;
     ctx.clearRect(0, 0, width, height);
 
     this.effects.forEach((effect) => {
       if (!effect.hasActiveParticles()) return;
-
       effect.render(ctx, width, height, isMirrored);
     });
   }
@@ -143,6 +166,7 @@ export class EffectManager {
    */
   resetAll(): void {
     this.wasActive.clear();
+    this.canvasDirty = true;
     this.effects.forEach((effect) => effect.reset());
   }
 }

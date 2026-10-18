@@ -26,8 +26,15 @@ Write-Host " Running Tauri build..." -ForegroundColor Yellow
 $env:CARGO_BUILD_JOBS = "2"
 npx tauri build
 
-# 4. Generate latest.json manifest for GitHub Release
-$nsisSigPath = "src-tauri\target\release\bundle\nsis\HeartWave_${Version}_x64-setup.exe.sig"
+# 4. Sign installer if not already signed
+$nsisExe = "src-tauri\target\release\bundle\nsis\HeartWave_${Version}_x64-setup.exe"
+$nsisSigPath = "$nsisExe.sig"
+if ((Test-Path $nsisExe) -and (-not (Test-Path $nsisSigPath))) {
+    Write-Host " Cryptographically signing NSIS installer..." -ForegroundColor Yellow
+    npx tauri signer sign -f src-tauri/heartwave.key -p "HeartWaveRelease2026" $nsisExe
+}
+
+# 5. Generate latest.json manifest for GitHub Release
 if (Test-Path $nsisSigPath) {
     $signature = (Get-Content $nsisSigPath -Raw).Trim()
     $isoDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
@@ -51,5 +58,20 @@ if (Test-Path $nsisSigPath) {
     Write-Host " Generated updater manifest (UTF-8 without BOM) at: $outPath" -ForegroundColor Green
     Write-Host " Upload 'latest.json' and 'HeartWave_${Version}_x64-setup.exe' to GitHub Release v$Version." -ForegroundColor Cyan
 }
+
+# 6. Copy artifacts to release-$Version directory
+$releaseFolder = "release-$Version"
+if (-not (Test-Path $releaseFolder)) {
+    New-Item -ItemType Directory -Path $releaseFolder | Out-Null
+}
+$msiExe = "src-tauri\target\release\bundle\msi\HeartWave_${Version}_x64_en-US.msi"
+$rawExe = "src-tauri\target\release\heartwave.exe"
+if (Test-Path $nsisExe) { Copy-Item $nsisExe -Destination $releaseFolder -Force }
+if (Test-Path $nsisSigPath) { Copy-Item $nsisSigPath -Destination $releaseFolder -Force }
+if (Test-Path $msiExe) { Copy-Item $msiExe -Destination $releaseFolder -Force }
+if (Test-Path $rawExe) { Copy-Item $rawExe -Destination "$releaseFolder\HeartWave-Portable.exe" -Force }
+$manifestPath = "src-tauri\target\release\bundle\latest.json"
+if (Test-Path $manifestPath) { Copy-Item $manifestPath -Destination $releaseFolder -Force }
+Write-Host " Artifacts copied to: $releaseFolder" -ForegroundColor Green
 
 Write-Host "Build and packaging completed successfully!" -ForegroundColor Green

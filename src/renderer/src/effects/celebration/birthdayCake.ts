@@ -77,6 +77,11 @@ export class BirthdayCakeEffect implements VisualEffect {
   private smoke: SmokeParticle[] = [];
   private sparklers: SparklerParticle[] = [];
 
+  // Hardware-accelerated cached canvas sprites (Zero per-frame allocation)
+  private cakeSprite: HTMLCanvasElement | null = null;
+  private flameGlowSprite: HTMLCanvasElement | null = null;
+  private smokeSprite: HTMLCanvasElement | null = null;
+
   init(width: number, height: number): void {
     this.width = width;
     this.height = height;
@@ -159,18 +164,18 @@ export class BirthdayCakeEffect implements VisualEffect {
       candle.flameFlicker += dt * 8;
       if (!candle.isLit) {
         candle.smokeTimer += dt;
-        if (candle.smokeTimer < 2.5 && Math.random() < 0.6) {
+        if (candle.smokeTimer < 2.5 && this.smoke.length < 6 && Math.random() < 0.4) {
           const s = this.cakeScale;
           const cx = this.anchor.x * this.width + candle.relX * (65 * s);
           const cy = this.anchor.y * this.height - (BirthdayCakeEffect.TOP_TIER_SURFACE + candle.height + 7) * s;
           this.smoke.push({
             x: cx + (Math.random() - 0.5) * 6,
             y: cy,
-            vx: (Math.random() - 0.5) * 18,
-            vy: -40 - Math.random() * 35,
+            vx: (Math.random() - 0.5) * 16,
+            vy: -35 - Math.random() * 30,
             size: 6 + Math.random() * 6,
-            alpha: 0.65,
-            curl: (Math.random() - 0.5) * 2.5,
+            alpha: 0.6,
+            curl: (Math.random() - 0.5) * 2.0,
           });
         }
       }
@@ -183,14 +188,14 @@ export class BirthdayCakeEffect implements VisualEffect {
       s.y += s.vy * dt;
       s.vx += s.curl * dt * 8;
       s.size += dt * 14;
-      s.alpha -= dt * 0.38;
+      s.alpha -= dt * 0.4;
       if (s.alpha <= 0) {
         this.smoke.splice(i, 1);
       }
     }
 
     // Update sparkler embers while lit
-    if (this.state === 'lit' && Math.random() < 0.7) {
+    if (this.state === 'lit' && this.sparklers.length < 8 && Math.random() < 0.5) {
       const c = this.candles[Math.floor(Math.random() * this.candles.length)];
       if (c && c.isLit) {
         const cx = this.anchor.x * this.width + c.relX * (65 * this.cakeScale);
@@ -198,9 +203,9 @@ export class BirthdayCakeEffect implements VisualEffect {
         this.sparklers.push({
           x: cx,
           y: cy,
-          vx: (Math.random() - 0.5) * 90,
-          vy: -Math.random() * 70 - 20,
-          size: 2 + Math.random() * 2.5,
+          vx: (Math.random() - 0.5) * 80,
+          vy: -Math.random() * 60 - 20,
+          size: 2 + Math.random() * 2,
           color: Math.random() > 0.4 ? '#FFE082' : '#FFF9C4',
           alpha: 1.0,
           decay: 2.2 + Math.random() * 2.0,
@@ -249,13 +254,13 @@ export class BirthdayCakeEffect implements VisualEffect {
 
     const originX = this.anchor.x * this.width;
     const originY = this.anchor.y * this.height - 110 * this.cakeScale;
-    const count = Math.floor(160 * intensityMult);
+    const count = Math.min(26, Math.floor(22 * intensityMult));
 
     for (let i = 0; i < count; i++) {
       const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.35;
-      const speed = (240 + Math.random() * 420) * intensityMult;
+      const speed = (220 + Math.random() * 380) * intensityMult;
       this.confetti.push({
-        x: originX + (Math.random() - 0.5) * 60,
+        x: originX + (Math.random() - 0.5) * 50,
         y: originY + (Math.random() - 0.5) * 20,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
@@ -268,7 +273,7 @@ export class BirthdayCakeEffect implements VisualEffect {
         wobbleSpeed: 4 + Math.random() * 6,
         color: colors[Math.floor(Math.random() * colors.length)],
         alpha: 1.0,
-        decay: 0.18 + Math.random() * 0.22,
+        decay: 0.22 + Math.random() * 0.22,
       });
     }
   }
@@ -305,109 +310,169 @@ export class BirthdayCakeEffect implements VisualEffect {
     ctx.restore();
   }
 
+  private getSmokeSprite(): HTMLCanvasElement {
+    if (!this.smokeSprite) {
+      const c = document.createElement('canvas');
+      c.width = 32;
+      c.height = 32;
+      const ctx = c.getContext('2d');
+      if (ctx) {
+        ctx.imageSmoothingEnabled = true;
+        const grad = ctx.createRadialGradient(16, 16, 1, 16, 16, 15);
+        grad.addColorStop(0, 'rgba(230, 230, 235, 0.6)');
+        grad.addColorStop(0.6, 'rgba(180, 180, 190, 0.25)');
+        grad.addColorStop(1, 'rgba(150, 150, 160, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(16, 16, 15, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      this.smokeSprite = c;
+    }
+    return this.smokeSprite;
+  }
+
+  private getFlameGlowSprite(): HTMLCanvasElement {
+    if (!this.flameGlowSprite) {
+      const c = document.createElement('canvas');
+      c.width = 64;
+      c.height = 64;
+      const ctx = c.getContext('2d');
+      if (ctx) {
+        ctx.imageSmoothingEnabled = true;
+        const grad = ctx.createRadialGradient(32, 32, 2, 32, 32, 30);
+        grad.addColorStop(0, 'rgba(255, 200, 50, 0.55)');
+        grad.addColorStop(0.5, 'rgba(255, 120, 20, 0.2)');
+        grad.addColorStop(1, 'rgba(255, 60, 0, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(32, 32, 30, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      this.flameGlowSprite = c;
+    }
+    return this.flameGlowSprite;
+  }
+
+  private getCakeSprite(): HTMLCanvasElement {
+    if (!this.cakeSprite) {
+      const c = document.createElement('canvas');
+      c.width = 320;
+      c.height = 240;
+      const ctx = c.getContext('2d');
+      if (ctx) {
+        ctx.imageSmoothingEnabled = true;
+        const cx = 160;
+        const cy = 210;
+
+        // 1. Platter plate base
+        const platterW = 150;
+        const platterH = 24;
+        const platterGrad = ctx.createLinearGradient(cx - platterW, cy + 10, cx + platterW, cy + 10);
+        platterGrad.addColorStop(0, '#B8860B');
+        platterGrad.addColorStop(0.3, '#FFF8DC');
+        platterGrad.addColorStop(0.7, '#DAA520');
+        platterGrad.addColorStop(1, '#8B6508');
+
+        ctx.fillStyle = platterGrad;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 10, platterW, platterH, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#FFE082';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // 2. Bottom Tier: Rich Vanilla & Gold Velvet
+        const bW = 125;
+        const bH = 65;
+        const bY = cy - 10;
+
+        const bGrad = ctx.createLinearGradient(cx - bW, 0, cx + bW, 0);
+        bGrad.addColorStop(0, '#D4A373');
+        bGrad.addColorStop(0.3, '#FAEDCD');
+        bGrad.addColorStop(0.7, '#E9D8A6');
+        bGrad.addColorStop(1, '#CCD5AE');
+
+        ctx.fillStyle = bGrad;
+        ctx.beginPath();
+        ctx.roundRect(cx - bW, bY - bH, bW * 2, bH, [10, 10, 24, 24]);
+        ctx.fill();
+
+        // Bottom tier decorative dripping icing
+        ctx.fillStyle = '#FFFDF0';
+        ctx.beginPath();
+        ctx.moveTo(cx - bW, bY - bH + 2);
+        for (let x = -bW; x <= bW; x += 18) {
+          const drip = Math.sin(x * 0.15) * 6 + 14;
+          ctx.quadraticCurveTo(cx + x + 9, bY - bH + drip, cx + x + 18, bY - bH + 2);
+        }
+        ctx.lineTo(cx + bW, bY - bH);
+        ctx.lineTo(cx - bW, bY - bH);
+        ctx.closePath();
+        ctx.fill();
+
+        // 3. Middle Tier: Rose Gold Strawberry
+        const mW = 95;
+        const mH = 55;
+        const mY = bY - bH + 6;
+
+        const mGrad = ctx.createLinearGradient(cx - mW, 0, cx + mW, 0);
+        mGrad.addColorStop(0, '#E07A5F');
+        mGrad.addColorStop(0.4, '#F4A261');
+        mGrad.addColorStop(0.8, '#E76F51');
+        mGrad.addColorStop(1, '#D94E34');
+
+        ctx.fillStyle = mGrad;
+        ctx.beginPath();
+        ctx.roundRect(cx - mW, mY - mH, mW * 2, mH, [8, 8, 16, 16]);
+        ctx.fill();
+
+        // Middle tier icing drip
+        ctx.fillStyle = '#FFF5EB';
+        ctx.beginPath();
+        ctx.moveTo(cx - mW, mY - mH + 2);
+        for (let x = -mW; x <= mW; x += 15) {
+          const drip = Math.cos(x * 0.2) * 5 + 11;
+          ctx.quadraticCurveTo(cx + x + 7.5, mY - mH + drip, cx + x + 15, mY - mH + 2);
+        }
+        ctx.lineTo(cx + mW, mY - mH);
+        ctx.lineTo(cx - mW, mY - mH);
+        ctx.closePath();
+        ctx.fill();
+
+        // 4. Top Tier: Pure Pearl White & Gold Ganache
+        const tW = 65;
+        const tH = 45;
+        const tY = mY - mH + 4;
+
+        const tGrad = ctx.createLinearGradient(cx - tW, 0, cx + tW, 0);
+        tGrad.addColorStop(0, '#FAF0CA');
+        tGrad.addColorStop(0.5, '#FFFFFF');
+        tGrad.addColorStop(1, '#F4D35E');
+
+        ctx.fillStyle = tGrad;
+        ctx.beginPath();
+        ctx.roundRect(cx - tW, tY - tH, tW * 2, tH, [6, 6, 12, 12]);
+        ctx.fill();
+
+        // Top tier rosettes
+        ctx.fillStyle = '#FFB703';
+        for (let rx = -tW + 8; rx <= tW - 8; rx += 14) {
+          ctx.beginPath();
+          ctx.arc(cx + rx, tY - tH, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      this.cakeSprite = c;
+    }
+    return this.cakeSprite;
+  }
+
   private renderCake(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: number): void {
     ctx.save();
     ctx.translate(cx, cy);
     ctx.scale(s, s);
-
-    // 1. Platter plate base
-    const platterW = 150;
-    const platterH = 24;
-    const platterGrad = ctx.createLinearGradient(-platterW, 10, platterW, 10);
-    platterGrad.addColorStop(0, '#B8860B');
-    platterGrad.addColorStop(0.3, '#FFF8DC');
-    platterGrad.addColorStop(0.7, '#DAA520');
-    platterGrad.addColorStop(1, '#8B6508');
-
-    ctx.fillStyle = platterGrad;
-    ctx.beginPath();
-    ctx.ellipse(0, 10, platterW, platterH, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#FFE082';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // 2. Bottom Tier: Rich Vanilla & Gold Velvet
-    const bW = 125;
-    const bH = 65;
-    const bY = -10;
-
-    const bGrad = ctx.createLinearGradient(-bW, 0, bW, 0);
-    bGrad.addColorStop(0, '#D4A373');
-    bGrad.addColorStop(0.3, '#FAEDCD');
-    bGrad.addColorStop(0.7, '#E9D8A6');
-    bGrad.addColorStop(1, '#CCD5AE');
-
-    ctx.fillStyle = bGrad;
-    ctx.beginPath();
-    ctx.roundRect(-bW, bY - bH, bW * 2, bH, [10, 10, 24, 24]);
-    ctx.fill();
-
-    // Bottom tier decorative dripping icing
-    ctx.fillStyle = '#FFFDF0';
-    ctx.beginPath();
-    ctx.moveTo(-bW, bY - bH + 2);
-    for (let x = -bW; x <= bW; x += 18) {
-      const drip = Math.sin((x + this.ageTime * 30) * 0.15) * 8 + 14;
-      ctx.quadraticCurveTo(x + 9, bY - bH + drip, x + 18, bY - bH + 2);
-    }
-    ctx.lineTo(bW, bY - bH);
-    ctx.lineTo(-bW, bY - bH);
-    ctx.closePath();
-    ctx.fill();
-
-    // 3. Middle Tier: Rose Gold Strawberry
-    const mW = 95;
-    const mH = 55;
-    const mY = bY - bH + 6;
-
-    const mGrad = ctx.createLinearGradient(-mW, 0, mW, 0);
-    mGrad.addColorStop(0, '#E07A5F');
-    mGrad.addColorStop(0.4, '#F4A261');
-    mGrad.addColorStop(0.8, '#E76F51');
-    mGrad.addColorStop(1, '#D94E34');
-
-    ctx.fillStyle = mGrad;
-    ctx.beginPath();
-    ctx.roundRect(-mW, mY - mH, mW * 2, mH, [8, 8, 16, 16]);
-    ctx.fill();
-
-    // Middle tier icing drip
-    ctx.fillStyle = '#FFF5EB';
-    ctx.beginPath();
-    ctx.moveTo(-mW, mY - mH + 2);
-    for (let x = -mW; x <= mW; x += 15) {
-      const drip = Math.cos((x - this.ageTime * 25) * 0.2) * 6 + 11;
-      ctx.quadraticCurveTo(x + 7.5, mY - mH + drip, x + 15, mY - mH + 2);
-    }
-    ctx.lineTo(mW, mY - mH);
-    ctx.lineTo(-mW, mY - mH);
-    ctx.closePath();
-    ctx.fill();
-
-    // 4. Top Tier: Pure Pearl White & Gold Ganache
-    const tW = 65;
-    const tH = 45;
-    const tY = mY - mH + 4;
-
-    const tGrad = ctx.createLinearGradient(-tW, 0, tW, 0);
-    tGrad.addColorStop(0, '#FAF0CA');
-    tGrad.addColorStop(0.5, '#FFFFFF');
-    tGrad.addColorStop(1, '#F4D35E');
-
-    ctx.fillStyle = tGrad;
-    ctx.beginPath();
-    ctx.roundRect(-tW, tY - tH, tW * 2, tH, [6, 6, 12, 12]);
-    ctx.fill();
-
-    // Top tier rosettes
-    ctx.fillStyle = '#FFB703';
-    for (let rx = -tW + 8; rx <= tW - 8; rx += 14) {
-      ctx.beginPath();
-      ctx.arc(rx, tY - tH, 4, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
+    ctx.drawImage(this.getCakeSprite(), -160, -210);
     ctx.restore();
   }
 
@@ -451,23 +516,10 @@ export class BirthdayCakeEffect implements VisualEffect {
         const tiltX = candle.flameTilt * 12 * s;
         const flameCenterY = wickTopY - flameH * 0.55;
 
-        // Radiant heat haze
-        const glowGrad = ctx.createRadialGradient(
-          candleX + tiltX,
-          flameCenterY,
-          1,
-          candleX + tiltX,
-          flameCenterY,
-          28 * s
-        );
-        glowGrad.addColorStop(0, 'rgba(255, 200, 50, 0.55)');
-        glowGrad.addColorStop(0.6, 'rgba(255, 120, 20, 0.2)');
-        glowGrad.addColorStop(1, 'rgba(255, 60, 0, 0)');
-
-        ctx.fillStyle = glowGrad;
-        ctx.beginPath();
-        ctx.arc(candleX + tiltX, flameCenterY, 28 * s, 0, Math.PI * 2);
-        ctx.fill();
+        // Radiant heat haze from pre-rendered sprite
+        const glowSprite = this.getFlameGlowSprite();
+        const glowRadius = 28 * s;
+        ctx.drawImage(glowSprite, candleX + tiltX - glowRadius, flameCenterY - glowRadius, glowRadius * 2, glowRadius * 2);
 
         // Teardrop flame
         ctx.beginPath();
@@ -488,35 +540,33 @@ export class BirthdayCakeEffect implements VisualEffect {
       ctx.restore();
     });
 
-    // Render sparklers
-    this.sparklers.forEach((p) => {
+    // Render sparklers with batched draw
+    if (this.sparklers.length > 0) {
       ctx.save();
-      ctx.globalAlpha = p.alpha;
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fill();
+      this.sparklers.forEach((p) => {
+        ctx.globalAlpha = Math.max(0, p.alpha);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
       ctx.restore();
-    });
+    }
   }
 
   private renderSmoke(ctx: CanvasRenderingContext2D): void {
+    if (this.smoke.length === 0) return;
+    const sprite = this.getSmokeSprite();
     ctx.save();
     this.smoke.forEach((s) => {
       ctx.globalAlpha = Math.max(0, s.alpha);
-      const smokeGrad = ctx.createRadialGradient(s.x, s.y, 1, s.x, s.y, s.size);
-      smokeGrad.addColorStop(0, 'rgba(230, 230, 235, 0.5)');
-      smokeGrad.addColorStop(0.7, 'rgba(180, 180, 190, 0.25)');
-      smokeGrad.addColorStop(1, 'rgba(150, 150, 160, 0)');
-      ctx.fillStyle = smokeGrad;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.drawImage(sprite, s.x - s.size, s.y - s.size, s.size * 2, s.size * 2);
     });
     ctx.restore();
   }
 
   private renderConfetti(ctx: CanvasRenderingContext2D): void {
+    if (this.confetti.length === 0) return;
     ctx.save();
     this.confetti.forEach((p) => {
       ctx.save();
