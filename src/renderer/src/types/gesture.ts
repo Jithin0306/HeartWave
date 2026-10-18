@@ -24,6 +24,7 @@ export interface GestureDetectionResult {
   gesture: SemanticGesture;
   confidence: number;
   anchor: { x: number; y: number }; // Normalized 0..1 in video space
+  anchors?: Array<{ x: number; y: number }>; // Multiple simultaneous hand anchors
   handsCount: number;
   rawHands: TrackedHand[];
 }
@@ -33,6 +34,7 @@ export interface GestureEvent {
   label: string;
   confidence: number;
   anchor: { x: number; y: number };
+  anchors?: Array<{ x: number; y: number }>; // Multiple simultaneous hand anchors
   holdProgress: number; // 0.0 to 1.0
   isTriggered: boolean;
   timestamp: number;

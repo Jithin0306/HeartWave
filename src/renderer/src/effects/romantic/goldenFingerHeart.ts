@@ -4,79 +4,117 @@ import { drawGoldenHeart } from '../proceduralShapes';
 interface PersistentGoldenHeart {
   x: number; // Normalized 0..1 in video space
   y: number; // Normalized 0..1 in video space
+  targetX: number;
+  targetY: number;
   size: number;
   scale: number;
   targetScale: number;
   alpha: number;
   breathTime: number;
+  isHolding: boolean;
 }
 
 export class GoldenFingerHeartEffect implements VisualEffect {
   id = 'golden-finger-heart';
   name = 'Golden Finger Heart';
 
-  private heart: PersistentGoldenHeart | null = null;
+  private hearts: PersistentGoldenHeart[] = [];
   private isHolding: boolean = false;
-  private targetAnchor: EffectAnchor = { x: 0.5, y: 0.5 };
 
   init(_width: number, _height: number): void {
     this.reset();
   }
 
-  onGestureTrigger(anchor: EffectAnchor, _confidence: number): void {
-    this.targetAnchor = anchor;
+  onGestureTrigger(anchor: EffectAnchor, _confidence: number, anchors?: EffectAnchor[]): void {
+    const activeAnchors = (anchors && anchors.length > 0) ? anchors : [anchor];
     this.isHolding = true;
 
-    if (!this.heart) {
-      // Create single persistent heart at the finger
-      this.heart = {
-        x: anchor.x,
-        y: anchor.y,
-        size: 32,
-        scale: 0.1,
-        targetScale: 1.0,
-        alpha: 1.0,
-        breathTime: 0,
-      };
-    } else {
-      this.heart.targetScale = 1.0;
+    this.syncHearts(activeAnchors, 0.25, true);
+  }
+
+  private syncHearts(activeAnchors: EffectAnchor[], threshold: number, resetScale: boolean): void {
+    const claimed = new Set<PersistentGoldenHeart>();
+
+    for (const targetAnchor of activeAnchors) {
+      let bestDist = Infinity;
+      let matchedHeart: PersistentGoldenHeart | null = null;
+
+      for (const h of this.hearts) {
+        if (claimed.has(h)) continue;
+        const d = Math.hypot(h.targetX - targetAnchor.x, h.targetY - targetAnchor.y);
+        if (d < threshold && d < bestDist) {
+          bestDist = d;
+          matchedHeart = h;
+        }
+      }
+
+      if (matchedHeart) {
+        matchedHeart.targetX = targetAnchor.x;
+        matchedHeart.targetY = targetAnchor.y;
+        if (resetScale) {
+          matchedHeart.targetScale = 1.0;
+        }
+        matchedHeart.isHolding = true;
+        claimed.add(matchedHeart);
+      } else {
+        const newHeart: PersistentGoldenHeart = {
+          x: targetAnchor.x,
+          y: targetAnchor.y,
+          targetX: targetAnchor.x,
+          targetY: targetAnchor.y,
+          size: 32,
+          scale: 0.1,
+          targetScale: 1.0,
+          alpha: 1.0,
+          breathTime: Math.random() * Math.PI,
+          isHolding: true,
+        };
+        this.hearts.push(newHeart);
+        claimed.add(newHeart);
+      }
+    }
+
+    for (const h of this.hearts) {
+      if (!claimed.has(h)) {
+        h.isHolding = false;
+      }
     }
   }
 
-  update(dt: number, intensity: number, currentAnchor?: EffectAnchor): void {
-    if (currentAnchor && this.isHolding) {
-      this.targetAnchor = currentAnchor;
+  update(dt: number, intensity: number, currentAnchor?: EffectAnchor, currentAnchors?: EffectAnchor[]): void {
+    const activeAnchors = (currentAnchors && currentAnchors.length > 0)
+      ? currentAnchors
+      : (currentAnchor ? [currentAnchor] : []);
+
+    if (this.isHolding && activeAnchors.length > 0) {
+      this.syncHearts(activeAnchors, 0.35, false);
     }
 
-    if (!this.heart) return;
+    if (this.hearts.length === 0) return;
 
     const intensityScale = 0.8 + (intensity / 100) * 0.4;
+    const followSpeed = 16;
 
-    if (this.isHolding) {
-      // 1. Silky-smooth LERP following the finger without jitter or lag
-      const followSpeed = 16;
-      this.heart.x += (this.targetAnchor.x - this.heart.x) * Math.min(1.0, followSpeed * dt);
-      this.heart.y += (this.targetAnchor.y - this.heart.y) * Math.min(1.0, followSpeed * dt);
-
-      // 2. Growth easing into target scale with user intensity scaling
-      this.heart.scale += (this.heart.targetScale * intensityScale - this.heart.scale) * Math.min(1.0, 10 * dt);
-
-      // 3. Subtle breathing cycle (no particle spam)
-      this.heart.breathTime += dt * 3.2;
-      this.heart.alpha = 1.0;
-    } else {
-      // Clean, elegant fade-out when released
-      this.heart.scale += (0.2 - this.heart.scale) * Math.min(1.0, 8 * dt);
-      this.heart.alpha -= dt * 3.5;
-
-      if (this.heart.alpha <= 0.02) {
-        this.heart = null;
+    for (let i = this.hearts.length - 1; i >= 0; i--) {
+      const h = this.hearts[i];
+      if (this.isHolding && h.isHolding) {
+        h.x += (h.targetX - h.x) * Math.min(1.0, followSpeed * dt);
+        h.y += (h.targetY - h.y) * Math.min(1.0, followSpeed * dt);
+        h.scale += (h.targetScale * intensityScale - h.scale) * Math.min(1.0, 10 * dt);
+        h.breathTime += dt * 3.2;
+        h.alpha = 1.0;
+      } else {
+        h.scale += (0.2 - h.scale) * Math.min(1.0, 8 * dt);
+        h.alpha -= dt * 3.5;
+        if (h.alpha <= 0.02) {
+          this.hearts.splice(i, 1);
+        }
       }
     }
   }
 
   render(ctx: CanvasRenderingContext2D, width: number, height: number, isMirrored: boolean): void {
-    if (!this.heart) return;
+    if (this.hearts.length === 0) return;
 
     ctx.save();
 
@@ -85,38 +123,43 @@ export class GoldenFingerHeartEffect implements VisualEffect {
       ctx.scale(-1, 1);
     }
 
-    const px = this.heart.x * width;
-    const py = this.heart.y * height;
+    for (const h of this.hearts) {
+      const px = h.x * width;
+      const py = h.y * height;
 
-    // Gentle micro-breath oscillation
-    const breathOffset = Math.sin(this.heart.breathTime) * 0.05;
-    const currentScale = Math.max(0.05, this.heart.scale + (this.isHolding ? breathOffset : 0));
+      // Gentle micro-breath oscillation
+      const breathOffset = Math.sin(h.breathTime) * 0.05;
+      const currentScale = Math.max(0.05, h.scale + ((this.isHolding && h.isHolding) ? breathOffset : 0));
 
-    drawGoldenHeart(
-      ctx,
-      px,
-      py,
-      this.heart.size,
-      this.heart.alpha,
-      currentScale
-    );
+      drawGoldenHeart(
+        ctx,
+        px,
+        py,
+        h.size,
+        h.alpha,
+        currentScale
+      );
+    }
 
     ctx.restore();
   }
 
   setHolding(holding: boolean): void {
     this.isHolding = holding;
-    if (!holding && this.heart) {
-      this.heart.targetScale = 0.2;
+    if (!holding) {
+      this.hearts.forEach((h) => {
+        h.isHolding = false;
+        h.targetScale = 0.2;
+      });
     }
   }
 
   hasActiveParticles(): boolean {
-    return this.heart !== null;
+    return this.hearts.length > 0;
   }
 
   reset(): void {
-    this.heart = null;
+    this.hearts = [];
     this.isHolding = false;
   }
 

@@ -57,6 +57,7 @@ export const CameraPreviewViewport: React.FC = () => {
   const lastMaskRef = useRef<HTMLCanvasElement | null>(null);
   const lastGestureResultRef = useRef<any>(null);
   const lastReportedGestureRef = useRef<string | null>(null);
+  const activeNativeAnchorsRef = useRef<Array<{ x: number; y: number }>>([]);
   const audioKeepAliveRef = useRef<AudioKeepAlive | null>(null);
   const framesSentCountRef = useRef<number>(0);
   const lastTelemetryLogRef = useRef<number>(0);
@@ -378,32 +379,69 @@ export const CameraPreviewViewport: React.FC = () => {
           ? gestureResult.gestureEvent.gesture
           : null;
 
-        if (lastReportedGestureRef.current !== curGestureName) {
-          lastReportedGestureRef.current = curGestureName;
-          useAppStore.getState().setActiveGestureEvent(
-            (curGestureName && gestureResult) ? gestureResult.gestureEvent : null
-          );
-          if (curGestureName && gestureResult?.gestureEvent) {
-            soundEngine.playForEffect(curGestureName);
-            effectManager.handleGestureEvent(gestureResult.gestureEvent);
+        const ev = (curGestureName && gestureResult) ? gestureResult.gestureEvent : null;
+        const currentAnchors = (ev?.anchors && ev.anchors.length > 0)
+          ? ev.anchors
+          : (ev?.anchor ? [ev.anchor] : []);
 
-            // Dispatch to Native DirectX 11 Engine for hardware GPU particle simulation ONCE on gesture trigger
-            if (window.heartwaveApi?.triggerEffect) {
-              const ev = gestureResult.gestureEvent;
-              const ax = ev.anchor?.x ?? 0.5;
-              const ay = ev.anchor?.y ?? 0.5;
-              window.heartwaveApi.triggerEffect(ev.gesture, ax, ay, 1.0);
+        if (lastReportedGestureRef.current !== curGestureName) {
+          const prevGestureName = lastReportedGestureRef.current;
+          lastReportedGestureRef.current = curGestureName;
+          useAppStore.getState().setActiveGestureEvent(ev);
+          if (curGestureName && ev) {
+            if (prevGestureName) {
+              window.heartwaveApi?.releaseEffect?.(prevGestureName);
             }
+            activeNativeAnchorsRef.current = [];
+            soundEngine.playForEffect(curGestureName);
+            effectManager.handleGestureEvent(ev);
           } else {
             effectManager.handleGestureEvent(null);
             window.heartwaveApi?.releaseEffect?.('all');
+            activeNativeAnchorsRef.current = [];
           }
-        } else if (curGestureName && gestureResult?.gestureEvent?.anchor) {
-          // While holding gesture, smoothly update native particle anchor without spawning new particles
-          const ev = gestureResult.gestureEvent;
-          const ax = ev.anchor?.x ?? 0.5;
-          const ay = ev.anchor?.y ?? 0.5;
-          window.heartwaveApi?.updateEffectAnchor?.(ev.gesture, ax, ay);
+        }
+
+        if (curGestureName && ev && currentAnchors.length > 0) {
+          // Track and trigger/update native DirectX effect anchors independently
+          const prevAnchors = activeNativeAnchorsRef.current;
+          const matchedPrev = new Set<number>();
+          const nextActiveAnchors: Array<{ x: number; y: number }> = [];
+
+          for (const anchor of currentAnchors) {
+            let foundIdx = -1;
+            let bestDist = Infinity;
+            for (let i = 0; i < prevAnchors.length; i++) {
+              if (matchedPrev.has(i)) continue;
+              const d = Math.hypot(prevAnchors[i].x - anchor.x, prevAnchors[i].y - anchor.y);
+              if (d < 0.25 && d < bestDist) {
+                bestDist = d;
+                foundIdx = i;
+              }
+            }
+
+            if (foundIdx !== -1) {
+              matchedPrev.add(foundIdx);
+              // Anchor already active: smoothly update its position without re-triggering
+              window.heartwaveApi?.updateEffectAnchor?.(ev.gesture, anchor.x, anchor.y);
+            } else {
+              // Brand new anchor formed (either initial gesture or 2nd hand joined while holding)
+              window.heartwaveApi?.triggerEffect?.(ev.gesture, anchor.x, anchor.y, 1.0);
+            }
+            nextActiveAnchors.push({ x: anchor.x, y: anchor.y });
+          }
+          // If any previous anchor disappeared (e.g. user lowered one hand while holding the other)
+          if (matchedPrev.size < prevAnchors.length) {
+            window.heartwaveApi?.releaseEffect?.(ev.gesture);
+            for (const a of nextActiveAnchors) {
+              window.heartwaveApi?.triggerEffect?.(ev.gesture, a.x, a.y, 1.0);
+            }
+          }
+
+          activeNativeAnchorsRef.current = nextActiveAnchors;
+        } else if (!curGestureName && activeNativeAnchorsRef.current.length > 0) {
+          window.heartwaveApi?.releaseEffect?.('all');
+          activeNativeAnchorsRef.current = [];
         }
 
         if (gestureResult && curGestureName) {
@@ -449,7 +487,7 @@ export const CameraPreviewViewport: React.FC = () => {
 
           const eCtx = effectsCanvas.getContext('2d');
           if (eCtx) {
-            effectManager.update(liveIntensity, gestureResult?.gestureEvent?.anchor, now);
+            effectManager.update(liveIntensity, gestureResult?.gestureEvent?.anchor, now, gestureResult?.gestureEvent?.anchors);
             effectManager.render(eCtx, effectsCanvas.width, effectsCanvas.height, liveMirrored);
           }
         } else if (effectsCanvasRef.current) {

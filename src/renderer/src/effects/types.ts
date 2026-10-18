@@ -22,8 +22,8 @@ export interface VisualEffect {
   id: string;
   name: string;
   init(width: number, height: number): void;
-  onGestureTrigger(anchor: EffectAnchor, confidence: number): void;
-  update(deltaTime: number, intensity: number, anchor?: EffectAnchor): void;
+  onGestureTrigger(anchor: EffectAnchor, confidence: number, anchors?: EffectAnchor[]): void;
+  update(deltaTime: number, intensity: number, anchor?: EffectAnchor, anchors?: EffectAnchor[]): void;
   render(ctx: CanvasRenderingContext2D, width: number, height: number, isMirrored: boolean): void;
   reset(): void;
   destroy(): void;

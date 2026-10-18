@@ -1,3 +1,14 @@
+# HeartWave v1.3.26 Release Notes
+
+## 💖 Dual-Hand Korean Finger Heart & Multi-Anchor Particle Synchronization
+- **Exclusive Multi-Hand Anchor Claiming**: Implemented an exclusive `syncHearts` matching algorithm in `goldenFingerHeart.ts` using claimed sets. Making the Korean finger heart gesture with both hands simultaneously now spawns two radiant golden hearts with independent breath cycles and smooth positional lerping.
+- **Gesture Classifier Priority Optimization**: Prioritized dual-hand Korean finger heart evaluation ahead of joined two-hand heart detection in `gestureClassifier.ts`, ensuring that two finger hearts held in close proximity are never falsely categorized as a joined two-hand heart.
+- **Zero-Glitch State Machine Anchor Isolation**: In `gestureStateMachine.ts`, detected anchors are strictly committed to active state only when the classified gesture matches the current active gesture, eliminating single-frame position jitter during pose transitions.
+- **Dynamic Native DirectX 11 Anchor Lifecycle**: `CameraPreviewViewport.tsx` now tracks active native hardware anchors independently. Bringing up a second hand mid-gesture dynamically triggers the secondary native effect, and dropping one hand seamlessly releases and re-synchronizes surviving instances without interrupting playout.
+- **CodeRabbit CLI Validated**: All changes verified by CodeRabbit with 0 findings across the full multi-anchor and gesture tracking pipeline.
+
+---
+
 # HeartWave v1.3.25 Release Notes
 
 ## 🎙️ Zero-Latency Discord & WebRTC A/V Lip Sync (OBS VirtualCam Standard)

@@ -29,6 +29,32 @@ export class GestureClassifier {
   }
 
   /**
+   * Check if a hand is forming a Korean Finger Heart (crossed/pinched thumb & index).
+   */
+  private checkFingerHeart(hand: TrackedHand): { isHeart: boolean; anchor: { x: number; y: number } } {
+    const lm = hand.landmarks;
+    const wrist = lm[0];
+    const middleCurled = this.isFingerCurled(lm, 12, 10);
+    const ringCurled = this.isFingerCurled(lm, 16, 14);
+    const pinkyCurled = this.isFingerCurled(lm, 20, 18);
+    const thumbIndexTipDist = dist2D(lm[4], lm[8]);
+    const indexTipDistFromWrist = dist2D(wrist, lm[8]);
+    const indexPipDistFromWrist = dist2D(wrist, lm[6]);
+    const isPinchedHeart = thumbIndexTipDist < 0.11 && indexTipDistFromWrist > indexPipDistFromWrist * 1.05;
+
+    if (isPinchedHeart && middleCurled && ringCurled && pinkyCurled) {
+      return {
+        isHeart: true,
+        anchor: {
+          x: (lm[4].x + lm[8].x) / 2,
+          y: Math.min(lm[4].y, lm[8].y) - 0.04,
+        },
+      };
+    }
+    return { isHeart: false, anchor: { x: 0, y: 0 } };
+  }
+
+  /**
    * Classify hand landmarks into a semantic gesture with mutually exclusive rules.
    */
   classify(hands: TrackedHand[]): GestureDetectionResult {
@@ -58,7 +84,27 @@ export class GestureClassifier {
       const h1 = validHands[0];
       const h2 = validHands[1];
 
-      // A. Two-Hand Heart Pose:
+      // A. Dual-Hand Korean Finger Heart:
+      // Both hands actively forming the finger heart gesture simultaneously!
+      // Checked first so two finger hearts held close together don't falsely match joined two_hand_heart.
+      const fh1 = this.checkFingerHeart(h1);
+      const fh2 = this.checkFingerHeart(h2);
+
+      if (fh1.isHeart && fh2.isHeart) {
+        return {
+          gesture: 'korean_finger_heart',
+          confidence: 0.96,
+          anchor: {
+            x: (fh1.anchor.x + fh2.anchor.x) / 2,
+            y: (fh1.anchor.y + fh2.anchor.y) / 2,
+          },
+          anchors: [fh1.anchor, fh2.anchor],
+          handsCount: 2,
+          rawHands: validHands,
+        };
+      }
+
+      // B. Two-Hand Heart Pose:
       // Index fingertips touch or come close, Thumb tips touch or come close
       const indexTipsDist = dist2D(h1.landmarks[8], h2.landmarks[8]);
       const thumbTipsDist = dist2D(h1.landmarks[4], h2.landmarks[4]);
@@ -81,7 +127,7 @@ export class GestureClassifier {
         };
       }
 
-      // B. Petal Rain Pose:
+      // C. Petal Rain Pose:
       // Both hands held wide apart in upper frame, all 4 fingers extended on both
       const wristsDist = dist2D(h1.landmarks[0], h2.landmarks[0]);
       const h1AllExt =
@@ -138,19 +184,13 @@ export class GestureClassifier {
       }
 
       // --- KOREAN FINGER HEART: Crossed / Pinched Mini Heart ---
-      // Strict rule: Thumb tip & index tip pinched close, index is NOT extended straight, others curled
-      const indexTipDistFromWrist = dist2D(wrist, lm[8]);
-      const indexPipDistFromWrist = dist2D(wrist, lm[6]);
-      const isPinchedHeart = thumbIndexTipDist < 0.11 && indexTipDistFromWrist > indexPipDistFromWrist * 1.05;
-
-      if (isPinchedHeart && middleCurled && ringCurled && pinkyCurled) {
+      const fh = this.checkFingerHeart(hand);
+      if (fh.isHeart) {
         return {
           gesture: 'korean_finger_heart',
           confidence: 0.94,
-          anchor: {
-            x: (lm[4].x + lm[8].x) / 2,
-            y: Math.min(lm[4].y, lm[8].y) - 0.04,
-          },
+          anchor: fh.anchor,
+          anchors: [fh.anchor],
           handsCount: validHands.length,
           rawHands: validHands,
         };

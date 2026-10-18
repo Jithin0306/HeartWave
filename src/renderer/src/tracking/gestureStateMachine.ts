@@ -19,6 +19,7 @@ export class GestureStateMachine {
   private lastSeenTime: number = 0;
   private isCurrentlyTriggered: boolean = false;
   private lastValidAnchor: { x: number; y: number } = { x: 0.5, y: 0.5 };
+  private lastValidAnchors?: Array<{ x: number; y: number }>;
 
   constructor(holdDurationSeconds: number = 0.22, cooldownSeconds: number = 0.8) {
     this.holdDurationMs = holdDurationSeconds * 1000;
@@ -35,9 +36,6 @@ export class GestureStateMachine {
 
   update(detection: GestureDetectionResult, now: number = performance.now()): GestureEvent {
     const rawDetected = detection.gesture;
-    if (detection.confidence > 0.6) {
-      this.lastValidAnchor = detection.anchor;
-    }
 
     // 1. Debounce and filter candidate transitions
     if (rawDetected === this.currentGesture) {
@@ -80,20 +78,28 @@ export class GestureStateMachine {
       }
     }
 
-    // 3. If currently in 'none' state
+    // 3. Update valid anchors only when detected gesture matches currentGesture
+    const detectionMatchesCurrent = detection.gesture === this.currentGesture && detection.confidence > 0.6;
+    if (detectionMatchesCurrent) {
+      this.lastValidAnchor = detection.anchor;
+      this.lastValidAnchors = detection.anchors;
+    }
+
+    // 4. If currently in 'none' state
     if (this.currentGesture === 'none') {
       return {
         gesture: 'none',
         label: GESTURE_LABELS['none'],
         confidence: 0,
         anchor: this.lastValidAnchor,
+        anchors: this.lastValidAnchors,
         holdProgress: 0,
         isTriggered: false,
         timestamp: now,
       };
     }
 
-    // 4. Calculate hold progress & triggers
+    // 5. Calculate hold progress & triggers
     const elapsed = now - this.gestureStartTime;
     const progress = Math.min(1.0, elapsed / this.holdDurationMs);
     const isCoolingDown = now - this.lastTriggerTime < this.cooldownMs;
@@ -109,7 +115,8 @@ export class GestureStateMachine {
       gesture: this.currentGesture,
       label: GESTURE_LABELS[this.currentGesture] || this.currentGesture,
       confidence: detection.confidence,
-      anchor: detection.confidence > 0.6 ? detection.anchor : this.lastValidAnchor,
+      anchor: detectionMatchesCurrent ? detection.anchor : this.lastValidAnchor,
+      anchors: detectionMatchesCurrent ? detection.anchors : this.lastValidAnchors,
       holdProgress: progress,
       isTriggered: triggeredThisFrame,
       timestamp: now,
@@ -122,5 +129,6 @@ export class GestureStateMachine {
     this.candidateCount = 0;
     this.gestureStartTime = 0;
     this.isCurrentlyTriggered = false;
+    this.lastValidAnchors = undefined;
   }
 }

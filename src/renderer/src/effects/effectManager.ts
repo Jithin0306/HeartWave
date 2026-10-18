@@ -58,13 +58,14 @@ export class EffectManager {
 
     const matchedEffectId = this.gestureToEffectMap.get(event.gesture);
     const anchor: EffectAnchor = { x: event.anchor.x, y: event.anchor.y };
+    const anchors: EffectAnchor[] | undefined = event.anchors?.map((a) => ({ x: a.x, y: a.y }));
 
     this.effects.forEach((eff, id) => {
       if (id === matchedEffectId) {
         if ('setHolding' in eff) {
           (eff as any).setHolding(true);
         }
-        eff.onGestureTrigger(anchor, event.confidence);
+        eff.onGestureTrigger(anchor, event.confidence, anchors);
       } else {
         // Guarantee clean mutual exclusivity: release all non-matched effects
         if ('setHolding' in eff) {
@@ -91,12 +92,12 @@ export class EffectManager {
   /**
    * Advance animations and physics.
    */
-  update(intensity: number, currentAnchor?: EffectAnchor, now: number = performance.now()): void {
+  update(intensity: number, currentAnchor?: EffectAnchor, now: number = performance.now(), currentAnchors?: EffectAnchor[]): void {
     const dt = Math.min(0.05, (now - this.lastTime) / 1000);
     this.lastTime = now;
 
     this.effects.forEach((effect) => {
-      effect.update(dt, intensity, currentAnchor);
+      effect.update(dt, intensity, currentAnchor, currentAnchors);
     });
   }
 
