@@ -16,18 +16,7 @@
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Jithin0306/HeartWave/main/resources/screenshots/2_heartwave_hero_showcase.jpg" alt="HeartWave Hero Showcase" width="100%">
-</p>
-
-<!-- Launch Showcase Video -->
-<p align="center">
-  <video src="https://github.com/Jithin0306/HeartWave/raw/main/brag-output/brag.mp4" poster="https://raw.githubusercontent.com/Jithin0306/HeartWave/main/brag-output/brag.jpg" controls="controls" width="100%" style="border-radius: 12px; max-width: 900px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);"></video>
-</p>
-
-<p align="center">
-  <a href="https://github.com/Jithin0306/HeartWave/raw/main/brag-output/brag.mp4">
-    <strong>🎬 Watch HeartWave Launch Showcase Video (1080p HD)</strong>
-  </a>
+  <img src="https://raw.githubusercontent.com/Jithin0306/HeartWave/main/resources/screenshots/heartwave_showcase_demo.gif" alt="HeartWave Launch Showcase" width="100%">
 </p>
 
 ---
