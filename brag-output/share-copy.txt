@@ -1,0 +1,1 @@
+Ditch the $2,000 mirrorless camera. HeartWave gives any standard webcam f/1.4 optical bokeh and 21-point gesture reactions — with a 56 MB Rust core and 0ms latency in OBS & Discord.

@@ -94,29 +94,48 @@ export const OBSGuide: React.FC = () => {
         )}
 
         {activeApp === 'discord' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-5 rounded-xl bg-atelier-canvas border border-white/10">
-              <span className="text-xs font-mono text-indigo-400 font-bold block mb-2">PHASE 01</span>
-              <h4 className="font-sans text-sm font-bold text-hw-sand mb-1">Open Voice & Video</h4>
-              <p className="text-xs text-hw-stone leading-relaxed">
-                Go to Discord <strong>User Settings</strong> &rarr; <strong>Voice & Video</strong>.
-              </p>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-5 rounded-xl bg-atelier-canvas border border-white/10">
+                <span className="text-xs font-mono text-indigo-400 font-bold block mb-2">PHASE 01</span>
+                <h4 className="font-sans text-sm font-bold text-hw-sand mb-1">Open Voice & Video</h4>
+                <p className="text-xs text-hw-stone leading-relaxed">
+                  Go to Discord <strong>User Settings</strong> &rarr; <strong>Voice & Video</strong>.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-xl bg-atelier-canvas border border-white/10">
+                <span className="text-xs font-mono text-indigo-400 font-bold block mb-2">PHASE 02</span>
+                <h4 className="font-sans text-sm font-bold text-hw-sand mb-1">Choose Camera</h4>
+                <p className="text-xs text-hw-stone leading-relaxed">
+                  Under <strong>Video Settings &gt; Camera</strong> dropdown, select <strong>Heartwave Virtual Camera</strong>.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-xl bg-atelier-canvas border border-white/10">
+                <span className="text-xs font-mono text-indigo-400 font-bold block mb-2">PHASE 03</span>
+                <h4 className="font-sans text-sm font-bold text-hw-sand mb-1">Perfect Lip Sync</h4>
+                <p className="text-xs text-hw-stone leading-relaxed">
+                  Heartwave's monotonic stream timestamps automatically collapse Discord's WebRTC playout buffer to 0ms!
+                </p>
+              </div>
             </div>
 
-            <div className="p-5 rounded-xl bg-atelier-canvas border border-white/10">
-              <span className="text-xs font-mono text-indigo-400 font-bold block mb-2">PHASE 02</span>
-              <h4 className="font-sans text-sm font-bold text-hw-sand mb-1">Choose Camera</h4>
-              <p className="text-xs text-hw-stone leading-relaxed">
-                Under <strong>Video Settings &gt; Camera</strong> dropdown, select <strong>Heartwave Virtual Camera</strong>.
-              </p>
-            </div>
-
-            <div className="p-5 rounded-xl bg-atelier-canvas border border-white/10">
-              <span className="text-xs font-mono text-indigo-400 font-bold block mb-2">PHASE 03</span>
-              <h4 className="font-sans text-sm font-bold text-hw-sand mb-1">Perfect Lip Sync</h4>
-              <p className="text-xs text-hw-stone leading-relaxed">
-                Heartwave's monotonic stream timestamps automatically collapse Discord's WebRTC playout buffer to 0ms!
-              </p>
+            {/* Showcase Video Player */}
+            <div className="rounded-xl overflow-hidden border border-white/10 bg-atelier-canvas/60 shadow-xl p-3">
+              <div className="flex items-center justify-between pb-3 px-2 border-b border-white/5 mb-3">
+                <div className="flex items-center gap-2 text-xs font-mono text-indigo-400">
+                  <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                  DISCORD 0MS LIP-SYNC &amp; GESTURE SHOWCASE
+                </div>
+                <span className="text-[11px] font-mono text-hw-stone">1080p • 60 FPS DirectShow</span>
+              </div>
+              <video
+                src="/assets/showcase-video.mp4"
+                poster="/assets/showcase-poster.jpg"
+                controls
+                className="w-full rounded-lg aspect-video object-cover"
+              />
             </div>
           </div>
         )}

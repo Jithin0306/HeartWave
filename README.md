@@ -19,6 +19,17 @@
   <img src="https://raw.githubusercontent.com/Jithin0306/HeartWave/main/resources/screenshots/2_heartwave_hero_showcase.jpg" alt="HeartWave Hero Showcase" width="100%">
 </p>
 
+<!-- Launch Showcase Video -->
+<p align="center">
+  <video src="https://github.com/Jithin0306/HeartWave/raw/main/brag-output/brag.mp4" poster="https://raw.githubusercontent.com/Jithin0306/HeartWave/main/brag-output/brag.jpg" controls="controls" width="100%" style="border-radius: 12px; max-width: 900px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);"></video>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Jithin0306/HeartWave/raw/main/brag-output/brag.mp4">
+    <strong>🎬 Watch HeartWave Launch Showcase Video (1080p HD)</strong>
+  </a>
+</p>
+
 ---
 
 ## 🌟 Overview
@@ -87,6 +98,26 @@ HeartWave provides native binaries for Windows, macOS, and Linux:
 
 > [!TIP]
 > Download the latest releases directly from the [**GitHub Releases Page**](https://github.com/Jithin0306/HeartWave/releases/latest).
+
+---
+
+## 🎮 Discord Integration Guide (0ms Playout Delay)
+
+Standard virtual cameras suffer from **1,000–2,000ms video lag** in Discord because Discord's WebRTC engine expands its jitter buffer when timestamps jitter or drift. HeartWave solves this at the driver level: our custom DirectShow filter writes monotonic stream-time timestamps aligned with the Windows reference clock, collapsing Discord's playout de-jitter buffer down to **0ms**.
+
+### 30-Second Setup in Discord:
+
+1. **Activate HeartWave Virtual Output**:
+   - In HeartWave, click **"Start Virtual Output"** (or press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>V</kbd>).
+2. **Open Discord Video Settings**:
+   - In Discord Desktop, click the **Gear Icon (⚙️ User Settings)** in the lower left corner.
+   - Under **App Settings**, select **Voice & Video**.
+3. **Select Heartwave Virtual Camera**:
+   - Scroll down to **Video Settings**.
+   - Under the **Camera** dropdown, select **"Heartwave Virtual Camera"**.
+   - Click **Test Video** to preview your real-time hand gestures, bokeh optics, and virtual studio backdrops.
+4. **Enjoy Instant Lip-Sync**:
+   - Join any voice channel, stream in server channels, or start direct video calls with zero lip-sync delay!
 
 ---
 

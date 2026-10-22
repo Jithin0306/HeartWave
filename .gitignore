@@ -21,3 +21,4 @@ release-*/
 __pycache__/
 *.pyc
 
+brag-output/composition/
